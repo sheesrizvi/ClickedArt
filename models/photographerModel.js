@@ -23,9 +23,16 @@ const photographerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  dob: {
+    type: Date,
+    required: false
+  },
   bio: {
     type: String,
     required: false
+  },
+  age: {
+    type: Number
   },
   profileImage: {
     type: String,

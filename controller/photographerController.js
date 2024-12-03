@@ -4,9 +4,10 @@ const Photographer = require('../models/photographerModel.js')
 const { generateFromEmail } = require("unique-username-generator")
 const UserType = require('../models/typeModel.js')
 const { sendResetEmail } = require("../middleware/handleEmail.js");
+const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { name, email, password, bio, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType } = req.body
+    const { name, email, password, bio, dob, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType } = req.body
 
     if(!name || !email || !password || !address ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
@@ -22,6 +23,17 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         4
     );
     
+    let age;
+    if (dob) {
+        const birthDate = parseISO(dob)
+        if (isValid(birthDate)) {
+            age = differenceInYears(new Date(), birthDate)
+        } else {
+            return res.status(400).send({ status: false, message: 'Invalid date of birth' });
+        }
+    }
+
+
     const photographerData = {
         name, email, username, password,  address,
         companyName: !companyName ? name : companyName
@@ -38,7 +50,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     } 
 
     const photographer = new Photographer({
-        name, email, username, password, address, bio, profileImage, portfolioLink,
+        name, email, username, password, address, bio, dob, age, profileImage, portfolioLink,
         yearsOfExperience,
         accountType,
         photographyStyles,

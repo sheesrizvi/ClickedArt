@@ -5,15 +5,25 @@ const { generateFromEmail } = require("unique-username-generator")
 const Photographer = require('../models/photographerModel.js')
 const UserType = require('../models/typeModel.js')
 const { sendResetEmail } = require("../middleware/handleEmail.js");
+const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password, address, age, dob, image, bio, interests } = req.body
+    const { name, email, password, address, dob, image, bio, interests } = req.body
 
     const username = generateFromEmail(
         name,
         2
     );
-   
+    let age;
+    if (dob) {
+        const birthDate = parseISO(dob)
+        if (isValid(birthDate)) {
+            age = differenceInYears(new Date(), birthDate)
+        } else {
+            return res.status(400).send({ status: false, message: 'Invalid date of birth' });
+        }
+    }
+
     if (name && email && password) {
         let user = new User({
             name,
