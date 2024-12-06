@@ -8,7 +8,7 @@ const { sendResetEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password, address, dob, image, bio, interests } = req.body
+    const { name, email, password, address, dob, image, bio, interests, connectedAccounts } = req.body
 
     const username = generateFromEmail(
         name,
@@ -35,7 +35,8 @@ const userRegistration = asyncHandler(async (req, res) => {
             username,
             image,
             bio,
-            interests
+            interests,
+            connectedAccounts
         })
         await user.save()
         await UserType.create({
