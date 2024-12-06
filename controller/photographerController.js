@@ -77,7 +77,96 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     }); 
 })
 
+const updatePhotographer = asyncHandler(async (req, res) => {
+    const { 
+        photographerId,
+        name, 
+        email, 
+        password, 
+        bio, 
+        dob, 
+        profileImage, 
+        address, 
+        isCompany, 
+        companyName, 
+        companyEmail, 
+        companyAddress, 
+        companyPhone, 
+        portfolioLink, 
+        photographyStyles, 
+        yearsOfExperience, 
+        accountType, 
+        connectedAccounts 
+    } = req.body;
 
+
+    const photographer = await Photographer.findById(photographerId);
+    if (!photographer) {
+        return res.status(404).json({ status: false, message: 'Photographer not found' });
+    }
+
+    if (email && email !== photographer.email) {
+        const existingPhotographer = await Photographer.findOne({ email });
+        if (existingPhotographer) {
+            return res.status(400).json({ status: false, message: 'Email already exists' });
+        }
+    }
+
+    if (name && name !== photographer.name) {
+        const username = generateFromEmail(name, 4);
+        photographer.username = username;
+    }
+
+    let age;
+    if (dob) {
+        const birthDate = parseISO(dob);
+        if (isValid(birthDate)) {
+            age = differenceInYears(new Date(), birthDate);
+            photographer.dob = dob;
+            photographer.age = age;
+        } else {
+            return res.status(400).json({ status: false, message: 'Invalid date of birth' });
+        }
+    }
+   
+
+    if (isCompany !== undefined && isCompany !== photographer.isCompany) {
+        photographer.isCompany = isCompany;
+        if (isCompany) {
+            if (!companyName || !companyEmail || !companyAddress || !companyPhone) {
+                return res.status(400).json({ status: false, message: 'Company details are required!' });
+            }
+            photographer.companyName = companyName;
+            photographer.companyEmail = companyEmail;
+            photographer.companyAddress = companyAddress;
+            photographer.companyPhone = companyPhone;
+        } else {
+            photographer.companyName = photographer.name;
+            photographer.companyEmail = photographer.email;
+            photographer.companyAddress = undefined;
+            photographer.companyPhone = undefined;
+        }
+    }
+    if(name) photographer.name = name
+    if(email) photographer.email = email
+    if (bio) photographer.bio = bio;
+    if (profileImage) photographer.profileImage = profileImage;
+    if (address) photographer.address = address;
+    if (portfolioLink) photographer.portfolioLink = portfolioLink;
+    if (photographyStyles) photographer.photographyStyles = photographyStyles;
+    if (yearsOfExperience) photographer.yearsOfExperience = yearsOfExperience;
+    if (accountType) photographer.accountType = accountType;
+    if (connectedAccounts) photographer.connectedAccounts = connectedAccounts;
+    if(password) photographer.password = password
+
+    await photographer.save();
+
+    res.status(200).json({
+        status: true,
+        message: 'Photographer updated successfully',
+        photographer
+    });
+});
 
 const photographerLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
@@ -204,5 +293,6 @@ module.exports = {
     resetPassword,
     getAllPhotographers,
     getPhotographerById,
-    getAllPendingPhotographersForAdmin
+    getAllPendingPhotographersForAdmin,
+    updatePhotographer
 }
