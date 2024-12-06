@@ -7,7 +7,7 @@ const { sendResetEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { name, email, password, bio, dob, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType } = req.body
+    const { name, email, password, bio, dob, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts } = req.body
 
     if(!name || !email || !password || !address ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
@@ -58,7 +58,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         isCompany: photographerData.isCompany,
         companyEmail: !companyEmail ?  email : companyEmail,
         companyAddress: photographerData.companyAddress || undefined, 
-        companyPhone: photographerData.companyPhone
+        companyPhone: photographerData.companyPhone,
+        connectedAccounts
     });
     
     await photographer.save();
@@ -75,6 +76,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         email: photographer.email
     }); 
 })
+
+
 
 const photographerLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;

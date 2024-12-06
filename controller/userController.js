@@ -14,6 +14,12 @@ const userRegistration = asyncHandler(async (req, res) => {
         name,
         2
     );
+
+    const emailExist = await User.findOne({ email })
+    if(emailExist) {
+        return res.status(400).send({ message: 'Email already exist. Please use a different email' })
+    }
+
     let age;
     if (dob) {
         const birthDate = parseISO(dob)
@@ -122,6 +128,47 @@ const getUserById = asyncHandler(async (req, res) => {
     res.status(200).send({ user })
 })
 
+const userProfileUpdate = asyncHandler(async (req, res) => {
+    const { userId, name, email, password, address, dob, image, bio, interests, connectedAccounts  } = req.body
+
+    const user = await User.findOne({ _id: userId })
+    if(!user) {
+        return res.status(400).send({ message: 'User not found' })
+    }
+    user.name = name || user.name
+    user.password = password || user.password
+    user.address = address || user.address
+    if(email && email !== user.email) {
+        const emailExist = await User.findOne({ email })
+        if(emailExist){
+            return res.status(400).send({ message: 'Email already exist' })
+        }
+        user.email  = email
+    }
+    if(dob) {
+        let age;
+        if (dob) {
+            const birthDate = parseISO(dob)
+            if (isValid(birthDate)) {
+                age = differenceInYears(new Date(), birthDate)
+            } else {
+                return res.status(400).send({ status: false, message: 'Invalid date of birth' });
+            }
+        }
+        user.dob = dob
+        user.age = age
+    }
+
+    user.image = image || user.image
+    user.bio = bio || user.bio
+    user.interests = interests || user.interests
+    user.connectedAccounts = connectedAccounts || user.connectedAccounts
+
+    await user.save()
+
+    res.status(200).send({ message: 'User updated successfully', user })
+})
+
 
 const convertUserToPhotographer = asyncHandler(async (req, res) => {
 
@@ -173,6 +220,16 @@ const convertUserToPhotographer = asyncHandler(async (req, res) => {
 })
 
 
+const deleteUserProfile = asyncHandler(async (req, res) => {
+    const { userId } = req.query
+    const user = await User.findOne({ _id: userId })
+    if(!user) {
+        return res.status(400).send({ message: 'user not exist' })
+    }
+
+    await User.findOneAndDelete({ _id: userId })
+    res.status(200).send({ message: 'User deleted successfully' })
+})
 
 module.exports = {
     userRegistration,
@@ -180,7 +237,9 @@ module.exports = {
     resetPassword,
     convertUserToPhotographer,
     getAllUsers,
-    getUserById
+    getUserById,
+    userProfileUpdate,
+    deleteUserProfile
 }
 
 
