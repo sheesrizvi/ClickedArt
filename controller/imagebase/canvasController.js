@@ -1,9 +1,21 @@
 const Canvas = require("../../models/imagebase/canvasModel");
 const asyncHandler = require("express-async-handler");
 const ImageVault = require('../../models/imagebase/imageVaultModel')
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
+
+const config = {
+  region: process.env.AWS_BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+};
+const s3 = new S3Client(config);
+
 
 const createCanvas = asyncHandler(async (req, res) => {
-  const { name, material, thickness, basePricePerSquareInch, isActive, customDimensions  } = req.body;
+  const { name, image, material, thickness, basePricePerSquareInch, isActive, customDimensions  } = req.body;
 
   const existingCanvas = await Canvas.findOne({ name });
   if (existingCanvas) {
@@ -13,6 +25,7 @@ const createCanvas = asyncHandler(async (req, res) => {
 
   const canvas = await Canvas.create({
     name,
+    image,
     material,
     thickness,
     basePricePerSquareInch,
@@ -46,7 +59,7 @@ const getCanvasById = asyncHandler(async (req, res) => {
 
 
 const updateCanvas = asyncHandler(async (req, res) => {
-  const { id, name, material, thickness, basePricePerSquareInch, isActive, customDimensions } = req.body;
+  const { id, name, image, material, thickness, basePricePerSquareInch, isActive, customDimensions } = req.body;
 
   const canvas = await Canvas.findById(id);
   if (!canvas) {
@@ -54,6 +67,7 @@ const updateCanvas = asyncHandler(async (req, res) => {
   }
 
   canvas.name = name || canvas.name;
+  canvas.image = image || canvas.image
   canvas.material = material || canvas.material;
   canvas.thickness = thickness || canvas.thickness;
   canvas.basePricePerSquareInch = basePricePerSquareInch || canvas.basePricePerSquareInch;
@@ -70,6 +84,17 @@ const deleteCanvas = asyncHandler(async (req, res) => {
   const canvas = await Canvas.findById(req.query.id);
   if (!canvas) {
     return res.status(404).send({ message: 'Canvas not found' })
+  }
+
+  f1 = canvas?.image || undefined
+  if (f1) {
+      const fileName = f1.split("//")[1].split("/")[1];
+
+      const command = new DeleteObjectCommand({
+      Bucket: process.env.AWS_BUCKET,
+      Key: fileName,
+      });
+      const response = await s3.send(command);
   }
 
   await Canvas.findByIdAndDelete(req.query.id);

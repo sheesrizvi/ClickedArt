@@ -31,7 +31,7 @@ const updateRoyalty = asyncHandler(async (req, res) => {
 const getRoyalty = asyncHandler(async (req, res) => {
     const royalty = await Royalty.find({})
     if(!royalty || royalty.length === 0) return res.status(400).send({ message: 'Royalty not found' })
-    res.status(400).send({ royalty })
+    res.status(200).send({ royalty })
 })
 
 const deleteRoyalty = asyncHandler(async (req, res) => {

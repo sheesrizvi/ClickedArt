@@ -1,10 +1,21 @@
 const Frame = require("../../models/imagebase/frameModel");
 const asyncHandler = require("express-async-handler");
 const ImageVault = require('../../models/imagebase/imageVaultModel')
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
+
+const config = {
+  region: process.env.AWS_BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+};
+const s3 = new S3Client(config);
 
 
 const createFrame = asyncHandler(async (req, res) => {
-  const { name, material, style, thickness, basePricePerLinearInch, isActive, customDimensions   } = req.body;
+  const { name, image, material, style, thickness, basePricePerLinearInch, isActive, customDimensions   } = req.body;
 
   const existingFrame = await Frame.findOne({ name });
   if (existingFrame) {
@@ -14,6 +25,7 @@ const createFrame = asyncHandler(async (req, res) => {
 
   const frame = await Frame.create({
     name,
+    image,
     material,
     style,
     thickness,
@@ -42,7 +54,7 @@ const getFrameById = asyncHandler(async (req, res) => {
 
 
 const updateFrame = asyncHandler(async (req, res) => {
-  const { id, name, material, style, thickness, basePricePerLinearInch, isActive, customDimensions } = req.body;
+  const { id, name, image, material, style, thickness, basePricePerLinearInch, isActive, customDimensions } = req.body;
 
   const frame = await Frame.findById(id);
   if (!frame) {
@@ -51,6 +63,7 @@ const updateFrame = asyncHandler(async (req, res) => {
   }
 
   frame.name = name || frame.name;
+  frame.image = image || frame.image
   frame.material = material || frame.material;
   frame.style = style || frame.style;
   frame.thickness = thickness || frame.thickness;
@@ -59,6 +72,7 @@ const updateFrame = asyncHandler(async (req, res) => {
   if (customDimensions) {
     frame.customDimensions = [...frame.customDimensions, ...customDimensions];
   }
+  
   const updatedFrame = await frame.save();
   res.status(200).json(updatedFrame);
 });
@@ -70,6 +84,17 @@ const deleteFrame = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Frame not found.");
   }
+
+    f1 = frame?.image || undefined
+    if (f1) {
+        const fileName = f1.split("//")[1].split("/")[1];
+
+        const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET,
+        Key: fileName,
+        });
+        const response = await s3.send(command);
+    }
 
   await Frame.findByIdAndDelete(req.query.id);
   res.status(200).json({ message: "Frame deleted successfully." });

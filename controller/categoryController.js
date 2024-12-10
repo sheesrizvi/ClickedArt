@@ -1,5 +1,17 @@
 const Category = require('../models/categoryModel')
 const asyncHandler = require('express-async-handler')
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
+
+const config = {
+    region: process.env.AWS_BUCKET_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_SECRET_KEY,
+    },
+  };
+const s3 = new S3Client(config);
+  
 
 const createCategory = asyncHandler(async (req, res) => {
     const { name, description, coverImage, tags } = req.body
@@ -40,9 +52,17 @@ const deleteCategory = asyncHandler(async (req, res) => {
   
     const category = await Category.findOne({  _id: id })
     if(!category) return res.status(400).send({ message: 'Category not exist' })
+    f1 = category?.coverImage || undefined
 
-     // image exist check under this category logic
-    // Delete from AWS 
+    if (f1) {
+        const fileName = f1.split("//")[1].split("/")[1];
+        const command = new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET,
+        Key: fileName,
+        });
+        const response = await s3.send(command);
+
+    }
 
     await Category.findOneAndDelete({ _id: id })
 
