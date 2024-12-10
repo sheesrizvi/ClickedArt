@@ -33,13 +33,21 @@ const createFrame = asyncHandler(async (req, res) => {
     isActive,
   });
 
-  res.status(201).json(frame);
+  res.status(201).json({ frame });
 });
 
 
 const getFrames = asyncHandler(async (req, res) => {
-  const frames = await Frame.find({});
-  res.status(200).json(frames);
+  const { pageNumber = 1, pageSize = 20 } = req.query
+  const frames = await Frame.find({}).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+  if(!frames || frames.length === 0) {
+    return res.status(400).send({ message: 'Frames not found' })
+  }
+
+  const totalDocuments = await Frame.countDocuments({})
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+  res.status(200).json({ frames, pageCount });
 });
 
 
@@ -49,7 +57,7 @@ const getFrameById = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Frame not found.");
   }
-  res.status(200).json(frame);
+  res.status(200).json({ frame });
 });
 
 
@@ -74,7 +82,7 @@ const updateFrame = asyncHandler(async (req, res) => {
   }
   
   const updatedFrame = await frame.save();
-  res.status(200).json(updatedFrame);
+  res.status(200).json({updatedFrame});
 });
 
 
