@@ -270,7 +270,7 @@ const getPhotographerById = asyncHandler(async (req, res) => {
 const getAllPendingPhotographersForAdmin = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const photographers = await Photographer.find({ status: 'pending' }).sort({
+    const photographers = await Photographer.find({ photographerStatus: 'pending' }).sort({
         createdAt: - 1
     }).skip((pageNumber - 1) * pageSize).limit({ pageSize })
 
