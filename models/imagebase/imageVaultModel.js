@@ -47,7 +47,6 @@ const imageVaultSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-  // additional Info
     cameraDetails: {
         camera: { type: String, trim: true },
         lens: { type: String, trim: true },
@@ -58,17 +57,15 @@ const imageVaultSchema = mongoose.Schema({
           iso: { type: Number },
         },
       },
-      price: {
+    price: {
        original: { type: Number, required: true  },
        medium: { type: Number },
        small: { type: Number }
     },
-    licenseType: {
-        type: String,
-        enum: ['exclusive'],
-        default: 'exclusive'
+    license: {
+       type: mongoose.Schema.Types.ObjectId,
+       ref: "License"
     },
-     // optional any extra details wanna provide for exclusive easy approval
     exclusivityDetails: {
         type: String,  
     },
@@ -77,7 +74,6 @@ const imageVaultSchema = mongoose.Schema({
         default: 'pending',
         enum: ['pending', 'review', 'approved', 'rejected']
     },
-    // if there is any property or person in image, he has to provide release(kind of noc) -> As of now optional
     identifiableData: {
         modelRelease: { type: String },
         propertyRelease: { type: String }
@@ -91,7 +87,6 @@ const imageVaultSchema = mongoose.Schema({
         trim: true,
         default: null
     },
-   
 }, {
     timestamps: true
 })

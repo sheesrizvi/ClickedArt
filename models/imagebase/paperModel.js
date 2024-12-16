@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const canvasSchema = new mongoose.Schema(
+const paperSchema = new mongoose.Schema(
     {
       name: {
         type: String,
@@ -11,7 +11,6 @@ const canvasSchema = new mongoose.Schema(
       },
       material: {
         type: String,
-        enum: ["glossy", "matte", "luster", "fine art", "canvas paper"],
         required: true,
       },
       thickness: {
@@ -38,24 +37,7 @@ const canvasSchema = new mongoose.Schema(
     { timestamps: true }
   );
   
-  module.exports = mongoose.model("Canvas", canvasSchema);
+  module.exports = mongoose.model("Paper", paperSchema);
   
 
 
-//   sizeOptions: [
-//     {
-//       sizeCategory: {
-//         type: String,
-//         enum: ["small", "medium", "large"], 
-//         required: true,
-//       },
-//       dimensions: {
-//         width: { type: Number, required: true }, 
-//         height: { type: Number, required: true }, 
-//       },
-//       price: {
-//         type: Number, 
-//         required: true,
-//       },
-//     },
-//   ]

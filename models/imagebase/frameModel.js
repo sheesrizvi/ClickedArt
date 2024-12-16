@@ -11,12 +11,10 @@ const frameSchema = new mongoose.Schema(
       },
       material: {
         type: String,
-        enum: ["wood", "metal", "plastic", "glass", "composite"],
         required: true,
       },
       style: {
         type: String,
-        enum: ["classic", "modern", "ornate", "minimalist"],
         required: true,
       },
       thickness: {

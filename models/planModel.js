@@ -1,32 +1,82 @@
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
 
-const planSchema = new Schema({
-  name: { type: String, required: true, unique: true },
-  userType: { 
-    type: String, 
-    enum: ['user', 'photographer'], 
-    required: true 
-  },
-  price: { type: Number, required: true }, 
-  level: { type: Number, enum: [1, 2, 3, 4, 5], default: 1 },
-  isAdFree: { type: Boolean, default: false },
-  downloadLimit: { type: Number, default: null },
-  priorityAccess: { type: Boolean, default: false }, 
-  promotionalTools: { type: Boolean, default: false }, 
-  analyticsAccess: { type: Boolean, default: false }, 
-  allowedImageResolutions: [{ 
-    type: String, 
-    enum: ['original', 'standard', 'large', 'medium', 'small'] 
-  }], 
-  duration: { 
-    type: String, 
-    enum: ['monthly', 'quaterly', 'half-yearly', 'yearly'], 
-    required: true 
-  }, 
-  description: { type: String }, 
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+const planSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        enum: ['Basic', 'Intermediate', 'Advanced'],
+        required: true
+    },
+    cost: [{
+      price: {
+          type: Number,
+          required: true
+      },
+      duration: {
+          type: String,
+          enum: ['monthly', 'yearly'],
+          required: true
+      }
+  }],
+    imageUploadLimit: {
+        type: Number,
+        required: true
+    },
+    catalogCreation: {
+        type: Number,
+        required: true
+    },
+    watermarkingTools: {
+        type: String,
+        enum: ['Basic watermark', 'Custom watermark', 'Advanced watermark and branding options'],
+        required: true
+    },
+    salesReports: {
+        type: String,
+        enum: ['Simple monthly report', 'Detailed sales analytics', 'Advanced analytics with customer insights'],
+        required: true
+    },
+    customPricing: {
+        type: Boolean,
+        required: true
+    },
+    licensingOptions: {
+        type: String,
+        enum: ['Fixed licensing only', 'Flexible licensing (commercial, personal)', 'Full licensing customization'],
+        required: true
+    },
+    socialMediaIntegration: {
+        type: String,
+        enum: ['Limited to sharing', 'Full integration (auto-posting tools)', 'Enhanced social media and website embeds'],
+        required: true
+    },
+    socialMediaAutoPosting: {
+        type: String,
+        enum: ['Not Available', 'Single-platform posting', 'Multi-platform posting with scheduling'],
+        required: true
+    },
+    prioritySupport: {
+        type: String,
+        enum: ['Not Available', 'Standard (24-48 hrs response)', 'Premium (12-24 hrs response, dedicated)'],
+        required: true
+    },
+    advancedTools: {
+        type: String,
+        enum: ['Not Available', 'Limited templates', 'Full customization and analytics dashboard'],
+        required: true
+    },
+    promotionalTools: {
+        type: String,
+        enum: ['No promotions', 'Seasonal promotions', 'Full promotional toolkit (coupons, discounts)'],
+        required: true
+    },
+    trialPeriod: {
+        type: String,
+        enum: ['Not applicable', 'Free for the first 1 month'],
+        required: true
+    }
+}, { timestamps: true });
 
-module.exports = mongoose.model('Plan', planSchema);
+const Plan = mongoose.model('Plan', planSchema);
+
+module.exports = Plan;
+

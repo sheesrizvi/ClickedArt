@@ -22,7 +22,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const addImageInVault = asyncHandler(async (req, res) => {
-  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData } = req.body
+  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
@@ -41,6 +41,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
     category, photographer, imageLinks, resolutions, description, keywords, 
     location, 
     story,
+    license,
     photoPrivacy, watermark, cameraDetails, price: prices, 
     exclusivityDetails, 
     identifiableData
@@ -56,17 +57,14 @@ const addImageInVault = asyncHandler(async (req, res) => {
 })
 
 const updateImageInVault = asyncHandler(async (req, res) => {
-    const { id, category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData } = req.body
+    const { id, category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
 
     const photo = await ImageVault.findOne({ _id: id, photographer })
     if(!photo) return res.status(400).send({  message: 'Photo not found' })
 
-    const license = await License.findOne({ image: photo._id, photographer })
-    if(!license) return res.status(400).send({ message: 'License not exist for this image' })
-    
-    
+  
    photo.category = category || photo.category
    photo.imageLinks = imageLinks || photo.imageLinks
    photo.resolutions = resolutions || photo.resolutions
@@ -79,6 +77,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.exclusivityDetails = exclusivityDetails || photo.exclusivityDetails
    photo.identifiableData = identifiableData || photo.identifiableData
    photo.story = story || photo.story
+   photo.license = license || photo.license
 
    const prices = {}
    if(price) {
@@ -106,7 +105,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
 const getImageFromVault = asyncHandler(async (req, res) => {
     const { id } = req.query
 
-    let image = await ImageVault.findOne({ _id: id }).populate('photographer category')
+    let image = await ImageVault.findOne({ _id: id }).populate('photographer category license')
 
     if(!image) return res.status(400).send({ message: 'Image not found' })
     
@@ -120,13 +119,14 @@ const getImageFromVault = asyncHandler(async (req, res) => {
     res.status(200).send({ photo: image })
 })
 
+
 const getAllImagesFromVault = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
     const totalDocuments = await ImageVault.countDocuments({ isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
-    const images = await ImageVault.find({ isActive: true }).populate('category photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const images = await ImageVault.find({ isActive: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     const newImages = await Promise.all(
         images.map(async (image) => {
@@ -149,7 +149,7 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
 const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
     const { photographer, pageNumber = 1, pageSize = 20 } = req.query
 
-    const photos = await ImageVault.find({ photographer, isActive: true }).populate('category photographer').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const photos = await ImageVault.find({ photographer, isActive: true }).populate('category photographer license').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!photos || photos.length === 0) return res.status(400).send({ message: 'Photos not found' })
 
@@ -177,7 +177,7 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
 const getImagesByCategory = asyncHandler(async(req, res) => {
     const { category, pageNumber = 1, pageSize = 20 } = req.query
 
-    const photos = await ImageVault.find({ category, isActive: true }).populate('category photographer').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const photos = await ImageVault.find({ category, isActive: true }).populate('category photographer license').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!photos || photos.length === 0) return res.status(400).send({ message: 'Photos not found' })
 
@@ -207,7 +207,7 @@ const getImagesByCategoryType = asyncHandler(async(req, res) => {
     const category = await Category.findOne({ name: categoryName})
 
     if(!category) return res.status(400).send({ message: 'Category not found with this title' })
-    const photos = await ImageVault.find({ category: category._id, isActive: true }).populate('category photographer').skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const photos = await ImageVault.find({ category: category._id, isActive: true }).populate('category photographer license ').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!photos || photos.length === 0) return res.status(400).send({ message: 'Photos not found' })
 
