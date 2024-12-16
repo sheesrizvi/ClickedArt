@@ -18,9 +18,9 @@ const {
  router.post('/update-catalogue', updateCatalogue)
  router.get('/get-catalogue-by-id', getCatalogueById)
  router.get('/get-all-catalogues', getAllCatalogues)
- router.get('/get-catalogue-by-photographer', getCatalogueByPhotographer)
+ router.get('/get-catalogues-by-photographer', getCatalogueByPhotographer)
  router.get('/search-catalogue', searchCatalogues)
  router.delete('/delete-catalogue', deleteCatalogue)
- router.delete('/remove-images-from-catalogue', removeImagesFromCatalogue)
+ router.post('/remove-images-from-catalogue', removeImagesFromCatalogue)
 
  module.exports = router

@@ -14,7 +14,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const createPaper = asyncHandler(async (req, res) => {
-  const { name, image, paperType, thickness, basePricePerSquareInch, isActive, customDimensions } = req.body;
+  const { name, image, material, thickness, basePricePerSquareInch, customDimensions } = req.body;
 
   const existingPaper = await Paper.findOne({ name });
   if (existingPaper) {
@@ -25,10 +25,9 @@ const createPaper = asyncHandler(async (req, res) => {
   const paper = await Paper.create({
     name,
     image,
-    paperType,
+    material,
     thickness,
     basePricePerSquareInch,
-    isActive,
     customDimensions
   });
 
@@ -47,7 +46,8 @@ const getPapers = asyncHandler(async (req, res) => {
 });
 
 const getPaperById = asyncHandler(async (req, res) => {
-  const paper = await Paper.findById(req.query.id);
+  const { paperId } = req.query
+  const paper = await Paper.findById(paperId);
   if (!paper) {
     return res.status(404).send({ message: 'Paper not found' });
   }
@@ -55,28 +55,29 @@ const getPaperById = asyncHandler(async (req, res) => {
 });
 
 const updatePaper = asyncHandler(async (req, res) => {
-  const { id, name, image, paperType, thickness, basePricePerSquareInch, isActive, customDimensions } = req.body;
+  const { paperId, name, image, material, thickness, basePricePerSquareInch, customDimensions } = req.body;
 
-  const paper = await Paper.findById(id);
+  const paper = await Paper.findById(paperId);
   if (!paper) {
     return res.status(404).send({ message: 'Paper not found' });
   }
 
   paper.name = name || paper.name;
   paper.image = image || paper.image;
-  paper.paperType = paperType || paper.paperType;
+  paper.material = material || paper.material;
   paper.thickness = thickness || paper.thickness;
   paper.basePricePerSquareInch = basePricePerSquareInch || paper.basePricePerSquareInch;
-  paper.isActive = isActive !== undefined ? isActive : paper.isActive;
   if (customDimensions) {
     paper.customDimensions = [...paper.customDimensions, ...customDimensions];
   }
   const updatedPaper = await paper.save();
   res.status(200).json({paper: updatedPaper});
-});
+})
 
 const deletePaper = asyncHandler(async (req, res) => {
-  const paper = await Paper.findById(req.query.id);
+  const { paperId } = req.query
+  
+  const paper = await Paper.findById(paperId);
   if (!paper) {
     return res.status(404).send({ message: 'Paper not found' });
   }
@@ -92,7 +93,7 @@ const deletePaper = asyncHandler(async (req, res) => {
     await s3.send(command);
   }
 
-  await Paper.findByIdAndDelete(req.query.id);
+  await Paper.findByIdAndDelete(paperId);
   res.status(200).json({ message: "Paper deleted successfully." });
 });
 
@@ -105,7 +106,7 @@ const calculatePaperPrices = asyncHandler(async (req, res) => {
   }
 
   const paper = await Paper.findById(paperId);
-  if (!paper || !paper.isActive) {
+  if (!paper) {
     res.status(404);
     throw new Error('Paper not found or is inactive.');
   }
@@ -159,7 +160,7 @@ const calculatePaperPrices = asyncHandler(async (req, res) => {
       },
     },
   });
-});
+})
 
 module.exports = {
   createPaper,
@@ -168,4 +169,4 @@ module.exports = {
   updatePaper,
   deletePaper,
   calculatePaperPrices
-};
+}

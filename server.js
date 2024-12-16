@@ -15,12 +15,15 @@ const followRoutes = require('./routes/followRoutes.js')
 const planRoutes = require('./routes/planRoutes.js')
 const subscriptionRoutes = require('./routes/subscriptionRoutes.js')
 const paperRoutes = require('./routes/imagebase/paperRoutes.js')
+const licenseRoutes = require('./routes/imagebase/licenseRoutes.js')
 const frameRoutes = require('./routes/imagebase/frameRoutes.js')
 const downloadRoutes = require('./routes/downloadRoutes.js')
 const invoiceRoutes = require('./routes/invoiceRoutes.js')
 const gstRoutes = require('./routes/gstRoutes.js')
 const blogRoutes = require('./routes/blogRoutes.js')
+const catalogueRoutes = require('./routes/imagebase/catalogueRoutes.js')
 const upload  = require("./routes/upload");
+
 
 const app = express();
 app.use(
@@ -49,6 +52,8 @@ app.use('/api/royalty', royaltyRoutes)
 app.use('/api/invoice', invoiceRoutes)
 app.use('/api/gst', gstRoutes)
 app.use('/api/blog', blogRoutes)
+app.use('/api/license', licenseRoutes)
+app.use('/api/catalogue', catalogueRoutes)
 
 dbConnect()
 

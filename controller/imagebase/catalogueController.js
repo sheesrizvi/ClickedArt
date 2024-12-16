@@ -22,6 +22,9 @@ const getAllCatalogues = asyncHandler(async (req, res) => {
         },
         {
             path: 'photographer'
+        },
+        {
+            path: 'license'
         }
     ]
     }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
@@ -47,6 +50,9 @@ const getCatalogueByPhotographer = asyncHandler(async (req, res) => {
         },
         {
             path: 'photographer'
+        },
+        {
+            path: 'license'
         }
     ]
     }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
@@ -63,13 +69,17 @@ const getCatalogueByPhotographer = asyncHandler(async (req, res) => {
 })
 
 const getCatalogueById = asyncHandler(async (req, res) => {
-    const catalogue = await Catalogue.findById(req.query.id).populate('photographer').populate({
+    const { catalogueId } = req.query
+    const catalogue = await Catalogue.findById(catalogueId).populate('photographer').populate({
         path: 'images',
         populate: [{
             path: 'category'
         },
         {
             path: 'photographer'
+        },
+        {
+            path: 'license'
         }
     ]
     })
@@ -90,7 +100,6 @@ const updateCatalogue = asyncHandler(async (req, res) => {
     }
     catalogue.name = name || catalogue.name;
     catalogue.description = description || catalogue.description
-    catalogue.photographer = photographer || catalogue.photographer
     if (images) {
         catalogue.images = [...catalogue.images, ...images]
     }
@@ -111,8 +120,8 @@ const deleteCatalogue = asyncHandler(async (req, res) => {
 
 
 const removeImagesFromCatalogue = asyncHandler(async (req, res) => {
-    const { catalogueId, imagesToRemove } = req.query
-
+    const { catalogueId, imagesToRemove } = req.body
+    console.log(req.query)
     const catalogue = await Catalogue.findById(catalogueId)
     if (!catalogue) {
         res.status(404);
@@ -135,7 +144,8 @@ const searchCatalogues = asyncHandler(async (req, res) => {
         $and: [
             {
                 $or: [
-                    { name: { $regex: Query, $options: 'i' }}
+                    { name: { $regex: Query, $options: 'i' }},
+                    { description: { $regex: Query, $options: 'i' } }
                  ]
             },
             {
@@ -150,6 +160,9 @@ const searchCatalogues = asyncHandler(async (req, res) => {
         },
         {
             path: 'photographer'
+        },
+        {
+            path: 'license'
         }
     ]
     }).skip((pageNumber -1) * pageSize).limit(pageSize)

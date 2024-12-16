@@ -127,7 +127,7 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
     const images = await ImageVault.find({ isActive: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
-
+   
     const newImages = await Promise.all(
         images.map(async (image) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
@@ -313,10 +313,10 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   
-  const totalDocuments = await ImageVault.countDocuments({ exclusiveLicenseStatus: 'pending' })
+  const totalDocuments = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false })
   const pageCount = Math.ceil(totalDocuments/pageSize)
 
-  const images = await ImageVault.find({ exclusiveLicenseStatus: 'pending' }).populate('category photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+  const images = await ImageVault.find({ exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
   const newImages = await Promise.all(
       images.map(async (image) => {

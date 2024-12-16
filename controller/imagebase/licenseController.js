@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const License = require('../models/license');
+const License = require('../../models/imagebase/licensingModel');
 
 const createLicense = asyncHandler(async (req, res) => {
     const { type, purpose, commonUses, restrictions, approxPrice, scopeOfUse, duration, geographicLimitations,canModify, attributionRequired   } = req.body
@@ -26,7 +26,8 @@ const getAllLicenses = asyncHandler(async (req, res) => {
 });
 
 const getLicenseById = asyncHandler(async (req, res) => {
-    const license = await License.findById(req.query.id);
+    const { licenseId } = req.query
+    const license = await License.findById(licenseId);
     if (!license) {
         return res.status(404).json({ error: 'License not found' });
     }
@@ -57,11 +58,13 @@ const updateLicense = asyncHandler(async (req, res) => {
 
 const deleteLicense = asyncHandler(async (req, res) => {
     const { licenseId } = req.query
+    if (!licenseId) {
+        return res.status(404).json({ error: 'License Id is required' });
+    }
     const license = await License.findByIdAndDelete(licenseId);
     if (!license) {
         return res.status(404).json({ error: 'License not found' });
     }
-    await License.findOneAndDelete({ _id: licenseId })
     res.status(200).json({ message: 'License deleted successfully' });
 });
 

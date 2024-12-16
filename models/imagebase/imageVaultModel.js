@@ -64,7 +64,8 @@ const imageVaultSchema = mongoose.Schema({
     },
     license: {
        type: mongoose.Schema.Types.ObjectId,
-       ref: "License"
+       ref: "License",
+       required: true
     },
     exclusivityDetails: {
         type: String,  
