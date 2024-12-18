@@ -22,7 +22,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const addImageInVault = asyncHandler(async (req, res) => {
-  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
+  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license, title } = req.body
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
@@ -38,7 +38,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
 
   const newImage = await ImageVault.create({
-    category, photographer, imageLinks, resolutions, description, keywords, 
+    category, photographer, imageLinks, resolutions, title, description, keywords, 
     location, 
     story,
     license,
@@ -57,7 +57,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 })
 
 const updateImageInVault = asyncHandler(async (req, res) => {
-    const { id, category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
+    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
 
@@ -69,6 +69,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.imageLinks = imageLinks || photo.imageLinks
    photo.resolutions = resolutions || photo.resolutions
    photo.description = description || photo.description
+   photo.title = title || photo.title
    photo.keywords = keywords || photo.keywords
    photo.location = location || photo.location
    photo.privacy = photoPrivacy || photo.photoPrivacy

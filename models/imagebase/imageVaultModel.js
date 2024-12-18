@@ -21,6 +21,9 @@ const imageVaultSchema = mongoose.Schema({
         medium: {  width: { type: Number }, height: { type: Number }  },
         original: {  width: { type: Number }, height: { type: Number }  },
     },
+    title: {
+        type: String
+    },
     description: {
             type: String
         },
