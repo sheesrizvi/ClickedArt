@@ -32,10 +32,10 @@ const generateInvoice = async (req, res) => {
  
   for (const order of orders) {
     console.log(1)
-    const { image, resolution } = order.imageInfo;
+    const { image, resolution } = order.imageInfo
    
    
-    const originalPrice = order.imageInfo.price;
+    const originalPrice = order.imageInfo.price
 
     const royaltyAmount = (originalPrice * royaltyShare) / 100;
     let royaltyWithGST
