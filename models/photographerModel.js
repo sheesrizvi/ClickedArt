@@ -127,6 +127,11 @@ const photographerSchema = new mongoose.Schema({
     enum: ['Photographer'],
     default: 'Photographer'
   },
+  photographerType: {
+    type: String, 
+    enum: ['Master', 'Influencer', 'Ambassador'],
+    default: 'Master'
+  },
   photographerStatus: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],
