@@ -286,6 +286,32 @@ const getAllPendingPhotographersForAdmin = asyncHandler(async (req, res) => {
 
 })
 
+
+const updatePhotographerRank = asyncHandler(async (req, res) => {
+    const { rank, photographerId } = req.body
+
+    const validRank = ['Master', 'Influencer', 'Ambassador']
+
+    if (!rank) {
+        return res.status(400).send({ message: 'Rank is required' });
+    }
+
+    if(!validRank.includes(rank)){
+        return res.status(400).send({ message: 'Rank is not valid' })
+    }
+    const photographer = await Photographer.findOne({ _id: photographerId })
+
+    if(!photographer) {
+        return res.status(400).send({ message: 'Photographer not found' })
+    }
+    photographer.rank = rank
+
+    await photographer.save()
+
+    res.status(200).send({ message: 'Photographer Rank updated' })
+})
+
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -294,5 +320,6 @@ module.exports = {
     getAllPhotographers,
     getPhotographerById,
     getAllPendingPhotographersForAdmin,
-    updatePhotographer
+    updatePhotographer,
+    updatePhotographerRank
 }

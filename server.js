@@ -23,6 +23,7 @@ const gstRoutes = require('./routes/gstRoutes.js')
 const blogRoutes = require('./routes/blogRoutes.js')
 const catalogueRoutes = require('./routes/imagebase/catalogueRoutes.js')
 const wishlistRoutes = require('./routes/wishlistRoutes.js')
+const storyRoutes = require('./routes/storyRoutes.js')
 const upload  = require("./routes/upload");
 
 
@@ -56,6 +57,7 @@ app.use('/api/blog', blogRoutes)
 app.use('/api/license', licenseRoutes)
 app.use('/api/catalogue', catalogueRoutes)
 app.use('/api/wishlist', wishlistRoutes)
+app.use('/api/story', storyRoutes)
 
 dbConnect()
 

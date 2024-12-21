@@ -127,7 +127,7 @@ const photographerSchema = new mongoose.Schema({
     enum: ['Photographer'],
     default: 'Photographer'
   },
-  photographerType: {
+  rank: {
     type: String, 
     enum: ['Master', 'Influencer', 'Ambassador'],
     default: 'Master'
