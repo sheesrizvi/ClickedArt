@@ -10,9 +10,9 @@ const storySchema = mongoose.Schema({
     media_url: {
         type: String
     },
-    referredBy: {
+    inspiredBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Photographer',
+        ref: 'ImageVault',
         default: null
     },
     expiration_time: {
