@@ -68,7 +68,7 @@ const updatePaper = asyncHandler(async (req, res) => {
   paper.thickness = thickness || paper.thickness;
   paper.basePricePerSquareInch = basePricePerSquareInch || paper.basePricePerSquareInch;
   if (customDimensions) {
-    paper.customDimensions = [...paper.customDimensions, ...customDimensions];
+    paper.customDimensions = customDimensions;
   }
   const updatedPaper = await paper.save();
   res.status(200).json({paper: updatedPaper});
