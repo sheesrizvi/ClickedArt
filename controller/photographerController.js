@@ -290,7 +290,7 @@ const getAllPendingPhotographersForAdmin = asyncHandler(async (req, res) => {
 const updatePhotographerRank = asyncHandler(async (req, res) => {
     const { rank, photographerId } = req.body
 
-    const validRank = ['Master', 'Influencer', 'Ambassador']
+    const validRank = ['master', 'professional', 'ambassador']
 
     if (!rank) {
         return res.status(400).send({ message: 'Rank is required' });
@@ -311,6 +311,17 @@ const updatePhotographerRank = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Photographer Rank updated' })
 })
 
+const toggleFeaturedPhotographer = asyncHandler(async (req, res) => {
+    const { photographerId } = req.query
+
+    const photographer = await Photographer.findById({ photographerId })
+
+    photographer.featuredArtist = !photographer.featuredArtist
+
+    await photographer.save()
+
+    res.status(200).send({  message: 'Featured Photographer toggle successfully' })
+})
 
 module.exports = {
     registerPhotographer,

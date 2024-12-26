@@ -40,12 +40,7 @@ const createOrder = asyncHandler(async (req, res) => {
       user: userId,
       userType: type
     },
-    imageInfo: {
-      image: imageInfo.image,
-      photographer: imageInfo.photographer,
-      resolution: imageInfo.resolution,
-      price: imageInfo.price
-    },
+    imageInfo: imageInfo,
     frameInfo,
     canvasInfo,
     subTotal,

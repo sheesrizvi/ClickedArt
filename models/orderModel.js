@@ -10,21 +10,17 @@ const orderSchema = new mongoose.Schema(
         image: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'ImageVault',
-            required: true,
           },  
         photographer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Photographer',
-            required: true
         },
         resolution: {
             type: String,
             enum: ['original', 'medium', 'small'],
-            required: true,
           },
         price: {
             type: Number,
-            required: true,
           },
     },
     frameInfo: {

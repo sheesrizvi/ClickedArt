@@ -129,8 +129,8 @@ const photographerSchema = new mongoose.Schema({
   },
   rank: {
     type: String, 
-    enum: ['Master', 'Influencer', 'Ambassador'],
-    default: 'Master'
+    enum: ['master', 'influencer', 'ambassador'],
+    default: 'master'
   },
   photographerStatus: {
         type: String,
@@ -148,6 +148,10 @@ const photographerSchema = new mongoose.Schema({
         ref: 'User',
         required: false
     },
+  featuredArtist: {
+      type: Boolean,
+      default: false
+    }
 }, {
   timestamps: true
 });

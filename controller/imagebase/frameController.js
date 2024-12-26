@@ -78,7 +78,7 @@ const updateFrame = asyncHandler(async (req, res) => {
   frame.basePricePerLinearInch = basePricePerLinearInch || frame.basePricePerLinearInch;
   frame.isActive = isActive !== undefined ? isActive : frame.isActive;
   if (customDimensions) {
-    frame.customDimensions = [...frame.customDimensions, ...customDimensions];
+    frame.customDimensions = customDimensions
   }
   
   const updatedFrame = await frame.save();

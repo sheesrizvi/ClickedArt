@@ -4,6 +4,7 @@ const Order = require('../models/orderModel')
 const RoyaltySettings = require('../models/imagebase/royaltyModel')
 const GST = require('../models/gstModel')
 const mongoose = require('mongoose')
+const Photographer = require('../models/photographerModel.js')
 
 const generateInvoice = async (req, res) => {
   const { photographerId, startDate, endDate } = req.body;
@@ -24,14 +25,24 @@ const generateInvoice = async (req, res) => {
     return res.status(404).json({ message: 'Global royalty settings not found.' });
   }
 
-  const royaltyShare = royaltySettings.royaltyShare || 70; 
+  const photographerData = await Photographer.findOne({ _id: photographerId })
+  const rank = photographerData.rank
+  let royaltyShare
+  if(rank === 'master') {
+    royaltyShare = royaltySettings.rankWiseRoyaltyShare.master
+  } else if (rank === 'ambassador') {
+    royaltyShare = royaltySettings.rankWiseRoyaltyShare.ambassador
+  } else if (rank === 'professional') {
+    royaltyShare = royaltySettings.rankWiseRoyaltyShare.professional
+  }
+
   let totalRoyaltyAmount = 0;
   let totalAmountPayable = 0;
   const orderDetails = [];
 
  
   for (const order of orders) {
-    console.log(1)
+    
     const { image, resolution } = order.imageInfo
    
    
