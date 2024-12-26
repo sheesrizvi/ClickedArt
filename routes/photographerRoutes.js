@@ -1,5 +1,7 @@
 const express = require('express')
-const { registerPhotographer, photographerLogin, resetPassword, getAllPhotographers, getPhotographerById, getAllPendingPhotographersForAdmin, updatePhotographer, updatePhotographerRank } = require('../controller/photographerController')
+const { registerPhotographer, photographerLogin, resetPassword, getAllPhotographers, getPhotographerById, getAllPendingPhotographersForAdmin, updatePhotographer, updatePhotographerRank, getFeaturedPhotographer,
+    toggleFeaturedPhotographer
+ } = require('../controller/photographerController')
 const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
 const router = express.Router()
 
@@ -13,5 +15,7 @@ router.get('/get-all-photographers', getAllPhotographers)
 router.get('/get-photographer-by-id', getPhotographerById)
 router.get('/get-all-pending-photographers-for-admin', isAdmin, getAllPendingPhotographersForAdmin)
 router.post('/update-photographer-rank', updatePhotographerRank)
+router.post('/toggle-featured-photographer', isAdmin, toggleFeaturedPhotographer)
+router.get('/get-featured-photographers', getFeaturedPhotographer)
 
 module.exports = router

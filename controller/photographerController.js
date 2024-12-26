@@ -323,6 +323,22 @@ const toggleFeaturedPhotographer = asyncHandler(async (req, res) => {
     res.status(200).send({  message: 'Featured Photographer toggle successfully' })
 })
 
+const getFeaturedPhotographer = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
+
+    const [ featuredPhotographer, totalDocuments ] = await Promise.all([
+        Photographer.find({ featuredArtist: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+        Photographer.countDocuments({ featuredArtist: true })
+    ])
+
+    if(!featuredPhotographer || featuredPhotographer.length === 0) {
+        return res.status(400).send({  message: 'Featured Photographer not found' })
+    }
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    res.status(200).send({  featuredPhotographer, pageCount })
+})
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -332,5 +348,7 @@ module.exports = {
     getPhotographerById,
     getAllPendingPhotographersForAdmin,
     updatePhotographer,
-    updatePhotographerRank
+    updatePhotographerRank,
+    toggleFeaturedPhotographer,
+    getFeaturedPhotographer
 }
