@@ -31,6 +31,7 @@ const createFrame = asyncHandler(async (req, res) => {
     thickness,
     basePricePerLinearInch,
     isActive,
+    customDimensions
   });
 
   res.status(201).json({ frame });
