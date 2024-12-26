@@ -26,6 +26,8 @@ const wishlistRoutes = require('./routes/wishlistRoutes.js')
 const storyRoutes = require('./routes/storyRoutes.js')
 const marketFreezeRoutes = require('./routes/enquiry/marketFreezeRoutes.js')
 const bulkDownloadEnquiryRoutes = require('./routes/enquiry/bulkDownloadEnquiryRoutes.js')
+const customRequestRoutes = require('./routes/enquiry/customRequestRoutes.js')
+const orderSupportRequestRoutes = require('./routes/enquiry/orderSupportRoutes.js')
 const upload  = require("./routes/upload");
 
 
@@ -60,8 +62,11 @@ app.use('/api/license', licenseRoutes)
 app.use('/api/catalogue', catalogueRoutes)
 app.use('/api/wishlist', wishlistRoutes)
 app.use('/api/story', storyRoutes)
-app.use('/api/marketfreeze-enquiry', marketFreezeRoutes)
-app.use('/api/download-enquiry', bulkDownloadEnquiryRoutes)
+app.use('/api/marketfreeze', marketFreezeRoutes)
+app.use('/api/bulkenquiry', bulkDownloadEnquiryRoutes)
+app.use('/api/customenquiry', customRequestRoutes)
+app.use('/api/ordersupport', orderSupportRequestRoutes)
+
 dbConnect()
 
 

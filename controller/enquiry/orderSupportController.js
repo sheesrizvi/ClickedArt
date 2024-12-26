@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const OrderSupport = require('../models/OrderSupport');
+const OrderSupport = require('../../models/enquiry/orderSupportFormModel.js')
 
 const createOrderSupport = asyncHandler(async (req, res) => {
     const {
@@ -30,11 +30,9 @@ const createOrderSupport = asyncHandler(async (req, res) => {
 const getPendingOrderSupportRequests = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query;
     
-    const { customRequests, totalDocuments } = await Promise.all([
-        OrderSupport.find({ $or: [ { status: 'review' }, { status: 'pending' } ]}).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize),
-        OrderSupport.countDocuments({ $or: [ { status: 'review' }, { status: 'pending' } ]})
-    ])
 
+    const customRequests = await  OrderSupport.find({ $or: [ { status: 'review' }, { status: 'pending' } ]}).populate('order').populate('userInfo.user').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize)
+    const totalDocuments = await  OrderSupport.countDocuments({ $or: [ { status: 'review' }, { status: 'pending' } ]})
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
     res.status(200).json({ customRequests, pageCount });
@@ -43,10 +41,8 @@ const getPendingOrderSupportRequests = asyncHandler(async (req, res) => {
 const getResolvedOrderSupportRequests = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query;
     
-    const { customRequests, totalDocuments } = await Promise.all([
-        OrderSupport.find({ status: 'approved' }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize),
-        OrderSupport.countDocuments({ status: 'approved'})
-    ])
+    const customRequests = await  OrderSupport.find({ status: 'approved' }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize)
+    const totalDocuments = await  OrderSupport.countDocuments({ status: 'approved'})
 
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
@@ -78,6 +74,9 @@ const updateOrderSupport = asyncHandler(async (req, res) => {
         }
     );
 
+    if(!orderSupport) {
+        return res.status(400).send({ message: 'Order Support not found for this order' })
+    }
     orderSupport.issueType = issueType || orderSupport.issueType
     orderSupport.issueDescription = issueDescription || orderSupport.issueDescription
     orderSupport.preferredContactMethod = preferredContactMethod || orderSupport.preferredContactMethod
@@ -87,18 +86,16 @@ const updateOrderSupport = asyncHandler(async (req, res) => {
 
 const deleteOrderSupport = asyncHandler(async (req, res) => {
     const { orderId } = req.query;
-    const orderReportExist = await OrderSupport.findOne({ order })
-
+    const orderReportExist = await OrderSupport.findOneAndDelete({ order: orderId })
     if(!orderReportExist) {
         return res.status(400).send({ message : 'Order Support not exist on this order' })
     }
 
-    await OrderSupport.findOneAndDelete({ order: orderId });
     res.status(200).send({ message: 'Order Support Deleted Successfully' })
 });
 
 const changeOrderSupportStatus = asyncHandler(async (req, res) => {
-    const { status, orderId } = req.query
+    const { status, orderId } = req.body
 
     const validStatusTypes = ['pending', 'review', 'approved', 'rejected']
 

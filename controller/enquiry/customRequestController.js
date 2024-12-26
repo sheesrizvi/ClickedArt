@@ -1,5 +1,5 @@
 const asyncHandler = require('express-async-handler');
-const CustomRequest = require('../models/CustomRequest');
+const CustomRequest = require('../../models/enquiry/customRequestFormModel.js');
 
 const createCustomRequest = asyncHandler(async (req, res) => {
     const { name, email, phone, requestType, requestDescription } = req.body;
@@ -17,11 +17,8 @@ const createCustomRequest = asyncHandler(async (req, res) => {
 const getPendingCustomRequests = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query;
     
-    const { customRequests, totalDocuments } = await Promise.all([
-        CustomRequest.find({ $or: [ { status: 'review' }, { status: 'pending' } ]}).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize),
-        CustomRequest.countDocuments({ $or: [ { status: 'review' }, { status: 'pending' } ]})
-    ])
-
+    const customRequests = await  CustomRequest.find({ $or: [ { status: 'review' }, { status: 'pending' } ]}).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const totalDocuments = await  CustomRequest.countDocuments({ $or: [ { status: 'review' }, { status: 'pending' } ]})
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
     res.status(200).json({ customRequests, pageCount });
@@ -30,10 +27,9 @@ const getPendingCustomRequests = asyncHandler(async (req, res) => {
 const getResolvedCustomRequests = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query;
     
-    const { customRequests, totalDocuments } = await Promise.all([
-        CustomRequest.find({ status: 'approved' }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize),
-        CustomRequest.countDocuments({ status: 'approved'})
-    ])
+    const customRequests = await  CustomRequest.find({ status: 'approved' }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const totalDocuments = await  CustomRequest.countDocuments({ status: 'approved' })
+ 
 
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
@@ -42,8 +38,11 @@ const getResolvedCustomRequests = asyncHandler(async (req, res) => {
 
 
 const getCustomRequestById = asyncHandler(async (req, res) => {
-    const { id } = req.query;
-    const customRequest = await CustomRequest.findById(id);
+    const { requestId } = req.query;
+    const customRequest = await CustomRequest.findById(requestId);
+    if(!customRequest) {
+        return res.status(400).send({ message: 'Custom Request Updated successfully' })
+    }
     res.status(200).json({customRequest});
 });
 
@@ -59,7 +58,7 @@ const updateCustomRequest = asyncHandler(async (req, res) => {
     customRequest.email = email || customRequest.email
     customRequest.phone = phone || customRequest.phone
     customRequest.requestType = requestType || customRequest.requestType
-    customRequest.description = description || customRequest.description
+    customRequest.description = requestDescription|| customRequest.requestDescription
 
     await customRequest.save()
 

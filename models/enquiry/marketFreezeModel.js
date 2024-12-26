@@ -22,13 +22,13 @@ const marketFreezeRequestSchema = new mongoose.Schema({
             required: true, 
             enum: ['Personal', 'Commercial', 'Other'] 
         },
-        additionalComments: { type: String },
+        additionalReason: { type: String },
     },
     status: {
         type: String,
-        enum: ['Pending', 'Approved', 'Rejected'],
-        default: 'Pending',
-    },
+        enum: ['pending', 'review', 'approved', 'rejected'],
+        default: 'pending',
+ },
 }, { timestamps: true });
 
 const MarketFreeze = mongoose.model('MarketFreezeRequest', marketFreezeRequestSchema)

@@ -1,15 +1,9 @@
 const mongoose = require('mongoose')
 
 const bulkenquirySchema = mongoose.Schema({
-    user: {
-        name: { type: String, required: true },
-        email: { type: String, required: true },
-        phone: { type: String, required: true },
-        company: { type: String },
-        deliveryAddress: { 
-            country: { type: String },
-            address: { type: String }
-         },
+    userInfo: { 
+            user: { type: mongoose.Schema.Types.ObjectId, refPath: 'userInfo.userType', required: true }, 
+            userType: { type: String, enum: ['User', 'Photographer'], required: true },
     },
     orderDetails: {
         orderType: { 
@@ -36,8 +30,8 @@ const bulkenquirySchema = mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'In Review', 'Approved', 'Rejected', 'Completed'],
-        default: 'Pending',
+        enum: ['pending', 'review', 'approved', 'rejected'],
+        default: 'pending',
     },
 })
 

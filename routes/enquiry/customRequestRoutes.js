@@ -16,7 +16,7 @@ router.post('/create-custom-request', createCustomRequest)
 router.post('/update-customer-request', updateCustomRequest)
 router.get('/get-custom-request-by-id', getCustomRequestById)
 router.get('/get-pending-custom-request', getPendingCustomRequests)
-router.get('/get-resolved-custom-request', getResolvedCustomRequests)
+router.get('/get-approved-custom-request', getResolvedCustomRequests)
 router.delete('/delete-custom-request', deleteCustomRequest)
 router.post('/change-custom-request-form-status', changeCustomRequestFormStatus)
 

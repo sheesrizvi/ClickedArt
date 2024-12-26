@@ -3,6 +3,7 @@ const MarketFreeze = require('../../models/enquiry/marketFreezeModel.js')
 
 const createMarketFreezeRequest = asyncHandler(async (req, res) => {
     const { user, requestDetails } = req.body;
+
     if (!user || !requestDetails) {
         return res.status(400).json({ message: 'Missing required fields: user, requestDetails' });
     }
@@ -11,15 +12,41 @@ const createMarketFreezeRequest = asyncHandler(async (req, res) => {
     res.status(201).json({ message: 'Market Freeze Request created successfully',  marketFreezeRequest });
 });
 
-const getMarketFreezeRequests = asyncHandler(async (req, res) => {
+const getPendingMarketFreezeRequests = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
-    const marketFreezeRequest = await MarketFreeze.find({}).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const marketFreezeRequest = await MarketFreeze.find({
+        $or: [
+            { status: 'pending' },
+            { status: 'reviewed' }
+        ]
+    }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
     
     if(!marketFreezeRequest || marketFreezeRequest.length === 0) {
         return res.status(400).send({ message: 'Enquiries not found' })
     }
 
-    const totalDocuments = await MarketFreeze.countDocuments({})
+    const totalDocuments = await MarketFreeze.countDocuments({ $or: [
+        { status: 'pending' },
+        { status: 'reviewed' }
+    ]})
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+
+    res.status(200).json({marketFreezeRequest, pageCount});
+});
+
+
+const getResolvedMarketFreezeRequests = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
+    const marketFreezeRequest = await MarketFreeze.find({
+      status: 'approved'
+    }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    
+    if(!marketFreezeRequest || marketFreezeRequest.length === 0) {
+        return res.status(400).send({ message: 'Enquiries not found' })
+    }
+
+    const totalDocuments = await MarketFreeze.countDocuments({  status: 'resolved' })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
 
@@ -27,8 +54,8 @@ const getMarketFreezeRequests = asyncHandler(async (req, res) => {
 });
 
 const getMarketFreezeRequestById = asyncHandler(async (req, res) => {
-    const { id } = req.query;
-    const marketFreezeRequest = await MarketFreeze.findById(id);
+    const { requestId } = req.query;
+    const marketFreezeRequest = await MarketFreeze.findById(requestId);
     if (!marketFreezeRequest) {
         return res.status(404).json({ message: 'Request not found' });
     }
@@ -36,30 +63,33 @@ const getMarketFreezeRequestById = asyncHandler(async (req, res) => {
 })
 
 const deleteMarketFreezeRequest = asyncHandler(async (req, res) => {
-    const { id } = req.query;
-    const deletedRequest = await MarketFreeze.findByIdAndDelete(id);
+    const { requestId } = req.query;
+    const deletedRequest = await MarketFreeze.findByIdAndDelete(requestId)
+    
     if (!deletedRequest) {
-        res.status(404).json({ message: 'Request not found' });
-        return;
+       return res.status(404).json({ message: 'Request not found' })
     }
-    res.status(200).json({ message: 'Request deleted successfully' });
+    res.status(200).json({ message: 'Request deleted successfully' })
 })
 
 const updateMarketFreezeRequestStatus = asyncHandler(async (req, res) => {
-    const { id, status } = req.query;
-    const marketFreezeRequest = await MarketFreeze.findById(id)
+    const { requestId, status } = req.body;
+    const marketFreezeRequest = await MarketFreeze.findById(requestId)
+
     if(!marketFreezeRequest) {
         return res.status(400).send({ message: 'No Enquiry Found' })
     }
+
     marketFreezeRequest.status = status
     await marketFreezeRequest.save()
 
-    res.status(200).json({ marketFreezeRequest });
+    res.status(200).json({ message: 'Status updated', marketFreezeRequest });
 });
 
 module.exports = {
     createMarketFreezeRequest,
-    getMarketFreezeRequests,
+    getPendingMarketFreezeRequests,
+    getResolvedMarketFreezeRequests,
     getMarketFreezeRequestById,
     deleteMarketFreezeRequest,
     updateMarketFreezeRequestStatus
