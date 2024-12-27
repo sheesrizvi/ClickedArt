@@ -18,7 +18,7 @@ const blogSchema = mongoose.Schema({
     type: { type: String, enum: ['Blog'], default: 'Blog' },
     isHide: { type: Boolean, default: false },
     blogType: { type: String, enum: ['blog', 'successstory'], default: 'blog', required: true },
-    photographerName: { type: String },
+    photographer: { type: mongoose.Schema.Types.ObjectId, ref: 'Photographer' },
     achievements: [{ type: String }],
 }, { timestamps: true })
 

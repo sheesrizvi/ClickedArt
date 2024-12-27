@@ -9,46 +9,63 @@ const { S3Client } = require('@aws-sdk/client-s3')
 
 
 const addBlog = asyncHandler(async (req, res) => {
-    const { authorInfo, slug, content, coverImage, tags } = req.body
+    const { authorInfo, slug, content, coverImage, tags, photographer, achievements, blogType  } = req.body
     if(!authorInfo || !content || !coverImage) return res.status(400).send({ message: 'All Fields are required'})
-   
+    
+    let blog 
+    if(blogType === 'successstory') {
+        blog = new Blog({
+            authorInfo,
+            slug,
+            content,
+            coverImage,
+            tags,
+            photographer,
+            achievements,
+            blogType
+        })
+    } else {
+        blog = new Blog({
+            authorInfo,
+            slug,
+            content,
+            coverImage,
+            tags
+        })
+    }
         
-    const blog = new Blog({
-        authorInfo,
-        slug,
-        content,
-        coverImage,
-        tags
-    })
-
     await blog.save()
 
     res.status(200).send({ message: 'Blog created successfully', blog })
 })
 
 const updateBlog = asyncHandler(async (req, res) => {
-    const {authorId, blogId, slug, content, coverImage, tags  } = req.body
+    const {blogId, slug, content, coverImage, tags, photographer, achievements  } = req.body
 
-    const blog = await Blog.findOne({ _id: blogId, 'authorInfo.author' : authorId })
+    const blog = await Blog.findOne({ _id: blogId })
     if(!blog) return res.status(400).send({ message: 'Blog not found' })
 
     blog.slug = slug || blog.slug
     blog.content = content || blog.content
-    if (coverImage && Array.isArray(coverImage)) {
-        blog.coverImage.push(...coverImage);
-        await blog.save()
-    }
-    blog.tags = tags || blog.tags
+    blog.coverImage = coverImage || blog.coverImage
 
+    blog.tags = tags || blog.tags
+    
+    if(blog.blogType === 'successstory') {
+        blog.achievements = achievements || blog.achievements
+        blog.photographer = photographer || blog.photographer
+    }
     await blog.save()
 
     res.status(200).send({ message: 'Blog update successfull', blog })
 })
 
 const deleteBlog = asyncHandler(asyncHandler(async (req, res) => {
-    const { authorId, blogId } = req.body
-    const blog = await Blog.findOne({ _id: blogId, 'authorInfo.author' : authorId })
+    const { blogId } = req.query
+
+    const blog = await Blog.findOne({ _id: blogId  })
     if(!blog) return res.status(400).send({ message: 'No Blog found' })
+
     const f1 = blog.coverImage
     if (f1) {
 
@@ -70,16 +87,17 @@ const deleteBlog = asyncHandler(asyncHandler(async (req, res) => {
         const response = await s3.send(command);
        
     }
-    await Blog.findOneAndDelete({ _id: blogId, 'authorInfo.author' : authorId })
+    await Blog.findOneAndDelete({ _id: blogId })
+
     res.status(200).send({ message: 'Blog Deleted successfully' })
 
 }))
 
 const getBlogById = asyncHandler(async (req, res) => {
     const { id } = req.query
-    let blog = await Blog.findOne({ _id: id }).populate('authorInfo.author')
+    let blog = await Blog.findOne({ _id: id }).populate('authorInfo.author').populate('photographer')
 
-    if(!blog) return res.status(400).send({ message: 'Image not found' })
+    if(!blog) return res.status(400).send({ message: 'Blog not found' })
     
     // const likeExist = await Like.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId })
     // const commentExist = await Comment.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId  })
@@ -97,10 +115,10 @@ const getBlogById = asyncHandler(async (req, res) => {
 const getAllBlogs = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const totalDocuments = await Blog.countDocuments({})
+    const totalDocuments = await Blog.countDocuments({ blogType: 'blog' })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
-    const blogs = await Blog.find({}).populate('authorInfo.author').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const blogs = await Blog.find({ blogType: 'blog' }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     const newBlogs = await Promise.all(
         blogs.map(async (blog) => {
@@ -120,12 +138,35 @@ const getAllBlogs = asyncHandler(async (req, res) => {
 })
 
 
+const getAllSuccessStories = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
 
+    const totalDocuments = await Blog.countDocuments({ blogType: 'successstory' })
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    const blogs = await Blog.find({ blogType: 'successstory' }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+    const newBlogs = await Promise.all(
+        blogs.map(async (blog) => {
+            // const likeExist = await Like.findOne({ 'entityInfo.entity': blog._id, 'userInfo.user': requesterId });
+            // const commentExist = await Comment.findOne({ 'entityInfo.entity': blog._id, 'userInfo.user': requesterId });
+          
+            return {
+                ...blog.toObject(),
+                // hasLiked: !!likeExist,
+                // hasCommented: !!commentExist,
+            };
+        })
+    );
+    
+   
+    res.status(200).send({ successstories : newBlogs, pageCount })
+})
 
 const getBlogsByTags = asyncHandler(async (req, res) => {
     const { requesterId, tag } = req.query
     if(!requesterId || !tag) return res.status(400).send({ message: 'RequesterId or Tag not found' })
-    const blogs = await Blog.find({ tags: { $regex: tag, $options: 'i' } }).populate('authorInfo.author','name email')
+    const blogs = await Blog.find({ tags: { $regex: tag, $options: 'i' }, blogType: 'blog' }).populate('authorInfo.author','name email').populate('photographer')
 
     if(blogs.length === 0) return res.status(400).send({ message: 'Blog not found' })
     res.status(200).send({ message: 'Blogs found with this tag', blogs })
@@ -135,14 +176,44 @@ const searchBlog = asyncHandler(async (req, res) => {
     const { Query: query } = req.query
     if(!query) return res.status(400).send({ message: 'Query is must' })
     const blogs = await Blog.find({
-        $or: [
-            { 'content.title': { $regex: query, $options: 'i' } },
-            { 'content.summary': { $regex: query, $options: 'i' } },
-            { 'content.body': { $regex: query, $options: 'i' } },
-            { 'tags': { $regex: query, $options: 'i' } },
+        $and: [
+            {
+                $or: [
+                    { 'content.title': { $regex: query, $options: 'i' } },
+                    { 'content.summary': { $regex: query, $options: 'i' } },
+                    { 'content.body': { $regex: query, $options: 'i' } },
+                    { 'tags': { $regex: query, $options: 'i' } },
+                ]
+            },
+            {
+                blogType: 'blog'
+            }
         ]
-    }).populate('authorInfo.author')
+       
+    }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 })
     res.status(200).send({ message: 'Blog not found', blogs})
+})
+
+const searchSuccessStory = asyncHandler(async (req, res) => {
+    const { Query: query } = req.query
+    if(!query) return res.status(400).send({ message: 'Query is must' })
+    const blogs = await Blog.find({
+        $and: [
+            {
+                $or: [
+                    { 'content.title': { $regex: query, $options: 'i' } },
+                    { 'content.summary': { $regex: query, $options: 'i' } },
+                    { 'content.body': { $regex: query, $options: 'i' } },
+                    { 'tags': { $regex: query, $options: 'i' } },
+                ]
+            },
+            {
+                blogType: 'successstory'
+            }
+        ]
+       
+    }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 })
+    res.status(200).send({ message: 'Blog not found', successstories:blogs})
 })
 
 const setBlogAsFeatured = asyncHandler(async (req, res) => {
@@ -151,7 +222,7 @@ const setBlogAsFeatured = asyncHandler(async (req, res) => {
     const admin = await Admin.findById(adminId)
     if(!admin) return res.status(400).send({message: 'Admin not found'})
 
-    const blog = await Blog.findById(blogId)
+    const blog = await Blog.findById(blogId).populate('photographer')
     if(!blog) return res.status(200).send({ status: "Blog Not found" })
     blog.featured = featuredStatus
     await blog.save()
@@ -167,7 +238,7 @@ const getFeaturedBlogs = asyncHandler(async (req, res) => {
     const pageCount = Math.ceil(totalDocuments/pageSize)
     const blogs = await Blog.find({ featured: true }).populate({
         path: 'authorInfo.author'
-    }).sort({
+    }).populate('photographer').sort({
         createdAt: -1
     }).skip((page-1) * pageSize).limit(pageSize)
 
@@ -179,6 +250,22 @@ const getFeaturedBlogs = asyncHandler(async (req, res) => {
         blogs,
         pageCount
     })
+})
+
+const getMySuccessStory = asyncHandler(async (req, res) => {
+    const { user, pageNumber = 1, pageSize = 20 } = req.query
+
+    const successstory = await Blog.find({ photographer: user }).populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+    if(!successstory || successstory.length === 0) {
+        return res.status(400).send({ message: 'No SuccessStory found for this photographer' })
+    }
+    const totalDocuments = await Blog.countDocuments({ photographer: user })
+
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    res.status(200).send({ successstory, pageCount })
+
 })
 
 
@@ -193,4 +280,7 @@ module.exports =  {
     searchBlog,
     setBlogAsFeatured,
     getFeaturedBlogs,
+    getMySuccessStory,
+    getAllSuccessStories,
+    searchSuccessStory
 }

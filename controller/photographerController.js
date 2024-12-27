@@ -5,6 +5,7 @@ const { generateFromEmail } = require("unique-username-generator")
 const UserType = require('../models/typeModel.js')
 const { sendResetEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
+const ImageVault = require('../models/imagebase/imageVaultModel.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
     const { name, email, password, bio, dob, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts } = req.body
