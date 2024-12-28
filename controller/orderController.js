@@ -7,11 +7,12 @@ const ImageVault = require('../models/imagebase/imageVaultModel')
 const GST = require('../models/gstModel')
 
 const createOrder = asyncHandler(async (req, res) => {
+  
   const { 
     userId, 
     imageInfo, 
     frameInfo, 
-    canvasInfo, 
+    paperInfo, 
     subTotal,
     paymentMethod, 
     shippingAddress,
@@ -24,6 +25,7 @@ const createOrder = asyncHandler(async (req, res) => {
   if (!image) {
     return res.status(400).send({ message: 'Image not found' });
   }
+  
 
   const photographer = await Photographer.findById(imageInfo.photographer);
   if (!photographer) {
@@ -42,7 +44,7 @@ const createOrder = asyncHandler(async (req, res) => {
     },
     imageInfo: imageInfo,
     frameInfo,
-    canvasInfo,
+    paperInfo,
     subTotal,
     gst: gstId,
     totalAmount,

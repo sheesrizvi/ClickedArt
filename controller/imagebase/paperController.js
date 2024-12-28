@@ -3,6 +3,7 @@ const asyncHandler = require("express-async-handler");
 const ImageVault = require('../../models/imagebase/imageVaultModel');
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
+const Frame = require('../../models/imagebase/frameModel.js')
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -162,11 +163,139 @@ const calculatePaperPrices = asyncHandler(async (req, res) => {
   });
 })
 
+
+const calculatePaperAndFramePrices = asyncHandler(async (req, res) => {
+  const { paperId, imageId, frameId } = req.query;
+
+  if (!paperId || !imageId) {
+    res.status(400);
+    throw new Error('Paper ID and Image ID are required.');
+  }
+
+  const paper = await Paper.findById(paperId);
+  if (!paper) {
+    res.status(404);
+    throw new Error('Paper not found or is inactive.');
+  }
+
+  const image = await ImageVault.findById(imageId);
+  if (!image || !image.resolutions) {
+    res.status(404);
+    throw new Error('Image not found or resolutions missing.');
+  }
+
+  const dpi = 300;
+
+  const calculatePriceForResolution = (widthPixels, heightPixels, dpi) => {
+    const widthInches = widthPixels / dpi;
+    const heightInches = heightPixels / dpi;
+    const areaInSquareInches = widthInches * heightInches;
+    const rawPrice = paper.basePricePerSquareInch * areaInSquareInches;
+    return Math.round(rawPrice * 100) / 100;
+  };
+
+  const prices = {};
+  for (const [key, resolution] of Object.entries(image.resolutions)) {
+    if (resolution.width && resolution.height) {
+      const price = calculatePriceForResolution(resolution.width, resolution.height, dpi);
+      prices[key] = {
+        size: {
+          width: parseFloat((resolution.width / dpi).toFixed(2)),
+          height: parseFloat((resolution.height / dpi).toFixed(2)),
+        },
+        price,
+      };
+    }
+  }
+
+  const customPrices = paper.customDimensions.map((dimension) => ({
+    size: {
+      width: dimension.width,
+      height: dimension.height,
+    },
+    price: dimension.price,
+  }));
+
+// for frames calculation
+
+const frame = await Frame.findById(frameId);
+
+  if (!frame || !frame.isActive) {
+    return res.status(200).send({
+      message: 'Paper Prices successfully calculated. No Frames found',
+      paperpricing: {
+      paperId: paper._id,
+      imageId: image._id,
+      pricing: {
+        resolutions: prices,
+        customDimensions: customPrices,
+      },
+    },
+    })
+  }
+
+
+  const calculateFramePriceForResolution = (widthPixels, heightPixels, dpi) => {
+    const widthInches = widthPixels / dpi;
+    const heightInches = heightPixels / dpi;
+
+   
+    const perimeterInches = 2 * (widthInches + heightInches);
+
+   
+    return Math.round(frame.basePricePerLinearInch * perimeterInches * 100) / 100;
+  };
+
+ 
+  const pricesForFrame = {};
+  for (const [key, resolution] of Object.entries(image.resolutions)) {
+    if (resolution.width && resolution.height) {
+      const widthInches = parseFloat((resolution.width / dpi).toFixed(2));
+      const heightInches = parseFloat((resolution.height / dpi).toFixed(2));
+
+      const price = calculateFramePriceForResolution(resolution.width, resolution.height, dpi);
+      pricesForFrame[key] = {
+        size: {
+          width: widthInches,
+          height: heightInches,
+        },
+        price,
+      };
+    }
+  }
+
+
+  const customPricesForFrame = frame.customDimensions.map((dimension) => ({
+    size: {
+      width: dimension.width,
+      height: dimension.height,
+    },
+    price: dimension.price,
+  }));
+
+  res.status(200).json({
+    message: 'Paper and frame prices calculated successfully for all resolutions.',
+    data: {
+      paperId: paper._id,
+      imageId: image._id,
+      paperpricing: {
+        resolutions: prices,
+        customDimensions: customPrices,
+      },
+      framepricing: {
+        resolutions: pricesForFrame,
+        customDimensions: customPricesForFrame
+      }
+    },
+  });
+})
+
 module.exports = {
   createPaper,
   getPapers,
   getPaperById,
   updatePaper,
   deletePaper,
-  calculatePaperPrices
+  calculatePaperPrices,
+  calculatePaperAndFramePrices
 }

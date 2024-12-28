@@ -36,8 +36,8 @@ const orderSchema = new mongoose.Schema(
         height: { type: Number }
        }
       },
-    canvasInfo: {
-      canvas: {
+    paperInfo: {
+      paper: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Canvas'
       },
@@ -77,13 +77,13 @@ const orderSchema = new mongoose.Schema(
         type: String,
       },
     shippingAddress: {
-        address: { type: String, required: true },
-        city: { type: String, required: true },
-        landmark: { type: String, required: true },
-        area: { type: String, required: true },
-        mobileNumber: { type: Number, required: true },
-        email: { type: String, required: true },
-        pincode: { type: String, required: true },
+        address: { type: String,  },
+        city: { type: String,  },
+        landmark: { type: String, },
+        area: { type: String,  },
+        mobileNumber: { type: Number, },
+        email: { type: String,  },
+        pincode: { type: String, },
         state: { type: String },
       },
   },
