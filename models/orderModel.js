@@ -39,7 +39,7 @@ const orderSchema = new mongoose.Schema(
     paperInfo: {
       paper: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Canvas'
+        ref: 'Paper'
       },
       price: {
         type: Number,

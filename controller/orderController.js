@@ -7,7 +7,7 @@ const ImageVault = require('../models/imagebase/imageVaultModel')
 const GST = require('../models/gstModel')
 
 const createOrder = asyncHandler(async (req, res) => {
-  
+
   const { 
     userId, 
     imageInfo, 
@@ -26,7 +26,6 @@ const createOrder = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Image not found' });
   }
   
-
   const photographer = await Photographer.findById(imageInfo.photographer);
   if (!photographer) {
     return res.status(400).send({ message: 'Photographer not found' });
@@ -63,7 +62,7 @@ const createOrder = asyncHandler(async (req, res) => {
 const getAllOrders = asyncHandler(async(req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const orders = await Order.find({}).populate('imageInfo.image').populate('userInfo.user').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const orders = await Order.find({}).populate('imageInfo.image').populate('userInfo.user').populate('frameInfo.frame').populate('paperInfo.paper').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!orders || orders.length === 0) return res.status(400).send({ message: 'Order not found' })
 
@@ -75,7 +74,7 @@ const getAllOrders = asyncHandler(async(req, res) => {
 
 const getMyOrders = asyncHandler(async (req, res) => {
   const { userId, pageNumber = 1, pageSize = 20 } = req.query
-  const orders = await Order.find({ 'userInfo.user': userId }).populate('imageInfo.image').skip((pageNumber - 1) * pageSize).limit(pageSize)
+  const orders = await Order.find({ 'userInfo.user': userId }).populate('imageInfo.image').populate('paperInfo.paper').populate('frameInfo.frame').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
   if(!orders || orders.length === 0) {
     res.status(400)
@@ -92,7 +91,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 const getOrdersByPhotographer = asyncHandler(async (req, res) => {
     const { photographer, pageNumber = 1, pageSize = 20 } = req.query
 
-    const orders = await Order.find({ 'imageInfo.photographer': photographer }).populate('imageInfo.image').skip((pageNumber - 1) * pageSize)
+    const orders = await Order.find({ 'imageInfo.photographer': photographer }).populate('imageInfo.image').populate('paperInfo.paper').populate('frameInfo.frame').skip((pageNumber - 1) * pageSize)
 
     if(!orders || orders.length === 0) {
       res.status(404)
@@ -154,7 +153,7 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
         return res.status(400).json({status: false,  message: "Invalid Action" });
     }
 
-    const orders = await Order.find({ orderStatus: status }).populate('imageInfo.image').populate('imageInfo.photographer').skip((pageNumber - 1) * pageSize).limit(pageNumber)
+    const orders = await Order.find({ orderStatus: status }).populate('imageInfo.image').populate('imageInfo.photographer').populate('paperInfo.paper').populate('frameInfo.frame').skip((pageNumber - 1) * pageSize).limit(pageNumber)
 
     if(!orders || orders.length === 0) {
       res.status(404)
