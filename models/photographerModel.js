@@ -34,6 +34,12 @@ const photographerSchema = new mongoose.Schema({
   age: {
     type: Number
   },
+  mobile: {
+    type: Number
+  },
+  whatsapp: {
+    type: Number
+  },
   profileImage: {
     type: String,
     required: false
@@ -44,9 +50,6 @@ const photographerSchema = new mongoose.Schema({
   portfolioLink: {
     type: String,
     required: false
-  },
-  address: { 
-    type: String
   },
   // photography styles specialization -> portrait, landscape
   photographyStyles: [
@@ -151,7 +154,18 @@ const photographerSchema = new mongoose.Schema({
   featuredArtist: {
       type: Boolean,
       default: false
-    }
+    },
+  shippingAddress: {
+      address: { type: String,  },
+      country: { type: String },
+      city: { type: String,  },
+      landmark: { type: String, },
+      area: { type: String,  },
+      mobile: { type: Number },
+      email: { type: String,  },
+      pincode: { type: String, },
+      state: { type: String },
+    },
 }, {
   timestamps: true
 });

@@ -24,11 +24,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  age: {
+  mobile: {
     type: Number
   },
-  address: {
-    type: String,
+  whatsapp: {
+    type: Number
+  },
+  age: {
+    type: Number
   },
   bio: {
     type: String,
@@ -69,6 +72,17 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Photographer',
     default: null
+  },
+  shippingAddress: {
+    address: { type: String,  },
+    country: { type: String },
+    city: { type: String,  },
+    landmark: { type: String, },
+    area: { type: String,  },
+    mobile: { type: Number },
+    email: { type: String,  },
+    pincode: { type: String, },
+    state: { type: String },
   },
   pushToken: {
     type: String,

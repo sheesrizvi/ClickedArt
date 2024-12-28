@@ -8,7 +8,7 @@ const { sendResetEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password, address, dob, image, bio, interests, connectedAccounts } = req.body
+    const { name, email, password, mobile, whatsapp, shippingAddress, dob, image, bio, interests, connectedAccounts } = req.body
 
     const username = generateFromEmail(
         name,
@@ -35,7 +35,9 @@ const userRegistration = asyncHandler(async (req, res) => {
             name,
             email,
             password,
-            address,
+            mobile,
+            whatsapp,
+            shippingAddress,
             age,
             dob,
             username,
@@ -129,7 +131,7 @@ const getUserById = asyncHandler(async (req, res) => {
 })
 
 const userProfileUpdate = asyncHandler(async (req, res) => {
-    const { userId, name, email, password, address, dob, image, bio, interests, connectedAccounts  } = req.body
+    const { userId, name, email, password, mobile, whatsapp, shippingAddress, dob, image, bio, interests, connectedAccounts  } = req.body
 
     const user = await User.findOne({ _id: userId })
     if(!user) {
@@ -137,7 +139,10 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
     }
     user.name = name || user.name
     user.password = password || user.password
-    user.address = address || user.address
+    user.shippingAddress = shippingAddress || user.shippingAddress
+    user.mobile = mobile || user.mobile
+    user.whatsapp = whatsapp || user.whatsapp
+
     if(email && email !== user.email) {
         const emailExist = await User.findOne({ email })
         if(emailExist){

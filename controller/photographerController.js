@@ -8,9 +8,9 @@ const { differenceInYears, parseISO, isValid } = require('date-fns');
 const ImageVault = require('../models/imagebase/imageVaultModel.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { name, email, password, bio, dob, profileImage, address, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts } = req.body
+    const { name, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts } = req.body
 
-    if(!name || !email || !password || !address ) {
+    if(!name || !email || !password  ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
     }
 
@@ -36,7 +36,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
 
 
     const photographerData = {
-        name, email, username, password,  address,
+        name, email, username, password, 
         companyName: !companyName ? name : companyName
     }
 
@@ -51,7 +51,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     } 
 
     const photographer = new Photographer({
-        name, email, username, password, address, bio, dob, age, profileImage, portfolioLink,
+        name, email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,
+        mobile, whatsapp, 
         yearsOfExperience,
         accountType,
         photographyStyles,
@@ -85,9 +86,11 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         email, 
         password, 
         bio, 
-        dob, 
+        dob,
+        mobile,
+        whatsapp, 
         profileImage, 
-        address, 
+        shippingAddress, 
         isCompany, 
         companyName, 
         companyEmail, 
@@ -152,13 +155,15 @@ const updatePhotographer = asyncHandler(async (req, res) => {
     if(email) photographer.email = email
     if (bio) photographer.bio = bio;
     if (profileImage) photographer.profileImage = profileImage;
-    if (address) photographer.address = address;
+    if (shippingAddress) photographer.shippingAddress = shippingAddress;
     if (portfolioLink) photographer.portfolioLink = portfolioLink;
     if (photographyStyles) photographer.photographyStyles = photographyStyles;
     if (yearsOfExperience) photographer.yearsOfExperience = yearsOfExperience;
     if (accountType) photographer.accountType = accountType;
     if (connectedAccounts) photographer.connectedAccounts = connectedAccounts;
     if(password) photographer.password = password
+    if(mobile) photographer.mobile = mobile
+    if(whatsapp) photographer.whatsapp = whatsapp
 
     await photographer.save();
 
