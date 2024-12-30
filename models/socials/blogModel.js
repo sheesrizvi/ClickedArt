@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const blogSchema = mongoose.Schema({
     authorInfo: {
         author: { type: mongoose.Schema.Types.ObjectId, refPath: 'authorInfo.authorType', required: true },
-        authorType: { type: String, enum: ['User', 'Photographer', 'Admin'], required: true },
+        authorType: { type: String, enum: ['User', 'Photographer', 'Admin', 'seo'], required: true },
     },
     slug: { type: String },
     content: {

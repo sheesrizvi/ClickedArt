@@ -4,12 +4,16 @@ const Admin  = require("../models/adminModel.js")
 
 
 const adminRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password } = req.body
+    const { name, email, password, type , role} = req.body
     if(name && email && password ) {
+        if(type !== 'Admin') {
+            throw new Error('Only Super Admin can create other admin')
+        }
         const admin = new Admin({
             name,
             email,
-            password
+            password,
+            type: role || type
         })
         const savedAdmin = await admin.save()
         const token = await savedAdmin.generateAccessToken()

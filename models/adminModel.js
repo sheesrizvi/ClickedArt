@@ -29,7 +29,7 @@ const adminSchema = new Schema({
         type: String,
         required: true,
         default: "Admin",
-        enum: ['Admin']
+        enum: ['Admin', 'finance', 'seo', 'print']
       }
 }, {
     timestamps: true
