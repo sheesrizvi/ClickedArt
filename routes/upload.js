@@ -10,6 +10,7 @@ const { S3Client } = require("@aws-sdk/client-s3");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 
+
 const config = {
   region: process.env.AWS_BUCKET_REGION,
   credentials: {
@@ -140,6 +141,10 @@ router.post("/uploadPhotoForMultipleResolution", upload1.single("image"), async 
 });
 
 
+
+
+
+// @ primary route in our case for converting images into multiple resolution
 router.post(
   "/uploadPhotoWithSizeCheck",
   upload1.single("image"),
@@ -150,73 +155,141 @@ router.post(
       }
 
       const originalImageBuffer = req.file.buffer;
-      const { width, height } = await sharp(originalImageBuffer).metadata();
-      const megapixels = (width * height) / 1e6;
-      console.log(width, height)
-     
-      const resolutions = {
-        small: { width: Math.sqrt(2 * 1e6 * (width / height)), height: Math.sqrt(2 * 1e6 * (height / width)) },
-        medium: { width: Math.sqrt(10 * 1e6 * (width / height)), height: Math.sqrt(10 * 1e6 * (height / width)) },
+      const { width, height, format } = await sharp(originalImageBuffer).metadata();
+      const fileSizeInMB = req.file.size / (1024 * 1024);
+      console.log(fileSizeInMB);
+
+      const sizeTargets = {
+        small: 2.6 * 1024 * 1024, // 2.6 MB
+        medium: 8.8 * 1024 * 1024, // 8.8 MB
       };
 
-     console.log(megapixels)
-    
+      const resolutions = {
+        small: {
+          width: Math.round(width * 0.6),  
+          height: Math.round(height * 0.6),
+        },
+        medium: {
+          width: Math.round(width * 0.75), 
+          height: Math.round(height * 0.75),
+        },
+      };
+
+      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+        let processedBuffer = buffer;
+
+
+        processedBuffer = await sharp(buffer)
+          .resize(targetResolution.width, targetResolution.height)
+          .toBuffer(); 
+
+ 
+        if (format === "jpeg" || format === "jpg") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer) 
+              .jpeg({ quality })
+              .toBuffer();
+
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5; 
+          }
+        } else if (format === "png") {
+         
+          processedBuffer = await sharp(processedBuffer) 
+            .png({ compressionLevel: 9, quality: 100 }) 
+            .toBuffer();
+        } else if (format === "webp") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer) 
+              .webp({ quality })
+              .toBuffer();
+
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5; 
+          }
+        } else {
+         
+          processedBuffer = await sharp(processedBuffer) 
+            .jpeg({ quality: 85 }) 
+            .toBuffer();
+        }
+
+        return processedBuffer;
+      };
+
       const conversionTargets =
-        megapixels > 10
+        fileSizeInMB > 10
           ? ["small", "medium"]
-          : megapixels > 4
+          : fileSizeInMB > 4
           ? ["small"]
           : [];
 
-      const uploadPromises = ["original", ...conversionTargets].map(
-        async (key) => {
-          const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
-          const fileKey = `images/${fileName}`;
+      const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+        const fileKey = `images/${fileName}`;
 
-          let processedBuffer;
-          if (key === "original") {
-            processedBuffer = originalImageBuffer;
-          } else {
-            const { width, height } = resolutions[key];
-            processedBuffer = await sharp(originalImageBuffer)
-              .resize(Math.round(width), Math.round(height))
-              .toBuffer();
-          }
-
-          const upload = new Upload({
-            client: s3,
-            params: {
-              Bucket: process.env.AWS_BUCKET,
-              Key: fileKey,
-              Body: processedBuffer,
-              ContentType: req.file.mimetype,
-            },
-          });
-
-          await upload.done();
-
-          return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+        let processedBuffer;
+        if (key === "original") {
+          processedBuffer = originalImageBuffer;
+        } else {
+          const targetResolution = resolutions[key];
+          const targetSize = sizeTargets[key];
+          processedBuffer = await convertToTargetSizeAndResolution(
+            originalImageBuffer,
+            targetSize,
+            targetResolution,
+            format
+          );
         }
-      );
+
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET,
+            Key: fileKey,
+            Body: processedBuffer,
+            ContentType: req.file.mimetype,
+          },
+        });
+
+        await upload.done();
+
+        return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+      });
 
       const uploadResults = await Promise.all(uploadPromises);
+
 
       const urls = uploadResults.reduce((acc, { key, url }) => {
         acc[key] = url;
         return acc;
       }, {});
 
-      resolutions.original = {
-        width,
-        height
+      const returnedResolutions = { original: { width, height } };
+      if (fileSizeInMB > 10) {
+        returnedResolutions.medium = resolutions.medium;
+        returnedResolutions.small = resolutions.small;
+      } else if (fileSizeInMB > 4) {
+        returnedResolutions.small = resolutions.small;
       }
-      res.send({urls, resolutions});
+
+
+      res.send({ urls, resolutions: returnedResolutions });
     } catch (error) {
       console.error("Error processing image:", error);
       res.status(500).send("Failed to upload image.");
     }
   }
 );
+
+
+
 
 router.delete("/deleteImage", async (req, res) => {
   try {
@@ -243,6 +316,7 @@ router.delete("/deleteImage", async (req, res) => {
 
     res.status(200).send({ message: "Images deleted successfully", responses });
   } catch (error) {
+
     console.error("Error deleting images:", error);
     res.status(500).send({ message: "Failed to delete images", error });
   }
@@ -276,6 +350,152 @@ router.delete('/delete-all-resolutions', asyncHandler(async (req, res) => {
 }))
 
 
+// router.post(
+//   "/uploadPhotoWithSizeCheck",
+//   upload1.single("image"),
+//   async (req, res) => {
+//     try {
+//       if (!req.file) {
+//         return res.status(400).send("No file uploaded.");
+//       }
 
+//       const originalImageBuffer = req.file.buffer;
+//       const { width, height, format } = await sharp(originalImageBuffer).metadata();
+//       const fileSizeInMB = req.file.size / (1024 * 1024);
+//       console.log(fileSizeInMB);
+
+//       const sizeTargets = {
+//         small: 2.6 * 1024 * 1024, // 2.6 MB
+//         medium: 8.8 * 1024 * 1024, // 8.8 MB
+//       };
+
+//       const resolutions = {
+//         small: {
+//           width: Math.round(width * 0.5),  // 50% resolution
+//           height: Math.round(height * 0.5),
+//         },
+//         medium: {
+//           width: Math.round(width * 0.75), // 75% resolution
+//           height: Math.round(height * 0.75),
+//         },
+//       };
+
+//       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+//         let processedBuffer = buffer;
+
+//         // Resize the image to target resolution
+//         processedBuffer = await sharp(buffer)
+//           .resize(targetResolution.width, targetResolution.height)
+//           .toBuffer(); // Resize buffer and return it
+
+//         // Handle different formats
+//         if (format === "jpeg" || format === "jpg") {
+//           // For JPEG images, we can adjust quality to meet the size target
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer) // Re-create sharp instance from processedBuffer
+//               .jpeg({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5; // Gradually decrease quality to meet the size limit
+//           }
+//         } else if (format === "png") {
+//           // For PNG images, apply PNG compression (lossless)
+//           processedBuffer = await sharp(processedBuffer) // Re-create sharp instance from processedBuffer
+//             .png({ compressionLevel: 9, quality: 100 }) // PNG compression
+//             .toBuffer();
+//         } else if (format === "webp") {
+//           // For WebP images, adjust quality (similar to JPEG)
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer) // Re-create sharp instance from processedBuffer
+//               .webp({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5; // Gradually decrease quality to meet the size limit
+//           }
+//         } else {
+//           // For other formats (e.g., GIF, TIFF), treat them like JPEG for resizing
+//           processedBuffer = await sharp(processedBuffer) // Re-create sharp instance from processedBuffer
+//             .jpeg({ quality: 85 }) // Default compression for unknown formats (lossy)
+//             .toBuffer();
+//         }
+
+//         return processedBuffer;
+//       };
+
+//       // Determine what sizes to generate based on the original file size
+//       const conversionTargets =
+//         fileSizeInMB > 10
+//           ? ["small", "medium"]
+//           : fileSizeInMB > 4
+//           ? ["small"]
+//           : [];
+
+//       const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+//         const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+//         const fileKey = `images/${fileName}`;
+
+//         let processedBuffer;
+//         if (key === "original") {
+//           processedBuffer = originalImageBuffer;
+//         } else {
+//           const targetResolution = resolutions[key];
+//           const targetSize = sizeTargets[key];
+//           processedBuffer = await convertToTargetSizeAndResolution(
+//             originalImageBuffer,
+//             targetSize,
+//             targetResolution,
+//             format
+//           );
+//         }
+
+//         // Upload to S3
+//         const upload = new Upload({
+//           client: s3,
+//           params: {
+//             Bucket: process.env.AWS_BUCKET,
+//             Key: fileKey,
+//             Body: processedBuffer,
+//             ContentType: req.file.mimetype,
+//           },
+//         });
+
+//         await upload.done();
+
+//         return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+//       });
+
+//       const uploadResults = await Promise.all(uploadPromises);
+
+//       // Collect URLs from upload results
+//       const urls = uploadResults.reduce((acc, { key, url }) => {
+//         acc[key] = url;
+//         return acc;
+//       }, {});
+
+//       // Include resolutions for the returned image sizes
+//       const returnedResolutions = { original: { width, height } };
+//       if (fileSizeInMB > 10) {
+//         returnedResolutions.medium = resolutions.medium;
+//         returnedResolutions.small = resolutions.small;
+//       } else if (fileSizeInMB > 4) {
+//         returnedResolutions.small = resolutions.small;
+//       }
+
+//       // Send the URLs and resolutions to the client
+//       res.send({ urls, resolutions: returnedResolutions });
+//     } catch (error) {
+//       console.error("Error processing image:", error);
+//       res.status(500).send("Failed to upload image.");
+//     }
+//   }
+// );
 
 module.exports = router
