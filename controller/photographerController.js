@@ -318,10 +318,13 @@ const updatePhotographerRank = asyncHandler(async (req, res) => {
 })
 
 const toggleFeaturedPhotographer = asyncHandler(async (req, res) => {
-    const { photographerId } = req.query
+    const { photographerId } = req.body
+    
+    const photographer = await Photographer.findOne({_id: photographerId })
 
-    const photographer = await Photographer.findById({ photographerId })
-
+    if(!photographer){
+        throw new Error('Photographer not found')
+    }
     photographer.featuredArtist = !photographer.featuredArtist
 
     await photographer.save()

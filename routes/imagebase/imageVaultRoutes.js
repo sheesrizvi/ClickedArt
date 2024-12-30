@@ -29,7 +29,7 @@ router.get('/get-image-by-category-type', getImagesByCategoryType)
 router.post('/approve-image', isAdmin, approveImage)
 router.get('/get-all-pending-images-for-admin', isAdmin, getAllPendingImagesForAdmin)
 
-router.post('/toggle-featured-artwork', toggleFeaturedArtwork)
+router.post('/toggle-featured-artwork', isAdmin, toggleFeaturedArtwork)
 router.get('/get-featured-artwork', getFeaturedArtwork)
 
 module.exports = router

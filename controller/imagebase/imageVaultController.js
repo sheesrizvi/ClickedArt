@@ -339,9 +339,13 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
 })
 
 const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
-  const { imageId } = req.query
+  const { imageId } = req.body
 
-  const image = await ImageVault.findById({ _id: imageId })
+  const image = await ImageVault.findOne({ _id: imageId })
+
+  if(!image) {
+    throw new Error('Image not found')
+  }
 
   image.featuredArtwork = !image.featuredArtwork
 
@@ -354,8 +358,8 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   const [ featuredArtwork, totalDocuments ] = await Promise.all([
-    ImageVault.find({ featuredArtist: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
-    ImageVault.countDocuments({ featuredArtist: true })
+    ImageVault.find({ featuredArtwork: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+    ImageVault.countDocuments({ featuredArtwork : true })
   ])
 
   if(!featuredArtwork || featuredArtwork.length === 0) {
