@@ -86,6 +86,10 @@ const imageVaultSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
+    featuredArtwork: {
+        type: Boolean,
+        default: false
+    },
     rejectionReason: {
         type: String,
         trim: true,

@@ -338,7 +338,33 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   
 })
 
+const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
+  const { imageId } = req.query
 
+  const image = await ImageVault.findById({ _id: imageId })
+
+  image.featuredArtwork = !image.featuredArtwork
+
+  await image.save()
+
+  res.status(200).send({  message: 'Featured Artwork toggle successfully' })
+})
+
+const getFeaturedArtwork = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query
+
+  const [ featuredArtwork, totalDocuments ] = await Promise.all([
+    ImageVault.find({ featuredArtist: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+    ImageVault.countDocuments({ featuredArtist: true })
+  ])
+
+  if(!featuredArtwork || featuredArtwork.length === 0) {
+      return res.status(400).send({  message: 'Featured Artwork not found' })
+  }
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+
+  res.status(200).send({  featuredArtwork, pageCount })
+})
 
 module.exports = {
     addImageInVault,
@@ -350,5 +376,7 @@ module.exports = {
     getImagesByCategory,
     getImagesByCategoryType,
     approveImage,
-    getAllPendingImagesForAdmin
+    getAllPendingImagesForAdmin,
+    toggleFeaturedArtwork,
+    getFeaturedArtwork
 }
