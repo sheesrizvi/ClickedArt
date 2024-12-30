@@ -36,9 +36,9 @@ const frameSchema = new mongoose.Schema(
       },
       customDimensions: [
         {
-          width: { type: Number, required: true }, 
-          height: { type: Number, required: true }, 
-          price: { type: Number, required: true }, 
+          width: { type: Number }, 
+          height: { type: Number }, 
+          price: { type: Number }, 
         },
       ],
     },
