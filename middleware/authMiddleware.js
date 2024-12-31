@@ -76,8 +76,24 @@ const IsAdminOrPhotographer = asyncHandler(async (req, res, next) => {
   
 })
 
-
+const isSuperAdmin = asyncHandler(async (req, res, next) => {
+    const token = req.header("x-auth-token");
+    if(!token) {
+      return res.status(403).send({
+            status: false,
+            message: 'Token is required'
+        })
+    }
+    
+    const decoded = await jwt.verify(token, process.env.SECRET_KEY)
+    if(decoded.type === 'Admin') {
+        req.user = decoded
+        next()
+    } else {
+        throw new Error('Not an Super Admin!')
+    }
+})
 
 module.exports = {
-    verifyToken, isAdmin, IsPhotographer , IsAdminOrPhotographer 
+    verifyToken, isAdmin, IsPhotographer , IsAdminOrPhotographer , isSuperAdmin
 }
