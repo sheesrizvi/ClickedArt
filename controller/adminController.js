@@ -4,13 +4,12 @@ const Admin  = require("../models/adminModel.js")
 
 
 const adminRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password, type , role} = req.body
+    const { name, email, password } = req.body
     if(name && email && password ) {
         const admin = new Admin({
             name,
             email,
             password,
-            type: role || type
         })
         const savedAdmin = await admin.save()
         const token = await savedAdmin.generateAccessToken()
@@ -65,7 +64,7 @@ const resetPassword = asyncHandler(async(req, res) => {
 
 const createOtherAdmin = asyncHandler(async (req, res) => {
     const { name, email, password, type , role} = req.body
-    if(name && email && password ) {
+    if(name && email && password && type && role ) {
         if(type !== 'Admin') {
             throw new Error('Only Super Admin can create other admin')
         }
@@ -93,9 +92,29 @@ const createOtherAdmin = asyncHandler(async (req, res) => {
     }
 })
 
+const getAllAdmins = asyncHandler(async (req, res) => {
+    const admins = await Admin.find({})
+
+    if(!admins || admins.length === 0) {
+        throw new Error('No Admin Found')
+    }
+
+    res.status(200).send({ admins })
+})
+
+const getAdminById = asyncHandler(async (req, res) => {
+    const { adminId } = req.query
+
+    const admin = await Admin.findOne({ _id: adminId })
+    
+    res.status(200).send({ admin })
+})
+
 module.exports = {
     adminRegistration,
     adminLogin,
     resetPassword,
-    createOtherAdmin
+    createOtherAdmin,
+    getAllAdmins,
+    getAdminById
 }
