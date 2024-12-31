@@ -9,7 +9,8 @@ const asyncHandler = require('express-async-handler')
 const { S3Client } = require("@aws-sdk/client-s3");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
-
+const fs = require('fs')
+const axios = require('axios')
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -350,6 +351,167 @@ router.delete('/delete-all-resolutions', asyncHandler(async (req, res) => {
 }))
 
 
+// router.post(
+//   "/uploadPhotoWithSizeCheck",
+//   upload1.single("image"),
+//   async (req, res) => {
+//     try {
+//       if (!req.file) {
+//         return res.status(400).send("No file uploaded.");
+//       }
+
+//       const watermarkUrl = 'https://orancia-s3.s3.ap-south-1.amazonaws.com/1735628057188_890080088.jpg';
+//       const watermarkResponse = await axios.get(watermarkUrl, { responseType: 'arraybuffer' });
+//       const watermarkBuffer = Buffer.from(watermarkResponse.data);
+
+//       const originalImageBuffer = req.file.buffer;
+//       const { width, height, format } = await sharp(originalImageBuffer).metadata();
+//       const fileSizeInMB = req.file.size / (1024 * 1024);
+//       console.log(fileSizeInMB);
+
+//       const sizeTargets = {
+//         small: 2.6 * 1024 * 1024, // 2.6 MB
+//         medium: 8.8 * 1024 * 1024, // 8.8 MB
+//       };
+
+//       const resolutions = {
+//         small: {
+//           width: Math.round(width * 0.6),
+//           height: Math.round(height * 0.6),
+//         },
+//         medium: {
+//           width: Math.round(width * 0.75),
+//           height: Math.round(height * 0.75),
+//         },
+//       };
+
+//       const addWatermark = async (buffer, width, height) => {
+//         const watermarkWidth = Math.round(width * 0.05); 
+//         const watermarkHeight = Math.round(height * 0.05); 
+      
+
+//         const watermarkResized = await sharp(watermarkBuffer)
+//           .resize(watermarkWidth, watermarkHeight, { fit: 'inside' })
+//           .toBuffer();
+      
+//         return sharp(buffer)
+//           .composite([{
+//             input: watermarkResized,
+//             gravity: 'southeast', 
+//             blend: 'over',
+//             tile: false, 
+//             // left: 10, 
+//             // top: 10,  
+//           }])
+//           .toBuffer();
+//       };
+
+//       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+//         let processedBuffer = await addWatermark(buffer, width, height);
+
+//         processedBuffer = await sharp(processedBuffer)
+//           .resize(targetResolution.width, targetResolution.height)
+//           .toBuffer();
+
+//         if (format === "jpeg" || format === "jpg") {
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer)
+//               .jpeg({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5;
+//           }
+//         } else if (format === "png") {
+//           processedBuffer = await sharp(processedBuffer)
+//             .png({ compressionLevel: 9, quality: 100 })
+//             .toBuffer();
+//         } else if (format === "webp") {
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer)
+//               .webp({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5;
+//           }
+//         } else {
+//           processedBuffer = await sharp(processedBuffer)
+//             .jpeg({ quality: 85 })
+//             .toBuffer();
+//         }
+
+//         return processedBuffer;
+//       };
+
+//       const conversionTargets =
+//         fileSizeInMB > 10
+//           ? ["small", "medium"]
+//           : fileSizeInMB > 4
+//           ? ["small"]
+//           : [];
+
+//       const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+//         const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+//         const fileKey = `images/${fileName}`;
+
+//         let processedBuffer;
+//         if (key === "original") {
+//           processedBuffer = await addWatermark(originalImageBuffer, width, height); // Add watermark to original image
+//         } else {
+//           const targetResolution = resolutions[key];
+//           const targetSize = sizeTargets[key];
+//           processedBuffer = await convertToTargetSizeAndResolution(
+//             originalImageBuffer,
+//             targetSize,
+//             targetResolution,
+//             format
+//           );
+//         }
+
+//         const upload = new Upload({
+//           client: s3,
+//           params: {
+//             Bucket: process.env.AWS_BUCKET,
+//             Key: fileKey,
+//             Body: processedBuffer,
+//             ContentType: req.file.mimetype,
+//           },
+//         });
+
+//         await upload.done();
+
+//         return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+//       });
+
+//       const uploadResults = await Promise.all(uploadPromises);
+
+//       const urls = uploadResults.reduce((acc, { key, url }) => {
+//         acc[key] = url;
+//         return acc;
+//       }, {});
+
+//       const returnedResolutions = { original: { width, height } };
+//       if (fileSizeInMB > 10) {
+//         returnedResolutions.medium = resolutions.medium;
+//         returnedResolutions.small = resolutions.small;
+//       } else if (fileSizeInMB > 4) {
+//         returnedResolutions.small = resolutions.small;
+//       }
+
+//       res.send({ urls, resolutions: returnedResolutions });
+//     } catch (error) {
+//       console.error("Error processing image:", error);
+//       res.status(500).send("Failed to upload image.");
+//     }
+//   }
+// );
 
 
 module.exports = router

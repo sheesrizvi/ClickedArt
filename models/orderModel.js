@@ -22,6 +22,12 @@ const orderSchema = new mongoose.Schema(
         price: {
             type: Number,
           },
+        quantity: {
+          type: Number
+        },
+        totalPrice: {
+          type: Number
+        }
     },
     frameInfo: {
        frame: {

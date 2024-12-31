@@ -6,9 +6,6 @@ const Admin  = require("../models/adminModel.js")
 const adminRegistration = asyncHandler(async (req, res) => {
     const { name, email, password, type , role} = req.body
     if(name && email && password ) {
-        if(type !== 'Admin') {
-            throw new Error('Only Super Admin can create other admin')
-        }
         const admin = new Admin({
             name,
             email,
@@ -66,10 +63,39 @@ const resetPassword = asyncHandler(async(req, res) => {
         res.status(200).send({status: true, message: 'Check Your Email for Password Reset'})
     })
 
-
+const createOtherAdmin = asyncHandler(async (req, res) => {
+    const { name, email, password, type , role} = req.body
+    if(name && email && password ) {
+        if(type !== 'Admin') {
+            throw new Error('Only Super Admin can create other admin')
+        }
+        const admin = new Admin({
+            name,
+            email,
+            password,
+            type: role 
+        })
+        const savedAdmin = await admin.save()
+        const token = await savedAdmin.generateAccessToken()
+        res.status(201).json({
+            status: true,
+            message: 'Admin created successfully',
+            user: {
+              id: savedAdmin._id,
+              name: savedAdmin.name,
+              email: savedAdmin.email,
+              token
+             
+            }
+          });
+    } else {
+        res.status(400).send({ status: false, message: 'All Fields are required'})
+    }
+})
 
 module.exports = {
     adminRegistration,
     adminLogin,
-    resetPassword
+    resetPassword,
+    createOtherAdmin
 }
