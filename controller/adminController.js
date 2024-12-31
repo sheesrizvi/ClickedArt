@@ -170,6 +170,16 @@ const getOtherAdminTypes = asyncHandler(async (req, res) => {
     res.status(200).send({ admins })
 })
 
+const deleteOtherAdminTypes = asyncHandler(async (req, res) => {
+    const { adminId } = req.query 
+    const admin = await Admin.findOneAndDelete({ _id: adminId })
+    if(!admin) {
+        throw new Error('Admin Not found')
+    }
+
+    res.status(200).send({ message: 'Admin Del' })
+})
+
 module.exports = {
     adminRegistration,
     adminLogin,
@@ -179,5 +189,6 @@ module.exports = {
     getAdminById,
     updateOtherAdmin,
     updateSuperAdmin,
-    getOtherAdminTypes
+    getOtherAdminTypes,
+    deleteOtherAdminTypes
 }
