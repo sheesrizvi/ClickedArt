@@ -160,6 +160,16 @@ const updateSuperAdmin = asyncHandler(async (req, res) => {
     
 })
 
+const getOtherAdminTypes = asyncHandler(async (req, res) => {
+    const admins = await Admin.find({ type: { $ne: 'Admin'} })
+
+    if(!admins || admins.length === 0) {
+        res.status(200).send({ message: 'No Admin Subsets Found' })
+    } 
+
+    res.status(200).send({ admins })
+})
+
 module.exports = {
     adminRegistration,
     adminLogin,
@@ -168,5 +178,6 @@ module.exports = {
     getAllAdmins,
     getAdminById,
     updateOtherAdmin,
-    updateSuperAdmin
+    updateSuperAdmin,
+    getOtherAdminTypes
 }

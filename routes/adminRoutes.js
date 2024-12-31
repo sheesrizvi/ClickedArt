@@ -1,5 +1,5 @@
 const express = require('express')
-const { adminRegistration, adminLogin, createOtherAdmin, getAllAdmins, getAdminById, updateOtherAdmin, updateSuperAdmin } = require('../controller/adminController')
+const { adminRegistration, adminLogin, createOtherAdmin, getAllAdmins, getAdminById, updateOtherAdmin, updateSuperAdmin, getOtherAdminTypes } = require('../controller/adminController')
 const { handlePhotographerStatusUpdate } = require('../controller/photographerController')
 const { isAdmin, isSuperAdmin } = require('../middleware/authMiddleware')
 const router = express.Router()
@@ -13,6 +13,7 @@ router.post('/create-other-admin', isSuperAdmin, createOtherAdmin)
 
 router.get('/get-all-admins', getAllAdmins)
 router.get('/get-admin-by-id', getAdminById)
+router.get('/get-other-admins', getOtherAdminTypes)
 
 router.post('/update-other-admin', isSuperAdmin, updateOtherAdmin)
 router.post('/update-super-admin', isSuperAdmin, updateSuperAdmin)
