@@ -8,6 +8,10 @@ const addCustomWaterMarkImage = asyncHandler(async (req, res) => {
         throw new Error('Image not found')
     }
 
+    await CustomWatermark.findOneAndDelete({
+        photographer
+    })
+
     const watermark = await CustomWatermark.create({
         watermarkImage, photographer
     })
@@ -31,14 +35,18 @@ const deleteWatermarkImage = asyncHandler(async (req, res) => {
 })
 
 const getWatermarkImage = asyncHandler(async( req, res) => {
-    const image = await CustomWatermark.findOne({})
+    const { photographer } = req.query
+    const watermarkImage = await CustomWatermark.findOne({ photographer }).populate('photographer')
 
-    if(!image) {
+    if(!watermarkImage) {
         throw new Error('Image not found')
     }
 
-    res.status(200).send({ image })
+    res.status(200).send({ watermarkImage })
 })
+
+
+
 module.exports = {
     addCustomWaterMarkImage,
     deleteWatermarkImage,

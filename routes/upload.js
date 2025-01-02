@@ -12,6 +12,7 @@ const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs')
 const axios = require('axios')
 const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
+const CustomWatermark = require('../models/imagebase/customWatermarkModel.js')
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -365,25 +366,29 @@ router.post(
       }
 
       const watermarkType = req.body.watermarkType;
+      
       let watermarkBuffer;
 
-      // Fetch watermark based on the type
-      if (watermarkType === "clickedart") {
-        const royaltySettings = await RoyaltySettings.findOne(); // Assuming you have RoyaltySettings model
+      if (watermarkType === "Basic") {
+        const royaltySettings = await RoyaltySettings.findOne();
         if (!royaltySettings || !royaltySettings.watermarkImage) {
-          return res.status(400).send("Watermark image not found for ClickedArt.");
+          return res.status(400).send("Watermark image not found for Basic.");
         }
         const watermarkUrl = royaltySettings.watermarkImage;
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
         watermarkBuffer = Buffer.from(watermarkResponse.data);
-      } else if (watermarkType === "custom") {
-        const customWatermark = await Watermark.findOne({ photographer: req.body.photographerId }); // Assuming you pass photographerId
+      } else if (watermarkType === "Custom") {
+
+        const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer }); 
+        
         if (!customWatermark || !customWatermark.watermarkImage) {
           return res.status(400).send("Custom watermark image not found.");
         }
         const watermarkUrl = customWatermark.watermarkImage;
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
         watermarkBuffer = Buffer.from(watermarkResponse.data);
+      } else {
+        return res.status(400).send("Invalid watermark type.");
       }
 
       const originalImageBuffer = req.file.buffer;
@@ -408,7 +413,7 @@ router.post(
 
       const addWatermark = async (buffer, width, height) => {
         if (!watermarkBuffer) {
-          return buffer; // No watermark applied
+          return buffer; 
         }
 
         const watermarkWidth = Math.round(width * 0.05);
@@ -536,6 +541,7 @@ router.post(
     }
   }
 );
+
 
 
 

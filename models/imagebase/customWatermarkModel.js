@@ -2,11 +2,13 @@ const mongoose = require('mongoose')
 
 const customWatermarkSchema = mongoose.Schema({
     watermarkImage: {
-       type: String
+       type: String,
+       required: true
     },
     photographer: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Photographer'
+        ref: 'Photographer',
+        required: true
     }
 })
 

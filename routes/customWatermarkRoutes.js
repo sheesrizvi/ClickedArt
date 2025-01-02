@@ -1,8 +1,8 @@
-import {
+const {
     addCustomWaterMarkImage,
     deleteWatermarkImage,
     getWatermarkImage
-} from '../controller/customWatermarkController.js'
+} =  require('../controller/customWatermarkController.js')
 
 const express = require('express')
 const router = express.Router()

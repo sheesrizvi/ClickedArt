@@ -13,11 +13,13 @@ const invoiceSchema = new mongoose.Schema(
           originalPrice: { type: Number, required: true },
           royaltyAmount: { type: Number, required: true },
           royaltyWithGST: { type: Number, required: true },
+          printcutAmount: { type: Number, required: true }
         } 
     ,],
     totalRoyaltyAmount: {type: Number, required: true,},
     gst: {type: Number, required: true },
     totalAmountPayable: {type: Number, required: true, },
+    totalPrintcutAmount: { type: Number, required: true },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid'],

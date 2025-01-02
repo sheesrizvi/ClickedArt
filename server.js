@@ -28,6 +28,9 @@ const marketFreezeRoutes = require('./routes/enquiry/marketFreezeRoutes.js')
 const bulkDownloadEnquiryRoutes = require('./routes/enquiry/bulkDownloadEnquiryRoutes.js')
 const customRequestRoutes = require('./routes/enquiry/customRequestRoutes.js')
 const orderSupportRequestRoutes = require('./routes/enquiry/orderSupportRoutes.js')
+const customWatermarkRoutes = require('./routes/customWatermarkRoutes.js')
+const couponRoutes = require('./routes/couponRoutes.js')
+const photographerAnalyticsRoutes = require('./routes/photographerAnalyticsRoutes.js')
 const upload  = require("./routes/upload");
 
 
@@ -66,6 +69,9 @@ app.use('/api/marketfreeze', marketFreezeRoutes)
 app.use('/api/bulkenquiry', bulkDownloadEnquiryRoutes)
 app.use('/api/customenquiry', customRequestRoutes)
 app.use('/api/ordersupport', orderSupportRequestRoutes)
+app.use('/api/customwatermark', customWatermarkRoutes)
+app.use('/api/coupon', couponRoutes)
+app.use('/api/photographeranalytics', photographerAnalyticsRoutes)
 
 dbConnect()
 

@@ -18,4 +18,4 @@ router.get('/is-active-coupon', isActiveCoupon)
 router.get('/get-coupon-by-code', getCouponByCode)
 router.delete('/delete-coupon', deleteCoupon)
 
-export default router
+module.exports = router
