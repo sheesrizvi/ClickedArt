@@ -28,7 +28,13 @@ const removeItemsFromWishList = asyncHandler(async (req, res) => {
 const getMyWishList = asyncHandler(async (req, res) => {
     const { userId } = req.query
 
-    const wishlist = await WishList.findOne({ user: userId }).populate('images')
+    const wishlist = await WishList.findOne({ user: userId }).populate({
+        path: 'images',
+        populate: {
+            path: 'photographer',
+            select: 'name'
+        }
+    })
     if(!wishlist) {
         return res.status(400).send({ message: 'Wishlist not found' })
     }
