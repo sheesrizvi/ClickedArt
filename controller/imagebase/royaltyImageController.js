@@ -3,24 +3,25 @@ const asyncHandler = require('express-async-handler')
 const Royalty = require('../../models/imagebase/royaltyModel.js')
 
 const createRoyalty = asyncHandler(async (req, res) => {
-    const { licensingType, royaltyShare, sizePricingModifiers }  = req.body
+    const { licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
 
     const royalty = await Royalty.create({
-        licensingType, royaltyShare, sizePricingModifiers
+        licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage
     })
 
     res.status(200).send({ royalty })
 })
 
 const updateRoyalty = asyncHandler(async (req, res) => {
-    const { id, licensingType, royaltyShare, sizePricingModifiers }  = req.body
+    const { id, licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
 
     const royalty = await Royalty.findOne({ _id: id })
     if(!royalty) return res.status(400).send({ message: 'Royalty not found' })
  
     royalty.licensingType = licensingType || royalty.licensingType
-    royalty.royaltyShare = royaltyShare || royalty.royaltyShare
+    royalty.rankWiseRoyaltyShare = rankWiseRoyaltyShare || royalty.rankWiseRoyaltyShare
     royalty.sizePricingModifiers = sizePricingModifiers || royalty.priceDeviationPercentage
+    royalty.watermarkImage = watermarkImage || royalty.watermarkImage
 
     await royalty.save()
 

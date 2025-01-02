@@ -28,14 +28,15 @@ const royaltySettingsSchema = mongoose.Schema({
     sizePricingModifiers: {
         medium: { 
             type: Number,
-            required: true,
             default: -30,
         },
         small: { 
             type: Number,
-            required: true,
             default: -50,
         },
+    },
+    watermarkImage: {
+        type: String
     }
 }, {
     timestamps: true

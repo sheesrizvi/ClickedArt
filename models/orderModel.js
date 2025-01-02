@@ -16,18 +16,12 @@ const orderSchema = new mongoose.Schema(
             ref: 'Photographer',
         },
         resolution: {
-            type: String,
-            enum: ['original', 'medium', 'small'],
-          },
+          type: String,
+          enum: ['original', 'medium', 'small'],
+        },
         price: {
             type: Number,
           },
-        quantity: {
-          type: Number
-        },
-        totalPrice: {
-          type: Number
-        }
     },
     frameInfo: {
        frame: {

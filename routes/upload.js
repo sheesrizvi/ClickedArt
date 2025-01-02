@@ -11,6 +11,7 @@ const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const fs = require('fs')
 const axios = require('axios')
+const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -154,7 +155,10 @@ router.post(
       if (!req.file) {
         return res.status(400).send("No file uploaded.");
       }
+      req.body.photographerId = '123',
+      req.body.watermarkOptions = 'custom'
 
+      
       const originalImageBuffer = req.file.buffer;
       const { width, height, format } = await sharp(originalImageBuffer).metadata();
       const fileSizeInMB = req.file.size / (1024 * 1024);
@@ -351,167 +355,188 @@ router.delete('/delete-all-resolutions', asyncHandler(async (req, res) => {
 }))
 
 
-// router.post(
-//   "/uploadPhotoWithSizeCheck",
-//   upload1.single("image"),
-//   async (req, res) => {
-//     try {
-//       if (!req.file) {
-//         return res.status(400).send("No file uploaded.");
-//       }
+router.post(
+  "/handle-photos-with-watermark-and-resolutions",
+  upload1.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).send("No file uploaded.");
+      }
 
-//       const watermarkUrl = 'https://orancia-s3.s3.ap-south-1.amazonaws.com/1735628057188_890080088.jpg';
-//       const watermarkResponse = await axios.get(watermarkUrl, { responseType: 'arraybuffer' });
-//       const watermarkBuffer = Buffer.from(watermarkResponse.data);
+      const watermarkType = req.body.watermarkType;
+      let watermarkBuffer;
 
-//       const originalImageBuffer = req.file.buffer;
-//       const { width, height, format } = await sharp(originalImageBuffer).metadata();
-//       const fileSizeInMB = req.file.size / (1024 * 1024);
-//       console.log(fileSizeInMB);
+      // Fetch watermark based on the type
+      if (watermarkType === "clickedart") {
+        const royaltySettings = await RoyaltySettings.findOne(); // Assuming you have RoyaltySettings model
+        if (!royaltySettings || !royaltySettings.watermarkImage) {
+          return res.status(400).send("Watermark image not found for ClickedArt.");
+        }
+        const watermarkUrl = royaltySettings.watermarkImage;
+        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        watermarkBuffer = Buffer.from(watermarkResponse.data);
+      } else if (watermarkType === "custom") {
+        const customWatermark = await Watermark.findOne({ photographer: req.body.photographerId }); // Assuming you pass photographerId
+        if (!customWatermark || !customWatermark.watermarkImage) {
+          return res.status(400).send("Custom watermark image not found.");
+        }
+        const watermarkUrl = customWatermark.watermarkImage;
+        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        watermarkBuffer = Buffer.from(watermarkResponse.data);
+      }
 
-//       const sizeTargets = {
-//         small: 2.6 * 1024 * 1024, // 2.6 MB
-//         medium: 8.8 * 1024 * 1024, // 8.8 MB
-//       };
+      const originalImageBuffer = req.file.buffer;
+      const { width, height, format } = await sharp(originalImageBuffer).metadata();
+      const fileSizeInMB = req.file.size / (1024 * 1024);
 
-//       const resolutions = {
-//         small: {
-//           width: Math.round(width * 0.6),
-//           height: Math.round(height * 0.6),
-//         },
-//         medium: {
-//           width: Math.round(width * 0.75),
-//           height: Math.round(height * 0.75),
-//         },
-//       };
+      const sizeTargets = {
+        small: 2.6 * 1024 * 1024, // 2.6 MB
+        medium: 8.8 * 1024 * 1024, // 8.8 MB
+      };
 
-//       const addWatermark = async (buffer, width, height) => {
-//         const watermarkWidth = Math.round(width * 0.05); 
-//         const watermarkHeight = Math.round(height * 0.05); 
-      
+      const resolutions = {
+        small: {
+          width: Math.round(width * 0.6),
+          height: Math.round(height * 0.6),
+        },
+        medium: {
+          width: Math.round(width * 0.75),
+          height: Math.round(height * 0.75),
+        },
+      };
 
-//         const watermarkResized = await sharp(watermarkBuffer)
-//           .resize(watermarkWidth, watermarkHeight, { fit: 'inside' })
-//           .toBuffer();
-      
-//         return sharp(buffer)
-//           .composite([{
-//             input: watermarkResized,
-//             gravity: 'southeast', 
-//             blend: 'over',
-//             tile: false, 
-//             // left: 10, 
-//             // top: 10,  
-//           }])
-//           .toBuffer();
-//       };
+      const addWatermark = async (buffer, width, height) => {
+        if (!watermarkBuffer) {
+          return buffer; // No watermark applied
+        }
 
-//       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
-//         let processedBuffer = await addWatermark(buffer, width, height);
+        const watermarkWidth = Math.round(width * 0.05);
+        const watermarkHeight = Math.round(height * 0.05);
 
-//         processedBuffer = await sharp(processedBuffer)
-//           .resize(targetResolution.width, targetResolution.height)
-//           .toBuffer();
+        const watermarkResized = await sharp(watermarkBuffer)
+          .resize(watermarkWidth, watermarkHeight, { fit: "inside" })
+          .toBuffer();
 
-//         if (format === "jpeg" || format === "jpg") {
-//           let quality = 90;
-//           while (true) {
-//             processedBuffer = await sharp(processedBuffer)
-//               .jpeg({ quality })
-//               .toBuffer();
+        return sharp(buffer)
+          .composite([
+            {
+              input: watermarkResized,
+              gravity: "southeast",
+              blend: "over",
+              tile: false,
+            },
+          ])
+          .toBuffer();
+      };
 
-//             if (processedBuffer.length <= targetSize || quality <= 10) {
-//               break;
-//             }
-//             quality -= 5;
-//           }
-//         } else if (format === "png") {
-//           processedBuffer = await sharp(processedBuffer)
-//             .png({ compressionLevel: 9, quality: 100 })
-//             .toBuffer();
-//         } else if (format === "webp") {
-//           let quality = 90;
-//           while (true) {
-//             processedBuffer = await sharp(processedBuffer)
-//               .webp({ quality })
-//               .toBuffer();
+      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+        let processedBuffer = await addWatermark(buffer, width, height);
 
-//             if (processedBuffer.length <= targetSize || quality <= 10) {
-//               break;
-//             }
-//             quality -= 5;
-//           }
-//         } else {
-//           processedBuffer = await sharp(processedBuffer)
-//             .jpeg({ quality: 85 })
-//             .toBuffer();
-//         }
+        processedBuffer = await sharp(processedBuffer)
+          .resize(targetResolution.width, targetResolution.height)
+          .toBuffer();
 
-//         return processedBuffer;
-//       };
+        if (format === "jpeg" || format === "jpg") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer)
+              .jpeg({ quality })
+              .toBuffer();
 
-//       const conversionTargets =
-//         fileSizeInMB > 10
-//           ? ["small", "medium"]
-//           : fileSizeInMB > 4
-//           ? ["small"]
-//           : [];
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5;
+          }
+        } else if (format === "png") {
+          processedBuffer = await sharp(processedBuffer)
+            .png({ compressionLevel: 9, quality: 100 })
+            .toBuffer();
+        } else if (format === "webp") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer)
+              .webp({ quality })
+              .toBuffer();
 
-//       const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
-//         const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
-//         const fileKey = `images/${fileName}`;
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5;
+          }
+        } else {
+          processedBuffer = await sharp(processedBuffer)
+            .jpeg({ quality: 85 })
+            .toBuffer();
+        }
 
-//         let processedBuffer;
-//         if (key === "original") {
-//           processedBuffer = await addWatermark(originalImageBuffer, width, height); // Add watermark to original image
-//         } else {
-//           const targetResolution = resolutions[key];
-//           const targetSize = sizeTargets[key];
-//           processedBuffer = await convertToTargetSizeAndResolution(
-//             originalImageBuffer,
-//             targetSize,
-//             targetResolution,
-//             format
-//           );
-//         }
+        return processedBuffer;
+      };
 
-//         const upload = new Upload({
-//           client: s3,
-//           params: {
-//             Bucket: process.env.AWS_BUCKET,
-//             Key: fileKey,
-//             Body: processedBuffer,
-//             ContentType: req.file.mimetype,
-//           },
-//         });
+      const conversionTargets =
+        fileSizeInMB > 10
+          ? ["small", "medium"]
+          : fileSizeInMB > 4
+          ? ["small"]
+          : [];
 
-//         await upload.done();
+      const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+        const fileKey = `images/${fileName}`;
 
-//         return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
-//       });
+        let processedBuffer;
+        if (key === "original") {
+          processedBuffer = await addWatermark(originalImageBuffer, width, height);
+        } else {
+          const targetResolution = resolutions[key];
+          const targetSize = sizeTargets[key];
+          processedBuffer = await convertToTargetSizeAndResolution(
+            originalImageBuffer,
+            targetSize,
+            targetResolution,
+            format
+          );
+        }
 
-//       const uploadResults = await Promise.all(uploadPromises);
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET,
+            Key: fileKey,
+            Body: processedBuffer,
+            ContentType: req.file.mimetype,
+          },
+        });
 
-//       const urls = uploadResults.reduce((acc, { key, url }) => {
-//         acc[key] = url;
-//         return acc;
-//       }, {});
+        await upload.done();
 
-//       const returnedResolutions = { original: { width, height } };
-//       if (fileSizeInMB > 10) {
-//         returnedResolutions.medium = resolutions.medium;
-//         returnedResolutions.small = resolutions.small;
-//       } else if (fileSizeInMB > 4) {
-//         returnedResolutions.small = resolutions.small;
-//       }
+        return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+      });
 
-//       res.send({ urls, resolutions: returnedResolutions });
-//     } catch (error) {
-//       console.error("Error processing image:", error);
-//       res.status(500).send("Failed to upload image.");
-//     }
-//   }
-// );
+      const uploadResults = await Promise.all(uploadPromises);
+
+      const urls = uploadResults.reduce((acc, { key, url }) => {
+        acc[key] = url;
+        return acc;
+      }, {});
+
+      const returnedResolutions = { original: { width, height } };
+      if (fileSizeInMB > 10) {
+        returnedResolutions.medium = resolutions.medium;
+        returnedResolutions.small = resolutions.small;
+      } else if (fileSizeInMB > 4) {
+        returnedResolutions.small = resolutions.small;
+      }
+
+      res.send({ urls, resolutions: returnedResolutions });
+    } catch (error) {
+      console.error("Error processing image:", error);
+      res.status(500).send("Failed to upload image.");
+    }
+  }
+);
+
 
 
 module.exports = router
