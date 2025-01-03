@@ -3,14 +3,14 @@ const User = require("../models/userModel.js")
 const Photographer = require('../models/photographerModel.js')
 const { generateFromEmail } = require("unique-username-generator")
 const UserType = require('../models/typeModel.js')
-const { sendResetEmail } = require("../middleware/handleEmail.js");
+const { sendResetEmail, sendVerificationEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 const ImageVault = require('../models/imagebase/imageVaultModel.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { name, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts } = req.body
+    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos } = req.body
 
-    if(!name || !email || !password  ) {
+    if(!firstName || !email || !password  ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
     }
 
@@ -20,7 +20,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     }
 
     const username = generateFromEmail(
-        name,
+        firstName,
         4
     );
     
@@ -36,8 +36,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
 
 
     const photographerData = {
-        name, email, username, password, 
-        companyName: !companyName ? name : companyName
+        firstName, email, username, password, 
+        companyName: !companyName ? firstName : companyName
     }
 
     if(isCompany) {
@@ -51,29 +51,38 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     } 
 
     const photographer = new Photographer({
-        name, email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,
+        firstName, lastName,  email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,
         mobile, whatsapp, 
         yearsOfExperience,
         accountType,
         photographyStyles,
-        companyName: !companyName ? name : companyName,
+        companyName: !companyName ? firstName : companyName,
         isCompany: photographerData.isCompany,
         companyEmail: !companyEmail ?  email : companyEmail,
         companyAddress: photographerData.companyAddress || undefined, 
         companyPhone: photographerData.companyPhone,
-        connectedAccounts
+        connectedAccounts,
+        expertise, awards ,achievements, bestPhotos
     });
-    
-    await photographer.save();
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    await sendVerificationEmail(otp, email)
+
+    photographer.otp = otp.toString()
+    await photographer.save()
+
+   
     await UserType.create({
         user: photographer._id,
         username: photographer.username,
         type: photographer.type
     })
 
+   
+
     res.status(201).json({
         status: true,
-        message: 'We will let u know once admin will approve you as a Photographer',
+        message: 'Verification OTP sent to your email. Please verify your email for login.',
         _id: photographer._id,
         email: photographer.email
     }); 
@@ -82,7 +91,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
 const updatePhotographer = asyncHandler(async (req, res) => {
     const { 
         photographerId,
-        name, 
+        firstName, lastName,
         email, 
         password, 
         bio, 
@@ -100,7 +109,8 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         photographyStyles, 
         yearsOfExperience, 
         accountType, 
-        connectedAccounts 
+        connectedAccounts,
+        expertise, awards ,achievements, bestPhotos
     } = req.body;
 
 
@@ -116,8 +126,8 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         }
     }
 
-    if (name && name !== photographer.name) {
-        const username = generateFromEmail(name, 4);
+    if (firstName && firstName !== photographer.firstName) {
+        const username = generateFromEmail(firstName, 4);
         photographer.username = username;
     }
 
@@ -151,19 +161,24 @@ const updatePhotographer = asyncHandler(async (req, res) => {
             photographer.companyPhone = undefined;
         }
     }
-    if(name) photographer.name = name
+    if(firstName) photographer.firstName = firstName
+    if(lastName) photographer.lastName = lastName
     if(email) photographer.email = email
-    if (bio) photographer.bio = bio;
-    if (profileImage) photographer.profileImage = profileImage;
-    if (shippingAddress) photographer.shippingAddress = shippingAddress;
-    if (portfolioLink) photographer.portfolioLink = portfolioLink;
-    if (photographyStyles) photographer.photographyStyles = photographyStyles;
-    if (yearsOfExperience) photographer.yearsOfExperience = yearsOfExperience;
-    if (accountType) photographer.accountType = accountType;
-    if (connectedAccounts) photographer.connectedAccounts = connectedAccounts;
+    if(bio) photographer.bio = bio;
+    if(profileImage) photographer.profileImage = profileImage;
+    if(shippingAddress) photographer.shippingAddress = shippingAddress;
+    if(portfolioLink) photographer.portfolioLink = portfolioLink;
+    if(photographyStyles) photographer.photographyStyles = photographyStyles;
+    if(yearsOfExperience) photographer.yearsOfExperience = yearsOfExperience;
+    if(accountType) photographer.accountType = accountType;
+    if(connectedAccounts) photographer.connectedAccounts = connectedAccounts;
     if(password) photographer.password = password
     if(mobile) photographer.mobile = mobile
     if(whatsapp) photographer.whatsapp = whatsapp
+    if(expertise) photographer.expertise = expertise
+    if(awards) photographer.awards = awards
+    if(achievements) photographer.achievements = achievements
+    if(bestPhotos) photographer.bestPhotos = bestPhotos
 
     await photographer.save();
 
@@ -178,7 +193,7 @@ const photographerLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     if(email && password) {
         let photographer = await Photographer.findOne({email})
-        if (photographer && (await photographer.isPasswordCorrect(password))) {
+        if (photographer && (await photographer.isPasswordCorrect(password)) && photographer.isEmailVerified) {
             if(photographer.photographerStatus === 'pending' || photographer.photographerStatus === 'rejected') {
                 throw new Error('Sorry! You need to wait till admin approval')
             }
@@ -348,6 +363,21 @@ const getFeaturedPhotographer = asyncHandler(async (req, res) => {
     res.status(200).send({  featuredPhotographer, pageCount })
 })
 
+const verifyPhotographerProfile = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body
+  
+    const user = await Photographer.findOne({ email })
+    if(!user) return res.status(400).send({message: 'User not found'})
+  
+    if(user.otp !== otp) return res.status(400).send({ message: 'OTP not valid' })
+    user.isEmailVerified = true
+    user.otp = ""
+    await user.save()
+   
+    res.status(200).send({ message: 'Photographer email verified successfully. We will let u know once admin will approve you as a Photographer', photographer: user })
+  })
+
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -359,5 +389,6 @@ module.exports = {
     updatePhotographer,
     updatePhotographerRank,
     toggleFeaturedPhotographer,
-    getFeaturedPhotographer
+    getFeaturedPhotographer,
+    verifyPhotographerProfile
 }

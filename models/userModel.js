@@ -5,10 +5,13 @@ const jwt = require('jsonwebtoken')
 
 
 const userSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
     required: true,
-    minlength: [5, 'Name must be minimum of 5 characters']
+  },
+  lastName: {
+    type: String,
+    required: true,
   },
   email: {
     type: String,
@@ -30,12 +33,9 @@ const userSchema = new mongoose.Schema({
   whatsapp: {
     type: Number
   },
+ 
   age: {
     type: Number
-  },
-  bio: {
-    type: String,
-    required: false
   },
   image: {
     type: String,
@@ -84,9 +84,22 @@ const userSchema = new mongoose.Schema({
     pincode: { type: String, },
     state: { type: String },
   },
+  isMarried: {
+    type: Boolean
+  },
+  anniversary: {
+    type: Date
+  },
   pushToken: {
     type: String,
   },
+  otp: {
+    type: String
+  },
+  isActive: {
+    type: Boolean,
+    default: false
+  }
 }
   , {
     timestamps: true

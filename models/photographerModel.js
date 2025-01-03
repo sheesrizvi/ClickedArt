@@ -4,10 +4,12 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 
 const photographerSchema = new mongoose.Schema({
-  name: {
+  firstName: {
     type: String,
     required: true,
-    minlength: [5, 'Name must be a minimum of 5 characters']
+  },
+  lastName: {
+    type: String,
   },
   email: {
     type: String,
@@ -37,6 +39,15 @@ const photographerSchema = new mongoose.Schema({
   mobile: {
     type: Number
   },
+  expertise: [{
+    type: String
+  }],
+  awards: [{
+    type: String
+  }],
+  achievements: [{
+    type: String
+  }],
   whatsapp: {
     type: Number
   },
@@ -155,6 +166,9 @@ const photographerSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+  bestPhotos: [{
+    type: String
+  }],
   shippingAddress: {
       address: { type: String,  },
       country: { type: String },
@@ -166,6 +180,13 @@ const photographerSchema = new mongoose.Schema({
       pincode: { type: String, },
       state: { type: String },
     },
+    otp: {
+      type: String
+    },
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

@@ -32,10 +32,7 @@ const verifyTransporter = asyncHandler(async (req, res, next) => {
 
 
 const sendResetEmail = asyncHandler(async(email) => {
-    let password = generator.generate({
-      length: 10,
-      numbers: true
-    })
+  const password = Math.floor(100000 + Math.random() * 900000);
   
     const info = await transporter.sendMail({
       from: process.env.USER_EMAIL, 
@@ -50,7 +47,21 @@ const sendResetEmail = asyncHandler(async(email) => {
   })
 
 
+  const sendVerificationEmail = asyncHandler(async(otp, email) => {
+    
+    const info =  await transporter.sendMail({
+      from: process.env.USER_EMAIL, 
+      to: email, 
+      subject: `Your OTP - PASSWORD`, 
+      text: `Your OTP/Temporary Password for Login is ${otp}`, 
+      html: `<h4>Verification OTP: ${otp}</h4>`, 
+    });
+    return true
+    
+  })
+
   module.exports = {
     sendResetEmail,
-    verifyTransporter
+    verifyTransporter,
+    sendVerificationEmail
   }

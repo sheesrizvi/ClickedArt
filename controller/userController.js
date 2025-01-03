@@ -4,14 +4,14 @@ const bcrypt = require('bcrypt')
 const { generateFromEmail } = require("unique-username-generator")
 const Photographer = require('../models/photographerModel.js')
 const UserType = require('../models/typeModel.js')
-const { sendResetEmail } = require("../middleware/handleEmail.js");
+const { sendResetEmail, sendVerificationEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { name, email, password, mobile, whatsapp, shippingAddress, dob, image, bio, interests, connectedAccounts } = req.body
-
+    const { firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary } = req.body
+   
     const username = generateFromEmail(
-        name,
+        firstName,
         2
     );
 
@@ -29,10 +29,12 @@ const userRegistration = asyncHandler(async (req, res) => {
             return res.status(400).send({ status: false, message: 'Invalid date of birth' });
         }
     }
+    
 
-    if (name && email && password) {
+    if (firstName && email && password) {
         let user = new User({
-            name,
+            firstName,
+            lastName,
             email,
             password,
             mobile,
@@ -42,27 +44,35 @@ const userRegistration = asyncHandler(async (req, res) => {
             dob,
             username,
             image,
-            bio,
             interests,
-            connectedAccounts
+            connectedAccounts,
+            isMarried,
+            anniversary
         })
+        const otp = Math.floor(100000 + Math.random() * 900000);
+
+        await sendVerificationEmail(otp, email)
+
+        user.otp = otp.toString()
         await user.save()
+        
         await UserType.create({
             user: user._id,
             username: user.username,
-            type: user.type
+            type: user.type,
         })
-        const token = await user.generateAccessToken()
+        
+
+       
+
         res.status(201).json({
             status: true,
-            message: 'User created successfully',
+            message: 'Verification OTP sent to your email. Please verify your email for login',
             user: {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                location: user.location,
                 username: user.username,
-                token
             }
         });
     } else {
@@ -74,7 +84,7 @@ const userLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body
     if (email && password) {
         let user = await User.findOne({ email })
-        if (user && (await user.isPasswordCorrect(password))) {
+        if (user && (await user.isPasswordCorrect(password)) && user.isActive) {
             user.password = undefined;
             const token = await user.generateAccessToken()
             res.json({
@@ -108,13 +118,13 @@ const resetPassword = asyncHandler(async(req, res) => {
 const getAllUsers = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const users = await User.find({}).sort({ createdAt: -1 })
+    const users = await User.find({ isActive: true }).sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
 
     if(!users || users.length === 0) return res.status(400).send({ message: 'Users not found' })
 
-    const totalDocuments = await User.countDocuments({})
+    const totalDocuments = await User.countDocuments({ isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
     res.status(200).send({ users, pageCount  })
@@ -131,17 +141,20 @@ const getUserById = asyncHandler(async (req, res) => {
 })
 
 const userProfileUpdate = asyncHandler(async (req, res) => {
-    const { userId, name, email, password, mobile, whatsapp, shippingAddress, dob, image, bio, interests, connectedAccounts  } = req.body
-
+    const { userId, firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary  } = req.body
     const user = await User.findOne({ _id: userId })
     if(!user) {
         return res.status(400).send({ message: 'User not found' })
     }
-    user.name = name || user.name
+    user.firstName = firstName || user.firstName
+    user.lastName = lastName || user.lastName
     user.password = password || user.password
     user.shippingAddress = shippingAddress || user.shippingAddress
     user.mobile = mobile || user.mobile
     user.whatsapp = whatsapp || user.whatsapp
+    user.isMarried = isMarried 
+    user.anniversary = anniversary || user.anniversary
+
 
     if(email && email !== user.email) {
         const emailExist = await User.findOne({ email })
@@ -164,8 +177,7 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
         user.age = age
     }
 
-    user.image = image || user.image
-    user.bio = bio || user.bio
+    user.image = image || user.image  
     user.interests = interests || user.interests
     user.connectedAccounts = connectedAccounts || user.connectedAccounts
 
@@ -236,6 +248,20 @@ const deleteUserProfile = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'User deleted successfully' })
 })
 
+const verifyUserProfile = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body
+  
+    const user = await User.findOne({ email })
+    if(!user) return res.status(400).send({message: 'User not found'})
+  
+    if(user.otp !== otp) return res.status(400).send({ message: 'OTP not valid' })
+    user.isActive = true
+    user.otp = ""
+    await user.save()
+    const token = await user.generateAccessToken()
+    res.status(200).send({ message: 'User verified successfully', user, token })
+  })
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -244,7 +270,8 @@ module.exports = {
     getAllUsers,
     getUserById,
     userProfileUpdate,
-    deleteUserProfile
+    deleteUserProfile,
+    verifyUserProfile
 }
 
 
