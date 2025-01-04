@@ -262,6 +262,23 @@ const verifyUserProfile = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'User verified successfully', user, token })
   })
 
+const resendOTP = asyncHandler(async (req, res) => {
+    const { email } = req.body
+  
+    const user = await User.findOne({ email })
+    if(!user) return res.status(400).send({message: 'User not found'})
+  
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    await sendVerificationEmail(otp, email)
+
+    user.otp = otp.toString()
+
+    await user.save()
+    
+    res.status(200).send({ message: 'OTP resent successfully', user})
+})
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -271,7 +288,8 @@ module.exports = {
     getUserById,
     userProfileUpdate,
     deleteUserProfile,
-    verifyUserProfile
+    verifyUserProfile,
+    resendOTP
 }
 
 
