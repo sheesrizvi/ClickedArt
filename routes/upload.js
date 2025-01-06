@@ -545,19 +545,240 @@ router.post(
 
 
 
-// this is working
+// // this is working
+// router.post(
+//   "/handle-photos-with-watermark-and-resolutions-options",
+//   upload1.single("image"),
+//   async (req, res) => {
+//     try {
+
+//       // if (!req.file) {
+//       //   return res.status(400).send("No file uploaded.");
+//       // }
+
+//       const plan = req.body.plan;
+//       const isCustomText = req.body.isCustomText === "true"; 
+//       const customText = req.body.customText;
+//       const imageUrl = req.body.imageUrl;
+      
+//       const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+//       imageBuffer = Buffer.from(response.data);
+      
+//       let watermarkBuffer;
+
+//       if (plan === "basic") {
+//         const royaltySettings = await RoyaltySettings.findOne();
+//         if (!royaltySettings || !royaltySettings.watermarkImage) {
+//           return res.status(400).send("Watermark image not found for Basic plan.");
+//         }
+//         // const watermarkUrl = royaltySettings.watermarkImage;
+//         // const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+//         // watermarkBuffer = Buffer.from(watermarkResponse.data);
+       
+//         const { width, height } = await sharp(imageBuffer).metadata();
+//         watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        
+//       } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
+//         if (!customText) {
+//           return res.status(400).send("Custom text is required.");
+//         }
+//         const { width, height } = await sharp(imageBuffer).metadata();
+//         watermarkBuffer = await createTextImageBuffer(customText, width, height);
+//       } else if (plan === "advanced" && !isCustomText) {
+//         const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
+//         if (!customWatermark || !customWatermark.watermarkImage) {
+//           return res.status(400).send("Custom watermark image not found.");
+//         }
+//         const watermarkUrl = customWatermark.watermarkImage;
+//         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+
+//         originalWatermarkBuffer  = Buffer.from(watermarkResponse.data);
+//         watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+//       } else {
+//         return res.status(400).send("Invalid plan.");
+//       }
+
+//       const addWatermark = async (buffer, width, height, isCustomImage = false) => {
+//         if (!watermarkBuffer) {
+//           return buffer; 
+//         }
+
+//         if (isCustomImage) {
+//           const watermarkWidth = Math.round(width * 0.1); 
+//           const watermarkHeight = Math.round(height * 0.1);
+
+//           const watermarkResized = await sharp(watermarkBuffer)
+//             .resize(watermarkWidth, watermarkHeight, { fit: "inside" })
+//             .toBuffer();
+
+//           return sharp(buffer)
+//             .composite([
+//               {
+//                 input: watermarkResized,
+//                 gravity: "center", 
+//                 blend: "over",
+//               },
+//             ])
+//             .toBuffer();
+//         } else {
+//           return sharp(buffer)
+//             .composite([
+//               {
+//                 input: watermarkBuffer,
+//                 gravity: "center", 
+//                 blend: "over",
+//               },
+//             ])
+//             .toBuffer();
+//         }
+//       };
+
+   
+      
+//       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+//         const { width, height } = await sharp(buffer).metadata();
+//         const isCustomImage = plan === "advanced" && !isCustomText;
+
+//         let processedBuffer = await addWatermark(buffer, width, height, isCustomImage);
+
+//         processedBuffer = await sharp(processedBuffer)
+//           .resize(targetResolution.width, targetResolution.height)
+//           .toBuffer();
+
+//         if (format === "jpeg" || format === "jpg") {
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer)
+//               .jpeg({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5;
+//           }
+//         } else if (format === "png") {
+//           processedBuffer = await sharp(processedBuffer)
+//             .png({ compressionLevel: 9, quality: 100 })
+//             .toBuffer();
+//         } else if (format === "webp") {
+//           let quality = 90;
+//           while (true) {
+//             processedBuffer = await sharp(processedBuffer)
+//               .webp({ quality })
+//               .toBuffer();
+
+//             if (processedBuffer.length <= targetSize || quality <= 10) {
+//               break;
+//             }
+//             quality -= 5;
+//           }
+//         } else {
+//           processedBuffer = await sharp(processedBuffer)
+//             .jpeg({ quality: 85 })
+//             .toBuffer();
+//         }
+
+//         return processedBuffer;
+//       };
+
+//       const { width, height, format } = await sharp(imageBuffer).metadata();
+//       const imageSizeInMB = imageBuffer.length / (1024 * 1024);
+
+//       const sizeTargets = {
+//         small: 2.6 * 1024 * 1024, // 2.6 MB
+//         medium: 8.8 * 1024 * 1024, // 8.8 MB
+//       };
+
+//       const resolutions = {
+//         small: {
+//           width: Math.round(width * 0.6),
+//           height: Math.round(height * 0.6),
+//         },
+//         medium: {
+//           width: Math.round(width * 0.75),
+//           height: Math.round(height * 0.75),
+//         },
+//       };
+
+//       const conversionTargets =
+//       imageSizeInMB > 10
+//           ? ["small", "medium"]
+//           : imageSizeInMB > 4
+//           ? ["small"]
+//           : [];
+
+//       const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+//         const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+//         const fileKey = `images/${fileName}`;
+
+//         let processedBuffer;
+//         if (key === "original") {
+//           processedBuffer = await addWatermark(imageBuffer, width, height, plan === "advanced" && !isCustomText);
+//         } else {
+//           const targetResolution = resolutions[key];
+//           const targetSize = sizeTargets[key];
+//           processedBuffer = await convertToTargetSizeAndResolution(
+//             imageBuffer,
+//             targetSize,
+//             targetResolution,
+//             format
+//           );
+//         }
+
+//         const upload = new Upload({
+//           client: s3,
+//           params: {
+//             Bucket: process.env.AWS_BUCKET,
+//             Key: fileKey,
+//             Body: processedBuffer,
+//             ContentType: req.file.mimetype,
+//           },
+//         });
+
+//         await upload.done();
+
+//         return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+//       });
+
+//       const uploadResults = await Promise.all(uploadPromises);
+
+//       const urls = uploadResults.reduce((acc, { key, url }) => {
+//         acc[key] = url;
+//         return acc;
+//       }, {});
+
+//       const returnedResolutions = { original: { width, height } };
+//       if (fileSizeInMB > 10) {
+//         returnedResolutions.medium = resolutions.medium;
+//         returnedResolutions.small = resolutions.small;
+//       } else if (fileSizeInMB > 4) {
+//         returnedResolutions.small = resolutions.small;
+//       }
+
+//       res.send({ urls, resolutions: returnedResolutions });
+//     } catch (error) {
+//       console.error("Error processing image:", error);
+//       res.status(500).send("Failed to upload image.");
+//     }
+//   }
+// );
+
+
+// new secondary for testing
 router.post(
   "/handle-photos-with-watermark-and-resolutions-options",
   upload1.single("image"),
   async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).send("No file uploaded.");
-      }
-
       const plan = req.body.plan;
-      const isCustomText = req.body.isCustomText === "true"; 
+      const isCustomText = req.body.isCustomText === "true";
       const customText = req.body.customText;
+      const imageUrl = req.body.imageUrl;
+
+      // Fetch image buffer from the provided URL
+      const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      const imageBuffer = Buffer.from(response.data);
 
       let watermarkBuffer;
 
@@ -567,18 +788,13 @@ router.post(
           return res.status(400).send("Watermark image not found for Basic plan.");
         }
 
-        // const watermarkUrl = royaltySettings.watermarkImage;
-        // const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
-        // watermarkBuffer = Buffer.from(watermarkResponse.data);
-
-        const { width, height } = await sharp(req.file.buffer).metadata();
+        const { width, height } = await sharp(imageBuffer).metadata();
         watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
-        
       } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
         if (!customText) {
           return res.status(400).send("Custom text is required.");
         }
-        const { width, height } = await sharp(req.file.buffer).metadata();
+        const { width, height } = await sharp(imageBuffer).metadata();
         watermarkBuffer = await createTextImageBuffer(customText, width, height);
       } else if (plan === "advanced" && !isCustomText) {
         const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
@@ -587,18 +803,20 @@ router.post(
         }
         const watermarkUrl = customWatermark.watermarkImage;
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
-        watermarkBuffer = Buffer.from(watermarkResponse.data);
+
+        const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
+        watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
       } else {
         return res.status(400).send("Invalid plan.");
       }
 
       const addWatermark = async (buffer, width, height, isCustomImage = false) => {
         if (!watermarkBuffer) {
-          return buffer; 
+          return buffer;
         }
 
         if (isCustomImage) {
-          const watermarkWidth = Math.round(width * 0.1); 
+          const watermarkWidth = Math.round(width * 0.1);
           const watermarkHeight = Math.round(height * 0.1);
 
           const watermarkResized = await sharp(watermarkBuffer)
@@ -609,7 +827,7 @@ router.post(
             .composite([
               {
                 input: watermarkResized,
-                gravity: "center", 
+                gravity: "center",
                 blend: "over",
               },
             ])
@@ -619,7 +837,7 @@ router.post(
             .composite([
               {
                 input: watermarkBuffer,
-                gravity: "center", 
+                gravity: "center",
                 blend: "over",
               },
             ])
@@ -627,8 +845,6 @@ router.post(
         }
       };
 
-   
-      
       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
         const { width, height } = await sharp(buffer).metadata();
         const isCustomImage = plan === "advanced" && !isCustomText;
@@ -676,8 +892,8 @@ router.post(
         return processedBuffer;
       };
 
-      const { width, height, format } = await sharp(req.file.buffer).metadata();
-      const fileSizeInMB = req.file.size / (1024 * 1024);
+      const { width, height, format } = await sharp(imageBuffer).metadata();
+      const imageSizeInMB = imageBuffer.length / (1024 * 1024);
 
       const sizeTargets = {
         small: 2.6 * 1024 * 1024, // 2.6 MB
@@ -696,24 +912,24 @@ router.post(
       };
 
       const conversionTargets =
-        fileSizeInMB > 10
+        imageSizeInMB > 10
           ? ["small", "medium"]
-          : fileSizeInMB > 4
+          : imageSizeInMB > 4
           ? ["small"]
           : [];
 
       const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
-        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.body.imageUrl.split("/").pop()}`;
         const fileKey = `images/${fileName}`;
 
         let processedBuffer;
         if (key === "original") {
-          processedBuffer = await addWatermark(req.file.buffer, width, height, plan === "advanced" && !isCustomText);
+          processedBuffer = await addWatermark(imageBuffer, width, height, plan === "advanced" && !isCustomText);
         } else {
           const targetResolution = resolutions[key];
           const targetSize = sizeTargets[key];
           processedBuffer = await convertToTargetSizeAndResolution(
-            req.file.buffer,
+            imageBuffer,
             targetSize,
             targetResolution,
             format
@@ -726,7 +942,7 @@ router.post(
             Bucket: process.env.AWS_BUCKET,
             Key: fileKey,
             Body: processedBuffer,
-            ContentType: req.file.mimetype,
+            ContentType: response.headers["content-type"],
           },
         });
 
@@ -743,10 +959,10 @@ router.post(
       }, {});
 
       const returnedResolutions = { original: { width, height } };
-      if (fileSizeInMB > 10) {
+      if (imageSizeInMB > 10) {
         returnedResolutions.medium = resolutions.medium;
         returnedResolutions.small = resolutions.small;
-      } else if (fileSizeInMB > 4) {
+      } else if (imageSizeInMB > 4) {
         returnedResolutions.small = resolutions.small;
       }
 
@@ -770,5 +986,47 @@ const createTextImageBuffer = async (text, width, height) => {
   `;
   return Buffer.from(svg);
 };
+
+
+const removeBackgroundWithSharp = async (buffer) => {
+  try {
+    const rgbaImage = await sharp(buffer)
+      .ensureAlpha()  
+      .toBuffer();
+
+   
+    const { data, info } = await sharp(rgbaImage)
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    for (let i = 0; i < data.length; i += info.channels) {
+      const r = data[i];     
+      const g = data[i + 1]; 
+      const b = data[i + 2]; 
+      const alpha = data[i + 3]; 
+      if (r > 180 && g > 180 && b > 180) {
+        data[i + 3] = 0; 
+      }
+    }
+
+    const transparentImage = await sharp(data, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: 4, 
+      },
+    })
+      .toFormat('png')
+      .toBuffer();
+
+    return transparentImage;
+  } catch (error) {
+    console.error("Error removing background aggressively with sharp:", error);
+    throw new Error("Failed to aggressively remove background from watermark image.");
+  }
+};
+
+
+
 
 module.exports = router
