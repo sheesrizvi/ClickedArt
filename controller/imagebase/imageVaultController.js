@@ -430,15 +430,23 @@ const searchImages = asyncHandler(async(req, res) => {
     },
     {
       $match: {
-        $or: [
-          { title : { $regex: Query, $options: 'i' } },
-          { description: { $regex: Query, $options: 'i' } },
-          { story : { $regex: Query, $options: 'i' } },
-          { keywords : { $regex: Query, $options: 'i' } },
-          { 'category.name': { $regex: Query , $options: 'i'} },
-          { 'category.description': { $regex: Query , $options: 'i'} },
-          { 'photographer.name': { $regex: Query , $options: 'i'} }
+        $and: [
+          {
+            $or: [
+              { title : { $regex: Query, $options: 'i' } },
+              { description: { $regex: Query, $options: 'i' } },
+              { story : { $regex: Query, $options: 'i' } },
+              { keywords : { $regex: Query, $options: 'i' } },
+              { 'category.name': { $regex: Query , $options: 'i'} },
+              { 'category.description': { $regex: Query , $options: 'i'} },
+              { 'photographer.name': { $regex: Query , $options: 'i'} }
+            ]
+          },
+          {
+            isActive: true
+          }
         ]
+        
       }
     },
     {
