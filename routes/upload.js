@@ -776,7 +776,6 @@ router.post(
       const customText = req.body.customText;
       const imageUrl = req.body.imageUrl;
 
-      // Fetch image buffer from the provided URL
       const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
       const imageBuffer = Buffer.from(response.data);
 

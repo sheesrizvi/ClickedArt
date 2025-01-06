@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Coupon = require('../models/couponModel.js')
-
+const mongoose = require('mongoose')
 
 const createCoupon = asyncHandler(async (req, res) => {
     const { code, discountPercentage, maxDiscountAmount, maxUses, applicableTo, expirationDate } = req.body;
@@ -52,14 +52,15 @@ const getCouponByCode = asyncHandler(async (req, res) => {
 })
 
 const updateCoupon = asyncHandler(async (req, res) => {
-    const { id, code , discountPercentage, maxDiscountAmount, maxUses, applicableTo, expirationDate } = req.body;
-
+    let { id, code , discountPercentage, maxDiscountAmount, maxUses, applicableTo, expirationDate } = req.body;
+    
+    id = new mongoose.Types.ObjectId(id)
     const coupon = await Coupon.findOne({ _id: id })
 
     if (!coupon) return res.status(404).json({ message: 'Coupon not found' })
     
     if(code) {
-        const codeExist  = await Coupon.findOne({ code, _id: { $ne: _id } })
+        const codeExist  = await Coupon.findOne({ code, _id: { $ne: id } })
         if(codeExist) {
             throw new Error('Code is already exist')
         }
