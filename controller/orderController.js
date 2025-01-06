@@ -5,6 +5,7 @@ const UserType = require('../models/typeModel')
 const asyncHandler = require('express-async-handler')
 const ImageVault = require('../models/imagebase/imageVaultModel')
 const GST = require('../models/gstModel')
+const Coupon = require('../models/couponModel')
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -16,9 +17,11 @@ const createOrder = asyncHandler(async (req, res) => {
     subTotal,
     paymentMethod, 
     shippingAddress,
+    discount,
     totalAmount,
     orderStatus,
     invoiceId,
+    coupon
   } = req.body;
 
   const image = await ImageVault.findById(imageInfo.image);
@@ -47,6 +50,7 @@ const createOrder = asyncHandler(async (req, res) => {
     subTotal,
     gst: gstId,
     totalAmount,
+    discount,
     orderStatus,
     paymentMethod,
     shippingAddress,
@@ -55,6 +59,18 @@ const createOrder = asyncHandler(async (req, res) => {
   };
 
   const order = await Order.create(orderData);
+
+  if(coupon) {
+    const couponData = await Coupon.findOne({ code: coupon })
+    if(couponData) {
+      couponData.usageCount += 1
+      couponData.users.push({
+        user: userId,
+        userType: type
+      })
+      await couponData.save()
+    }
+  }
 
   res.status(201).send(order);
 });

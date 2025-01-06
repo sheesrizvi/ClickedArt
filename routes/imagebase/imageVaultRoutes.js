@@ -11,7 +11,8 @@ const {
         approveImage,
         getAllPendingImagesForAdmin,
         toggleFeaturedArtwork,
-        getFeaturedArtwork
+        getFeaturedArtwork,
+        searchImages
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin } = require('../../middleware/authMiddleware')
 
@@ -31,5 +32,6 @@ router.get('/get-all-pending-images-for-admin', isAdmin, getAllPendingImagesForA
 
 router.post('/toggle-featured-artwork', isAdmin, toggleFeaturedArtwork)
 router.get('/get-featured-artwork', getFeaturedArtwork)
+router.get('/search-images', searchImages)
 
 module.exports = router

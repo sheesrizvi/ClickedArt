@@ -76,6 +76,9 @@ const orderSchema = new mongoose.Schema(
     invoiceId: {
         type: String,
       },
+    discount: {
+      type: Number
+    },
     shippingAddress: {
         address: { type: String, },
         country: { type: String },

@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Coupon = require('../models/couponModel.js')
 
+
 const createCoupon = asyncHandler(async (req, res) => {
     const { code, discountPercentage, maxDiscountAmount, maxUses, applicableTo, expirationDate } = req.body;
 
@@ -109,6 +110,40 @@ const getActiveCoupons = asyncHandler(async (req, res) => {
     res.status(200).send({  coupons })
 })
 
+
+const applyCoupon = asyncHandler(async (req, res) => {
+    const { code , userId, type } = req.query
+    const now = Date.now()
+    
+    const coupon = await Coupon.findOne({
+        code,
+        status: 'active', 
+        expirationDate: { $gte: now },
+        $expr: {
+            $or:[
+                { $eq: [ '$maxUses', null ] },
+                { $lt: [ '$usageCount', '$maxUses' ] }
+            ]
+        },
+    })
+
+    if(!coupon) {
+        return res.status(400).send({message: 'coupon not found or inactive'})
+    }
+
+    const userExist = coupon.users.find((userInfo)  => userInfo.user.toString() === userId.toString() )
+
+    if(userExist) {
+        return res.status(400).send({message: 'Coupon already used by user or user id not provided'})
+    }
+    
+    if(coupon.applicableTo.toLowerCase() !== type.toLowerCase()) {
+        return res.status(400).send({ message: 'Coupon not applicable for this user type' })
+    }
+    
+    res.status(200).send({message: 'Coupon is active and not used by user',  coupon})
+})
+
 module.exports = {
     createCoupon,
     getCoupons,
@@ -116,5 +151,6 @@ module.exports = {
     updateCoupon,
     deleteCoupon,
     isActiveCoupon,
-    getActiveCoupons
+    getActiveCoupons,
+    applyCoupon
 };

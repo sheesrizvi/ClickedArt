@@ -6,7 +6,8 @@ const {
     updateCoupon,
     deleteCoupon,
     isActiveCoupon,
-    getActiveCoupons
+    getActiveCoupons,
+    applyCoupon
  } = require('../controller/couponController.js')
 const router = express.Router()
 
@@ -17,5 +18,6 @@ router.get('/get-active-coupons', getActiveCoupons)
 router.get('/is-active-coupon', isActiveCoupon)
 router.get('/get-coupon-by-code', getCouponByCode)
 router.delete('/delete-coupon', deleteCoupon)
+router.get('/apply-coupon', applyCoupon)
 
 module.exports = router

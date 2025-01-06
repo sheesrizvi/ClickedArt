@@ -358,7 +358,7 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   const [ featuredArtwork, totalDocuments ] = await Promise.all([
-    ImageVault.find({ featuredArtwork: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+    ImageVault.find({ featuredArtwork: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
     ImageVault.countDocuments({ featuredArtwork : true })
   ])
 
@@ -368,6 +368,89 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const pageCount = Math.ceil(totalDocuments/pageSize)
 
   res.status(200).send({  featuredArtwork, pageCount })
+})
+
+const searchImages = asyncHandler(async(req, res) => {
+  const { Query, pageNumber = 1, pageSize = 20 } = req.query
+
+  const images = await ImageVault.aggregate([
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as:'category'
+      },
+    },
+    {
+      $lookup: {
+        from: 'photographers',
+        localField: 'photographer',
+        foreignField: '_id',
+        as: 'photographer'
+      }
+    },
+    {
+      $match: {
+        $or: [
+          { title : { $regex: Query, $options: 'i' } },
+          { description: { $regex: Query, $options: 'i' } },
+          { story : { $regex: Query, $options: 'i' } },
+          { keywords : { $regex: Query, $options: 'i' } },
+          { 'category.name': { $regex: Query , $options: 'i'} },
+          { 'category.description': { $regex: Query , $options: 'i'} },
+          { 'photographer.name': { $regex: Query , $options: 'i'} }
+        ]
+      }
+    },
+    {
+      $skip: (pageNumber - 1) * pageSize
+    },
+    {
+      $limit: pageSize
+    },
+  ])
+
+  const totalDocuments = await ImageVault.aggregate([
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'category',
+        foreignField: '_id',
+        as:'category'
+      },
+    },
+    {
+      $lookup: {
+        from: 'photographers',
+        localField: 'photographer',
+        foreignField: '_id',
+        as: 'photographer'
+      }
+    },
+    {
+      $match: {
+        $or: [
+          { title : { $regex: Query, $options: 'i' } },
+          { description: { $regex: Query, $options: 'i' } },
+          { story : { $regex: Query, $options: 'i' } },
+          { keywords : { $regex: Query, $options: 'i' } },
+          { 'category.name': { $regex: Query , $options: 'i'} },
+          { 'category.description': { $regex: Query , $options: 'i'} },
+          { 'photographer.name': { $regex: Query , $options: 'i'} }
+        ]
+      }
+    },
+    {
+      $count: 'total'
+    }
+  ]) 
+  
+  const count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0
+  
+  const pageCount = Math.ceil(count/pageSize)
+  res.status(200).send({ images, pageCount })
+  
 })
 
 module.exports = {
@@ -382,5 +465,6 @@ module.exports = {
     approveImage,
     getAllPendingImagesForAdmin,
     toggleFeaturedArtwork,
-    getFeaturedArtwork
+    getFeaturedArtwork,
+    searchImages
 }

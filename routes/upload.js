@@ -13,6 +13,7 @@ const fs = require('fs')
 const axios = require('axios')
 const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const CustomWatermark = require('../models/imagebase/customWatermarkModel.js')
+const { S3 } = require("@aws-sdk/client-s3");
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -544,5 +545,230 @@ router.post(
 
 
 
+// this is working
+router.post(
+  "/handle-photos-with-watermark-and-resolutions-options",
+  upload1.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).send("No file uploaded.");
+      }
+
+      const plan = req.body.plan;
+      const isCustomText = req.body.isCustomText === "true"; 
+      const customText = req.body.customText;
+
+      let watermarkBuffer;
+
+      if (plan === "basic") {
+        const royaltySettings = await RoyaltySettings.findOne();
+        if (!royaltySettings || !royaltySettings.watermarkImage) {
+          return res.status(400).send("Watermark image not found for Basic plan.");
+        }
+
+        // const watermarkUrl = royaltySettings.watermarkImage;
+        // const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        // watermarkBuffer = Buffer.from(watermarkResponse.data);
+
+        const { width, height } = await sharp(req.file.buffer).metadata();
+        watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        
+      } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
+        if (!customText) {
+          return res.status(400).send("Custom text is required.");
+        }
+        const { width, height } = await sharp(req.file.buffer).metadata();
+        watermarkBuffer = await createTextImageBuffer(customText, width, height);
+      } else if (plan === "advanced" && !isCustomText) {
+        const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
+        if (!customWatermark || !customWatermark.watermarkImage) {
+          return res.status(400).send("Custom watermark image not found.");
+        }
+        const watermarkUrl = customWatermark.watermarkImage;
+        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        watermarkBuffer = Buffer.from(watermarkResponse.data);
+      } else {
+        return res.status(400).send("Invalid plan.");
+      }
+
+      const addWatermark = async (buffer, width, height, isCustomImage = false) => {
+        if (!watermarkBuffer) {
+          return buffer; 
+        }
+
+        if (isCustomImage) {
+          const watermarkWidth = Math.round(width * 0.1); 
+          const watermarkHeight = Math.round(height * 0.1);
+
+          const watermarkResized = await sharp(watermarkBuffer)
+            .resize(watermarkWidth, watermarkHeight, { fit: "inside" })
+            .toBuffer();
+
+          return sharp(buffer)
+            .composite([
+              {
+                input: watermarkResized,
+                gravity: "center", 
+                blend: "over",
+              },
+            ])
+            .toBuffer();
+        } else {
+          return sharp(buffer)
+            .composite([
+              {
+                input: watermarkBuffer,
+                gravity: "center", 
+                blend: "over",
+              },
+            ])
+            .toBuffer();
+        }
+      };
+
+   
+      
+      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+        const { width, height } = await sharp(buffer).metadata();
+        const isCustomImage = plan === "advanced" && !isCustomText;
+
+        let processedBuffer = await addWatermark(buffer, width, height, isCustomImage);
+
+        processedBuffer = await sharp(processedBuffer)
+          .resize(targetResolution.width, targetResolution.height)
+          .toBuffer();
+
+        if (format === "jpeg" || format === "jpg") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer)
+              .jpeg({ quality })
+              .toBuffer();
+
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5;
+          }
+        } else if (format === "png") {
+          processedBuffer = await sharp(processedBuffer)
+            .png({ compressionLevel: 9, quality: 100 })
+            .toBuffer();
+        } else if (format === "webp") {
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer)
+              .webp({ quality })
+              .toBuffer();
+
+            if (processedBuffer.length <= targetSize || quality <= 10) {
+              break;
+            }
+            quality -= 5;
+          }
+        } else {
+          processedBuffer = await sharp(processedBuffer)
+            .jpeg({ quality: 85 })
+            .toBuffer();
+        }
+
+        return processedBuffer;
+      };
+
+      const { width, height, format } = await sharp(req.file.buffer).metadata();
+      const fileSizeInMB = req.file.size / (1024 * 1024);
+
+      const sizeTargets = {
+        small: 2.6 * 1024 * 1024, // 2.6 MB
+        medium: 8.8 * 1024 * 1024, // 8.8 MB
+      };
+
+      const resolutions = {
+        small: {
+          width: Math.round(width * 0.6),
+          height: Math.round(height * 0.6),
+        },
+        medium: {
+          width: Math.round(width * 0.75),
+          height: Math.round(height * 0.75),
+        },
+      };
+
+      const conversionTargets =
+        fileSizeInMB > 10
+          ? ["small", "medium"]
+          : fileSizeInMB > 4
+          ? ["small"]
+          : [];
+
+      const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
+        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
+        const fileKey = `images/${fileName}`;
+
+        let processedBuffer;
+        if (key === "original") {
+          processedBuffer = await addWatermark(req.file.buffer, width, height, plan === "advanced" && !isCustomText);
+        } else {
+          const targetResolution = resolutions[key];
+          const targetSize = sizeTargets[key];
+          processedBuffer = await convertToTargetSizeAndResolution(
+            req.file.buffer,
+            targetSize,
+            targetResolution,
+            format
+          );
+        }
+
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET,
+            Key: fileKey,
+            Body: processedBuffer,
+            ContentType: req.file.mimetype,
+          },
+        });
+
+        await upload.done();
+
+        return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+      });
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      const urls = uploadResults.reduce((acc, { key, url }) => {
+        acc[key] = url;
+        return acc;
+      }, {});
+
+      const returnedResolutions = { original: { width, height } };
+      if (fileSizeInMB > 10) {
+        returnedResolutions.medium = resolutions.medium;
+        returnedResolutions.small = resolutions.small;
+      } else if (fileSizeInMB > 4) {
+        returnedResolutions.small = resolutions.small;
+      }
+
+      res.send({ urls, resolutions: returnedResolutions });
+    } catch (error) {
+      console.error("Error processing image:", error);
+      res.status(500).send("Failed to upload image.");
+    }
+  }
+);
+
+
+
+const createTextImageBuffer = async (text, width, height) => {
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <text x="50%" y="50%" class="text" fill="rgba(255, 255, 255, 0.3)" font-family="'Brush Script MT', cursive" font-size="${Math.round(
+        height * 0.07
+      )}" text-anchor="middle" dominant-baseline="middle">${text}</text>
+    </svg>
+  `;
+  return Buffer.from(svg);
+};
 
 module.exports = router
