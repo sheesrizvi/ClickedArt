@@ -6,10 +6,11 @@ const Photographer = require('../models/photographerModel.js')
 const UserType = require('../models/typeModel.js')
 const { sendResetEmail, sendVerificationEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
+const Referral = require('../models/referralModel.js')
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary } = req.body
-   
+    const { firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary, referralcode } = req.body
+    console.log(referralcode)
     const username = generateFromEmail(
         firstName,
         2
@@ -30,8 +31,16 @@ const userRegistration = asyncHandler(async (req, res) => {
         }
     }
     
+    if(referralcode) {
+        const now = Date.now()
+        const referral = await Referral.findOne({ code: referralcode, status: 'active', expirationDate: { $gt: now } }).populate('photographer')
+        if(!referral) {
+            return res.status(400).send({ message: 'Referral Code is not valid' })
+        }
+    }
 
     if (firstName && email && password) {
+        
         let user = new User({
             firstName,
             lastName,
@@ -47,10 +56,11 @@ const userRegistration = asyncHandler(async (req, res) => {
             interests,
             connectedAccounts,
             isMarried,
-            anniversary
+            anniversary,
+            referralcode
         })
         const otp = Math.floor(100000 + Math.random() * 900000);
-
+        console.log(otp)
         await sendVerificationEmail(otp, email)
 
         user.otp = otp.toString()
@@ -62,9 +72,6 @@ const userRegistration = asyncHandler(async (req, res) => {
             type: user.type,
         })
         
-
-       
-
         res.status(201).json({
             status: true,
             message: 'Verification OTP sent to your email. Please verify your email for login',

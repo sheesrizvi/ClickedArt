@@ -186,6 +186,9 @@ const photographerSchema = new mongoose.Schema({
   isEmailVerified: {
     type: Boolean,
     default: false
+  },
+  referralcode: {
+    type: String
   }
 }, {
   timestamps: true

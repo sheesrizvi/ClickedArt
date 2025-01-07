@@ -32,6 +32,7 @@ const customWatermarkRoutes = require('./routes/customWatermarkRoutes.js')
 const couponRoutes = require('./routes/couponRoutes.js')
 const photographerAnalyticsRoutes = require('./routes/photographerAnalyticsRoutes.js')
 const userAnalyticsRoutes = require('./routes/userAnalyticsRoutes.js')
+const referralRoutes = require('./routes/referralRoutes.js')
 const upload  = require("./routes/upload");
 
 
@@ -74,6 +75,7 @@ app.use('/api/customwatermark', customWatermarkRoutes)
 app.use('/api/coupon', couponRoutes)
 app.use('/api/photographeranalytics', photographerAnalyticsRoutes)
 app.use('/api/useranalytics', userAnalyticsRoutes)
+app.use('/api/referral', referralRoutes)
 
 dbConnect()
 

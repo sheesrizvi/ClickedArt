@@ -6,9 +6,10 @@ const UserType = require('../models/typeModel.js')
 const { sendResetEmail, sendVerificationEmail } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 const ImageVault = require('../models/imagebase/imageVaultModel.js')
+const Referral = require('../models/referralModel.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos } = req.body
+    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode } = req.body
 
     if(!firstName || !email || !password  ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
@@ -50,6 +51,14 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         }
     } 
 
+    if(referralcode) {
+            const now = Date.now()
+            const referral = await Referral.findOne({ code: referralcode, status: 'active', expirationDate: { $gt: now } }).populate('photographer')
+            if(!referral) {
+                return res.status(400).send({ message: 'Referral Code is not valid' })
+            }
+        }
+
     const photographer = new Photographer({
         firstName, lastName,  email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,
         mobile, whatsapp, 
@@ -62,10 +71,12 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         companyAddress: photographerData.companyAddress || undefined, 
         companyPhone: photographerData.companyPhone,
         connectedAccounts,
-        expertise, awards ,achievements, bestPhotos
+        expertise, awards ,achievements, bestPhotos,
+        referralcode
     });
-    const otp = Math.floor(100000 + Math.random() * 900000);
 
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    console.log(otp)
     await sendVerificationEmail(otp, email)
 
     photographer.otp = otp.toString()

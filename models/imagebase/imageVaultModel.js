@@ -12,11 +12,13 @@ const imageVaultSchema = mongoose.Schema({
         required: true
     },
     imageLinks: {
+        thumbnail: { type: String },
         original: { type: String, required: true },
         medium: { type: String },
         small: { type: String },
       },
     resolutions: {
+        thumbnail: { type: String },
         small: {  width: { type: Number }, height: { type: Number }  },
         medium: {  width: { type: Number }, height: { type: Number }  },
         original: {  width: { type: Number }, height: { type: Number }  },

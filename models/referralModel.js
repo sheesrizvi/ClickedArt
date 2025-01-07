@@ -6,7 +6,7 @@ const ReferralSchema = new mongoose.Schema({
         required: true, 
         unique: true 
     },
-    referringPhotographer: { 
+    photographer: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Photographer', 
         required: true 

@@ -6,6 +6,7 @@ const asyncHandler = require('express-async-handler')
 const ImageVault = require('../models/imagebase/imageVaultModel')
 const GST = require('../models/gstModel')
 const Coupon = require('../models/couponModel')
+const ReferralBalance = require('../models/referralBalanceModel')
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -39,6 +40,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const gst = await GST.findOne({ 'userInfo.user': userId  })
   const gstId = gst ? gst._id : null
 
+  
   const orderData = {
     userInfo: {
       user: userId,

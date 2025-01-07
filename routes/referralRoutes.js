@@ -21,4 +21,4 @@ router.get('/get-all-referrals', getAllReferrals)
 router.get('/get-active-referral-by-code', isActiveReferral)
 router.get('/get-all-active-referrals', getAllActiveReferrals)
 
-export default router
+module.exports = router

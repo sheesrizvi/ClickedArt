@@ -1,22 +1,17 @@
 const asyncHandler = require('express-async-handler');
-const Referral = require('../models/Referral');
-const Photographer = require('../models/photographerModel');
-
+const Referral = require('../models/referralModel.js');
+const Photographer = require('../models/photographerModel.js');
+const mongoose = require('mongoose')
 
 const createReferral = asyncHandler(async (req, res) => {
-    const { referringPhotographer, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, applicableTo } = req.body;
+    const { code, photographer, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, applicableTo } = req.body;
 
-    if (!referringPhotographer || !commissionRate || !discountPercentage || !applicableTo) {
+    if (!photographer || !commissionRate || !discountPercentage || !applicableTo) {
         return res.status(400).send({ message: 'Missing required fields' });
     }
-    const photographer = await Photographer.findOne({ _id: referringPhotographer })
-    if(!photographer) return res.status(400).send({ message: 'Photographer not exist' })
+    const photographerData = await Photographer.findOne({ _id: photographer })
+    if(!photographerData) return res.status(400).send({ message: 'Photographer not exist' })
 
-    const name = photographer.name
-    const randomString = Math.random().toString(36).substring(2, 6).toUpperCase()
-    const initials = name.split(' ').map(word => word[0]).join('').toUpperCase()
-
-    const code = `${initials}${randomString}`
 
     const referralExists = await Referral.findOne({ code });
     if (referralExists) {
@@ -25,7 +20,7 @@ const createReferral = asyncHandler(async (req, res) => {
 
     const referral = await Referral.create({
         code,
-        referringPhotographer,
+        photographer,
         commissionRate,
         discountPercentage,
         maxUses,
@@ -84,31 +79,27 @@ const deleteReferral = asyncHandler(async (req, res) => {
 });
 
 const getAllReferrals = asyncHandler(async (req, res) => {
-    const referrals = await Referral.find({}).populate('photographer').sort({ createdAt: -1 })
+    const referrals = await Referral.find({}).populate('photographer').populate('users').sort({ createdAt: -1 })
     res.status(200).send(referrals)
 })
 
 const getAllActiveReferrals = asyncHandler(async (req, res) => {
     const now = Date.now()
-    const referrals = await Referral.find({status: 'active', expirationDate: { $gt: now }}).populate('photographer').sort({ createdAt: -1 })
+    const referrals = await Referral.find({status: 'active', expirationDate: { $gt: now }}).populate('photographer').populate('users').sort({ createdAt: -1 })
     res.status(200).send(referrals)
 })
 
 const getReferralByPhotographer = asyncHandler(async (req, res) => {
-    const { photographer } = req.query
+    let { photographer } = req.query
+    const referrals = await Referral.find({ photographer }).populate('photographer').populate('users').sort({ createdAt: -1 })
+    res.status(200).send(referrals)
 
-    const referrals = await Referral.find({ photographer }).populate('photographer').sort({ createdAt: -1 })
-    if(!referrals || referrals.length > 0) {
-        return res.status(400).send({ message: 'No Referral Code found for photographer' })
-    }
-
-    res.status(200).send({ referrals })
 })
 
 const getActiveReferralByPhotographer = asyncHandler(async (req, res) => {
     const { photographer } = req.query
     const now = new Date()
-    const referrals = await Referral.find({ photographer, expirationDate: { $gt: now }, status: 'active' }).populate('photographer').sort({ createdAt: -1 })
+    const referrals = await Referral.find({ photographer, expirationDate: { $gt: now }, status: 'active' }).populate('photographer').populate('users').sort({ createdAt: -1 })
     if(!referrals || referrals.length > 0) {
         return res.status(400).send({ message: 'No Referral Code found for photographer' })
     }
