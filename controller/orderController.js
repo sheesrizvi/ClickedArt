@@ -40,7 +40,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const gst = await GST.findOne({ 'userInfo.user': userId  })
   const gstId = gst ? gst._id : null
 
-  
+ 
   const orderData = {
     userInfo: {
       user: userId,
@@ -62,6 +62,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const order = await Order.create(orderData);
 
+
   if(coupon) {
     const couponData = await Coupon.findOne({ code: coupon })
     if(couponData) {
@@ -73,6 +74,9 @@ const createOrder = asyncHandler(async (req, res) => {
       await couponData.save()
     }
   }
+
+
+ 
 
   res.status(201).send(order);
 });
