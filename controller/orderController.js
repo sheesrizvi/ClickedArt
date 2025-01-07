@@ -7,6 +7,8 @@ const ImageVault = require('../models/imagebase/imageVaultModel')
 const GST = require('../models/gstModel')
 const Coupon = require('../models/couponModel')
 const ReferralBalance = require('../models/referralBalanceModel')
+const User = require('../models/userModel.js')
+const Referral = require('../models/referralModel.js')
 
 const createOrder = asyncHandler(async (req, res) => {
 
@@ -39,7 +41,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const gst = await GST.findOne({ 'userInfo.user': userId  })
   const gstId = gst ? gst._id : null
-
+  const orderExist = await Order.findOne({ 'userInfo.user': userId })
  
   const orderData = {
     userInfo: {
@@ -75,8 +77,23 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
-
- 
+  const Model = type === 'User' ? User : Photographer
+  const user = await Model.findOne({ _id: userId })
+  
+  if(user && user.referralcode && !orderExist) {
+      const referral = await Referral.findOne({ code: user.referralcode })
+      if(referral){
+        const commissionRate = referral.commissionRate
+        const price = order.totalAmount
+        const balance = Math.round(price * (commissionRate/100))
+        
+        await ReferralBalance.create({
+          photographer: referral.photographer,
+          amount: balance
+        })
+        
+      }
+  }
 
   res.status(201).send(order);
 });

@@ -20,6 +20,7 @@ const invoiceSchema = new mongoose.Schema(
     gst: {type: Number, required: true },
     totalAmountPayable: {type: Number, required: true, },
     totalPrintcutAmount: { type: Number, required: true },
+    totalReferralAmount: { type: Number  },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid'],

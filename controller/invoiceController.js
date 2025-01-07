@@ -4,11 +4,12 @@ const Order = require('../models/orderModel')
 const RoyaltySettings = require('../models/imagebase/royaltyModel')
 const GST = require('../models/gstModel')
 const Photographer = require('../models/photographerModel.js')
-
+const ReferralBalance = require('../models/referralBalanceModel.js')
+const mongoose = require('mongoose')
 
 const generateInvoice = async (req, res) => {
   const { photographerId, startDate, endDate } = req.body;
-
+  
   const orders = await Order.find({
     'imageInfo.photographer': photographerId,
     orderStatus: 'completed',
@@ -19,7 +20,22 @@ const generateInvoice = async (req, res) => {
   .populate('paperInfo.paper')
   .populate('frameInfo.frame');
  
-  if (!orders || orders.length === 0) {
+  const referralBalance = await ReferralBalance.aggregate([
+    {
+      $match: {
+        photographer: new mongoose.Types.ObjectId(photographerId),
+        createdAt: { $gte: new Date(startDate), $lte: new Date(endDate)  }
+      }
+    },
+    {
+     $group: { _id: null,
+        price: { $sum: "$amount" }
+      }
+    }
+  ])
+  const totalPrice = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
+  if (!orders || orders.length === 0 ) {
     return res.status(404).json({ message: 'No completed orders found for the photographer within the given period.' });
   }
 
@@ -88,6 +104,7 @@ const generateInvoice = async (req, res) => {
 
   const gst = (totalAmountPayable - totalRoyaltyAmount).toFixed(2);
 
+ 
   const invoice = new Invoice({
     photographer: photographerId,
     orderDetails,

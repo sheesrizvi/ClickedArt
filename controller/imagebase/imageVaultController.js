@@ -10,6 +10,7 @@ const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
 const Photographer = require('../../models/photographerModel.js')
 const RoyaltySettings = require('../../models/imagebase/royaltyModel.js')
+const Order = require('../../models/orderModel.js')
 
 const config = {
     region: process.env.AWS_BUCKET_REGION,
@@ -461,6 +462,65 @@ const searchImages = asyncHandler(async(req, res) => {
   
 })
 
+
+const updateImageViewCount = asyncHandler(async (req, res) => {
+  const { imageId } = req.body
+  if(!imageId){
+    return res.status(400).send({ message: 'No image found to update' })
+  }
+  const analytics = await ImageAnalytics.findOneAndUpdate({
+    image: imageId
+  }, { 
+      $inc: { views: 1 }
+   },
+   { new: true, upsert: true } 
+  ).populate({
+    path: 'image',
+    populate: [
+      {
+        path: 'category'
+      },
+      {
+        path: 'photographer'
+      },
+      {
+        path: 'license'
+      }
+    ]
+  })
+
+   if(!analytics) {
+    return res.status(400).send({ message: 'Not able to update' })
+   }
+   res.status(200).send({ analytics })
+})
+
+const getImageAnalytics = asyncHandler(async (req, res) => {
+  const { imageId } = req.query
+  const downloads = await Order.countDocuments({ 'imageInfo.image': imageId })
+  const imageAnalytics = await ImageAnalytics.findOneAndUpdate({ image: imageId }, {
+    downloads
+  }).populate({
+    path: 'image',
+    populate: [
+      {
+        path: 'category'
+      },
+      {
+        path: 'photographer'
+      },
+      {
+        path: 'license'
+      }
+    ]
+  })
+
+ if(!imageAnalytics){
+  return res.status(400).send({ message: 'No Image Analytics Found' })
+ }
+
+ res.status(200).send({ message: 'Image Analytics' , imageAnalytics })
+})
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -474,5 +534,7 @@ module.exports = {
     getAllPendingImagesForAdmin,
     toggleFeaturedArtwork,
     getFeaturedArtwork,
-    searchImages
+    searchImages,
+    updateImageViewCount,
+    getImageAnalytics
 }

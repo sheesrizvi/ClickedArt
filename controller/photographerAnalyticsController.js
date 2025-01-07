@@ -53,7 +53,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     } else {
         royaltyShare = royaltySettings.royaltyShare || 70; 
     }
-    
+
+    console.log(royaltySettings.rankWiseRoyaltyShare)
     let totalSales = 0;
     let totalRoyaltyAmount = 0;
     let downloads = 0;
@@ -68,6 +69,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     orders.forEach(order => {
         const price = order.imageInfo.price || 0;
         const royalty = price * (royaltyShare / 100);
+        console.log(price, royalty, royaltyShare)
         const orderMonth = new Date(order.createdAt).getMonth();
 
         totalSales += price;
@@ -134,6 +136,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       
 
     res.status(200).send({ totalUploadingImgCount, pendingImagesCount, totalSales, totalRoyaltyAmount, monthlyData: formattedMonthlyData, downloads, frequentlyUsedCategories: categories })
+
 })
 
 module.exports = {

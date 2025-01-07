@@ -12,7 +12,9 @@ const {
         getAllPendingImagesForAdmin,
         toggleFeaturedArtwork,
         getFeaturedArtwork,
-        searchImages
+        searchImages,
+        updateImageViewCount,
+        getImageAnalytics
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin } = require('../../middleware/authMiddleware')
 
@@ -33,5 +35,8 @@ router.get('/get-all-pending-images-for-admin', isAdmin, getAllPendingImagesForA
 router.post('/toggle-featured-artwork', isAdmin, toggleFeaturedArtwork)
 router.get('/get-featured-artwork', getFeaturedArtwork)
 router.get('/search-images', searchImages)
+
+router.post('/add-image-views-count', updateImageViewCount)
+router.get('/get-image-analytics', getImageAnalytics)
 
 module.exports = router
