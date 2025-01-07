@@ -34,11 +34,20 @@ const generateInvoice = async (req, res) => {
     }
   ])
   const totalPrice = referralBalance.length > 0 ? referralBalance[0].price : 0;
-
-  if (!orders || orders.length === 0 ) {
-    return res.status(404).json({ message: 'No completed orders found for the photographer within the given period.' });
+ 
+  if (!orders || orders.length === 0 && totalPrice) {
+    const invoice = new Invoice({
+      photographer: photographerId,
+      totalAmountPayable: totalPrice,
+      totalReferralAmount: totalPrice,
+      paymentStatus: 'pending',
+    });
+    return res.status(400).send({ invoice })
   }
 
+  if(!orders || orders.length === 0) {
+    return res.status(404).json({ message: 'No completed orders found for the photographer within the given period.' });
+  }
   const gstRecord = await GST.findOne({ 'userInfo.user': photographerId });
   const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
 
@@ -103,13 +112,14 @@ const generateInvoice = async (req, res) => {
   }
 
   const gst = (totalAmountPayable - totalRoyaltyAmount).toFixed(2);
-
+  totalAmountPayable = totalPrice + totalAmountPayable
  
   const invoice = new Invoice({
     photographer: photographerId,
     orderDetails,
     totalRoyaltyAmount,
-    totalPrintcutAmount,  
+    totalPrintcutAmount: Math.round(totalPrintcutAmount),  
+    totalReferralAmount: totalPrice,
     gst,
     totalAmountPayable: totalAmountPayable.toFixed(2),
     paymentStatus: 'pending',

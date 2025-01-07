@@ -7,19 +7,19 @@ const invoiceSchema = new mongoose.Schema(
         required: true,
       },
       orderDetails: [{
-          order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
-          image: { type: mongoose.Schema.Types.ObjectId, ref: 'ImageVault', required: true },
-          resolution: { type: String, required: true },
-          originalPrice: { type: Number, required: true },
-          royaltyAmount: { type: Number, required: true },
-          royaltyWithGST: { type: Number, required: true },
-          printcutAmount: { type: Number, required: true }
+          order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+          image: { type: mongoose.Schema.Types.ObjectId, ref: 'ImageVault'},
+          resolution: { type: String },
+          originalPrice: { type: Number },
+          royaltyAmount: { type: Number },
+          royaltyWithGST: { type: Number },
+          printcutAmount: { type: Number }
         } 
     ,],
-    totalRoyaltyAmount: {type: Number, required: true,},
-    gst: {type: Number, required: true },
-    totalAmountPayable: {type: Number, required: true, },
-    totalPrintcutAmount: { type: Number, required: true },
+    totalRoyaltyAmount: {type: Number},
+    gst: {type: Number },
+    totalAmountPayable: {type: Number },
+    totalPrintcutAmount: { type: Number },
     totalReferralAmount: { type: Number  },
     paymentStatus: {
         type: String,

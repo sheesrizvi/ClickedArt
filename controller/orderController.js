@@ -91,7 +91,6 @@ const createOrder = asyncHandler(async (req, res) => {
           photographer: referral.photographer,
           amount: balance
         })
-        
       }
   }
 

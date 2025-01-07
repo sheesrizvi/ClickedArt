@@ -5,6 +5,11 @@ const Royalty = require('../../models/imagebase/royaltyModel.js')
 const createRoyalty = asyncHandler(async (req, res) => {
     const { licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
 
+    if(!rankWiseRoyaltyShare || !sizePricingModifiers || !watermarkImage) {
+        return res.status(400).send({ message: 'All Fields are required' })
+    }
+    await Royalty.deleteMany({})
+
     const royalty = await Royalty.create({
         licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage
     })
