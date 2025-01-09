@@ -12,30 +12,21 @@ const Referral = require("../models/referralModel.js");
 const Razorpay = require("razorpay");
 
 const createOrder = asyncHandler(async (req, res) => {
+ 
   const {
     userId,
-    imageInfo,
-    frameInfo,
-    paperInfo,
-    subTotal,
+    orderItems,
     paymentMethod,
     shippingAddress,
     discount,
-    totalAmount,
+    finalAmount,
     orderStatus,
     invoiceId,
     coupon,
   } = req.body;
 
-  const image = await ImageVault.findById(imageInfo.image);
-  if (!image) {
-    return res.status(400).send({ message: "Image not found" });
-  }
-
-  const photographer = await Photographer.findById(imageInfo.photographer);
-  if (!photographer) {
-    return res.status(400).send({ message: "Photographer not found" });
-  }
+  
+ 
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
@@ -43,26 +34,42 @@ const createOrder = asyncHandler(async (req, res) => {
   const gstId = gst ? gst._id : null;
   const orderExist = await Order.findOne({ "userInfo.user": userId });
 
-  const orderData = {
-    userInfo: {
-      user: userId,
-      userType: type,
-    },
-    imageInfo: imageInfo,
-    frameInfo,
-    paperInfo,
-    subTotal,
-    gst: gstId,
-    totalAmount,
-    discount,
-    orderStatus,
-    paymentMethod,
-    shippingAddress,
-    invoiceId,
-    isPaid: true,
-  };
+  const groupedOrders = orderItems.reduce((acc, item) => {
 
-  const order = await Order.create(orderData);
+    const photographerId = item.imageInfo?.photographer || 'print'; 
+    if (!acc[photographerId]) {
+      acc[photographerId] = [];
+    }
+    acc[photographerId].push(item);
+    return acc;
+  }, {});
+
+
+  const orders = [];
+  for (const [key, items] of Object.entries(groupedOrders)) {
+    const totalAmount = items.reduce((sum, item) => sum + (item.finalPrice || 0), 0); 
+
+    
+    const order = new Order({
+      userInfo: {
+        user: userId,
+        userType: type
+      },
+      orderItems: items,
+      gst: gstId,
+      paymentMethod,
+      shippingAddress,
+      discount,
+      totalAmount,
+      orderStatus,
+      invoiceId,
+      finalAmount
+    });
+
+
+    const savedOrder = await order.save();
+    orders.push(savedOrder);
+  }
 
   if (coupon) {
     const couponData = await Coupon.findOne({ code: coupon });
@@ -83,7 +90,7 @@ const createOrder = asyncHandler(async (req, res) => {
     const referral = await Referral.findOne({ code: user.referralcode });
     if (referral) {
       const commissionRate = referral.commissionRate;
-      const price = order.totalAmount;
+      const price = orders[0].totalAmount;
       const balance = Math.round(price * (commissionRate / 100));
 
       await ReferralBalance.create({
@@ -92,18 +99,40 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
   }
-
-  res.status(201).send(order);
+  
+  res.status(201).send(orders);
 });
+
+
+
+
+
 
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
   const orders = await Order.find({})
-    .populate("imageInfo.image")
+    .populate({
+      path: 'orderItems',
+      populate: [
+        {
+          path: 'imageInfo.image',
+          populate: {
+            path: 'photographer'
+          }
+        },
+        {
+          path: 'frameInfo.frame'
+        },
+        {
+          path: 'paperInfo.paper'
+        },
+        {
+          path: 'imageInfo.photographer'
+        }
+      ]
+    })
     .populate("userInfo.user")
-    .populate("frameInfo.frame")
-    .populate("paperInfo.paper")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
@@ -120,9 +149,27 @@ const getAllOrders = asyncHandler(async (req, res) => {
 const getMyOrders = asyncHandler(async (req, res) => {
   const { userId, pageNumber = 1, pageSize = 20 } = req.query;
   const orders = await Order.find({ "userInfo.user": userId })
-    .populate("imageInfo.image")
-    .populate("paperInfo.paper")
-    .populate("frameInfo.frame")
+  .populate({
+    path: 'orderItems',
+    populate: [
+      {
+        path: 'imageInfo.image',
+        populate: {
+          path: 'photographer'
+        }
+      },
+      {
+        path: 'frameInfo.frame'
+      },
+      {
+        path: 'paperInfo.paper'
+      },
+      {
+        path: 'imageInfo.photographer'
+      }
+    ]
+  })
+  .populate("userInfo.user")
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
 
@@ -142,10 +189,28 @@ const getMyOrders = asyncHandler(async (req, res) => {
 const getOrdersByPhotographer = asyncHandler(async (req, res) => {
   const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ "imageInfo.photographer": photographer })
-    .populate("imageInfo.image")
-    .populate("paperInfo.paper")
-    .populate("frameInfo.frame")
+  const orders = await Order.find({ "orderItems.imageInfo.photographer": photographer })
+    .populate({
+      path: 'orderItems',
+      populate: [
+        {
+          path: 'imageInfo.image',
+          populate: {
+            path: 'photographer'
+          }
+        },
+        {
+          path: 'frameInfo.frame'
+        },
+        {
+          path: 'paperInfo.paper'
+        },
+        {
+          path: 'imageInfo.photographer'
+        }
+      ]
+    })
+    .populate("userInfo.user")
     .skip((pageNumber - 1) * pageSize);
 
   if (!orders || orders.length === 0) {
@@ -154,7 +219,7 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
   }
 
   const totalDocuments = await Order.countDocuments({
-    "imageInfo.photographer": photographer,
+    "orderItems.imageInfo.photographer": photographer,
   });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
@@ -195,8 +260,27 @@ const getOrderById = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Order Id is required" });
 
   const order = await Order.findById(orderId)
-    .populate("imageInfo.image")
-    .populate("imageInfo.photographer");
+  .populate({
+    path: 'orderItems',
+    populate: [
+      {
+        path: 'imageInfo.image',
+        populate: {
+          path: 'photographer'
+        }
+      },
+      {
+        path: 'frameInfo.frame'
+      },
+      {
+        path: 'paperInfo.paper'
+      },
+      {
+        path: 'imageInfo.photographer'
+      }
+    ]
+  })
+  .populate("userInfo.user")
 
   res.status(200).send({ order });
 });
@@ -211,10 +295,27 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
   }
 
   const orders = await Order.find({ orderStatus: status })
-    .populate("imageInfo.image")
-    .populate("imageInfo.photographer")
-    .populate("paperInfo.paper")
-    .populate("frameInfo.frame")
+  .populate({
+    path: 'orderItems',
+    populate: [
+      {
+        path: 'imageInfo.image',
+        populate: {
+          path: 'photographer'
+        }
+      },
+      {
+        path: 'frameInfo.frame'
+      },
+      {
+        path: 'paperInfo.paper'
+      },
+      {
+        path: 'imageInfo.photographer'
+      }
+    ]
+  })
+  .populate("userInfo.user")
     .skip((pageNumber - 1) * pageSize)
     .limit(pageNumber);
 

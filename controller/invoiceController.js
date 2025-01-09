@@ -213,7 +213,6 @@ const generateSingleOrderInvoice = async (req, res) => {
 
 
 
-
 const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
     const { photographer } = req.query
   

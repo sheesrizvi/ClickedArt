@@ -2,11 +2,12 @@ const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema(
   {
-    userInfo: { // primary user info
+    userInfo: { 
         user: { type: mongoose.Schema.Types.ObjectId, refPath: 'userInfo.userType', required: true }, 
         userType: { type: String, enum: ['User', 'Photographer'], required: true },
     },
-    imageInfo: {
+    orderItems: [{ 
+      imageInfo: {
         image: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'ImageVault',
@@ -24,19 +25,19 @@ const orderSchema = new mongoose.Schema(
           },
     },
     frameInfo: {
-       frame: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Frame',
-       },
-       price: {
-        type: Number,
-       },
-       size: {
-        width: { type: Number },
-        height: { type: Number }
-       }
+      frame: {
+       type: mongoose.Schema.Types.ObjectId,
+       ref: 'Frame',
       },
-    paperInfo: {
+      price: {
+       type: Number,
+      },
+      size: {
+       width: { type: Number },
+       height: { type: Number }
+      }
+     },
+     paperInfo: {
       paper: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Paper'
@@ -49,23 +50,24 @@ const orderSchema = new mongoose.Schema(
         height: { type: Number }
        }
       },
-    subTotal: {
+      subTotal: {
         type: Number,
         required: true
-    }, 
-    gst: {
+      }, 
+     finalPrice: {
+        type: Number
+      }
+    }
+    ],
+   gst: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'GST',
       required: false,
     },
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
     orderStatus: {
       type: String,
       enum: ['pending', 'completed', 'cancelled'],
-      default: 'pending',
+      default: 'completed',
     },
     isPaid: {
       type: Boolean
@@ -76,6 +78,14 @@ const orderSchema = new mongoose.Schema(
     invoiceId: {
         type: String,
       },
+    totalAmount: {
+        type: Number,
+        required: true,
+        },
+     finalAmount: {
+      type: Number,
+      required: true
+     },
     discount: {
       type: Number
     },
