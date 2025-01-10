@@ -9,16 +9,17 @@ const { differenceInYears, parseISO, isValid } = require('date-fns');
 const Referral = require('../models/referralModel.js')
 
 const userRegistration = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary, referralcode } = req.body
-    console.log(referralcode)
-    const username = generateFromEmail(
-        firstName,
-        2
-    );
-
+    const { firstName, lastName, username,  email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary, referralcode } = req.body
+  
+    
     const emailExist = await User.findOne({ email })
     if(emailExist) {
         return res.status(400).send({ message: 'Email already exist. Please use a different email' })
+    }
+
+    const userNameExist = await User.findOne({ username })
+    if(userNameExist) {
+        return res.status(400).send({ message: 'Username already exist. Please try again using different username.' })
     }
 
     let age;

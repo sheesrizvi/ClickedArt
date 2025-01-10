@@ -11,6 +11,8 @@ const { S3Client } = require("@aws-sdk/client-s3");
 const Photographer = require('../../models/photographerModel.js')
 const RoyaltySettings = require('../../models/imagebase/royaltyModel.js')
 const Order = require('../../models/orderModel.js')
+const {  sendApprovedImageMail,
+  sendUnapprovedImageMail } = require('../../middleware/handleEmail.js')
 
 const config = {
     region: process.env.AWS_BUCKET_REGION,
@@ -23,7 +25,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const addImageInVault = asyncHandler(async (req, res) => {
-  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license, title } = req.body
+  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, watermark, cameraDetails, price, license, title } = req.body
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
@@ -43,9 +45,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
     location, 
     story,
     license,
-    photoPrivacy, watermark, cameraDetails, price: prices, 
-    exclusivityDetails, 
-    identifiableData
+    watermark, cameraDetails, price: prices
   })
 
   await ImageAnalytics.create({
@@ -58,7 +58,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 })
 
 const updateImageInVault = asyncHandler(async (req, res) => {
-    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, photoPrivacy, watermark, cameraDetails, price, exclusivityDetails, identifiableData, license } = req.body
+    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
 
@@ -73,11 +73,8 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.title = title || photo.title
    photo.keywords = keywords || photo.keywords
    photo.location = location || photo.location
-   photo.privacy = photoPrivacy || photo.photoPrivacy
    photo.watermark = watermark || photo.watermark
    photo.cameraDetails = cameraDetails || photo.cameraDetails
-   photo.exclusivityDetails = exclusivityDetails || photo.exclusivityDetails
-   photo.identifiableData = identifiableData || photo.identifiableData
    photo.story = story || photo.story
    photo.license = license || photo.license
 
@@ -284,19 +281,31 @@ const approveImage = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: 'Invalid status. Allowed values are "approved", "rejected", or "review".' });
       }
   
-      const image = await ImageVault.findById(imageId);
+      const image = await ImageVault.findById(imageId).populate('photographer');
       if (!image) {
         return res.status(404).json({ message: 'Image not found.' });
       }
   
-      image.exclusiveLicenseStatus = status;
+    
   
       if (status === 'rejected' && rejectionReason) {
         image.rejectionReason = rejectionReason || null
         image.isActive = false
+        const imageTitle = image.title
+        
+        const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
+        const email = image.photographer.email
+        const reasons = image.rejectionReason
+        
+        sendUnapprovedImageMail(photographerName, email, imageTitle,  reasons)
       } else if (status === 'approved') {
+        const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
+        
+        const email = image.photographer.email
+        const imageTitle = image.title
         image.rejectionReason = null; 
         image.isActive = true
+        sendApprovedImageMail(photographerName, email, imageTitle)
       } else if (status === 'review') {
         image.rejectionReason = null; 
         image.isActive = false
@@ -310,7 +319,8 @@ const approveImage = asyncHandler(async (req, res) => {
       });
     
   })
-  
+
+
 const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 

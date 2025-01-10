@@ -4,6 +4,7 @@ const licenseSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ['Personal', 'Commercial', 'Editorial', 'Exclusive', 'Extended'],
+        default: 'Personal',
         required: true
     },
     purpose: {

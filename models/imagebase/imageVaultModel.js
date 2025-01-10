@@ -41,13 +41,6 @@ const imageVaultSchema = mongoose.Schema({
     location: { 
         type: String
     },
-    photoPrivacy: {
-        type: 'String',
-        enum: [
-            'Public', 'Private'
-        ],
-        default: 'Public'
-    },
     watermark: {
         type: Boolean,
         default: false
@@ -70,19 +63,11 @@ const imageVaultSchema = mongoose.Schema({
     license: {
        type: mongoose.Schema.Types.ObjectId,
        ref: "License",
-       required: true
-    },
-    exclusivityDetails: {
-        type: String,  
     },
     exclusiveLicenseStatus: {
         type: String,
         default: 'pending',
         enum: ['pending', 'review', 'approved', 'rejected']
-    },
-    identifiableData: {
-        modelRelease: { type: String },
-        propertyRelease: { type: String }
     },
     isActive: {
         type: Boolean,
@@ -92,11 +77,11 @@ const imageVaultSchema = mongoose.Schema({
         type: Boolean,
         default: false
     },
-    rejectionReason: {
+    rejectionReason: [{
         type: String,
         trim: true,
         default: null
-    },
+    }],
 }, {
     timestamps: true
 })

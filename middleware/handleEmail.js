@@ -132,10 +132,78 @@ Empowering Photographers Everywhere
 });
 
 
+const sendApprovedImageMail = asyncHandler(async (photographerName, email, imageTitle) => {
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Your Image on ClickedArt.com has been Approved!",
+      text: `
+Dear ${photographerName},
+
+Congratulations!
+
+Your image titled "${imageTitle}" has been successfully approved and is now live on ClickedArt.com. Your work is now available for purchase by art enthusiasts and businesses worldwide.
+
+Here’s what you can do now:
+
+1. Promote Your Work:
+ - Share your approved image across your social media channels and website to attract potential buyers.
+ - You can also add more images to your portfolio to increase your exposure.
+
+
+We are excited to see your creativity flourishing on ClickedArt.com. If you have any questions or need assistance, feel free to reach out to us at support@clickedart.com.
+
+Keep up the great work, and continue sharing your masterpieces with the world!
+
+Warm Regards,  
+Team ClickedArt.com  
+Empowering Photographers Everywhere
+      `,
+  });
+  return true;
+});
+
+const sendUnapprovedImageMail = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit.",]) => {
+
+
+  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
+      ? reasons.map((reason) => `• ${reason}`).join("\n")
+      : "No specific reasons provided.";
+
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Update on Your Image Submission to ClickedArt.com",
+      text: `
+Dear ${photographerName},
+
+Thank you for submitting your image titled "${imageTitle}" to ClickedArt.com.
+
+After reviewing your image, we regret to inform you that it has not been approved at this time.
+
+Reason(s) for Disapproval:
+${formattedReasons}
+
+You are welcome to make the necessary adjustments and re-upload the image. We encourage you to keep submitting your work, as we truly value your creativity and contributions to our platform.
+
+If you need any clarification or assistance regarding the review process, feel free to reach out to us at support@clickedart.com. We are here to help.
+
+Warm Regards,  
+Team ClickedArt.com  
+Empowering Photographers Everywhere
+      `,
+  });
+  return true;
+});
+
+
+
   module.exports = {
     sendResetEmail,
     verifyTransporter,
     sendVerificationEmail,
     sendApprovedMail,
-    sendRejectionEmail
+    sendRejectionEmail,
+    sendApprovedImageMail,
+    sendUnapprovedImageMail
   }

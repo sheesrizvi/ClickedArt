@@ -10,7 +10,7 @@ const Referral = require('../models/referralModel.js')
 const { sendApprovedMail, sendRejectionEmail } = require('../middleware/handleEmail.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode } = req.body
+    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body
 
     if(!firstName || !email || !password  ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
@@ -21,10 +21,10 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         return res.status(400).json({status: false,  message: "Email already exist" });
     }
 
-    const username = generateFromEmail(
-        firstName,
-        4
-    );
+    const photographerExist = await Photographer.findOne({ username })
+    if(photographerExist){
+        return res.status(400).send({ message: 'username already exist' })
+    }
     
     let age;
     if (dob) {
@@ -73,7 +73,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         companyPhone: photographerData.companyPhone,
         connectedAccounts,
         expertise, awards ,achievements, bestPhotos,
-        referralcode
+        referralcode,
+        coverImage
     });
 
     const otp = Math.floor(100000 + Math.random() * 900000);
@@ -122,7 +123,8 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         yearsOfExperience, 
         accountType, 
         connectedAccounts,
-        expertise, awards ,achievements, bestPhotos
+        expertise, awards ,achievements, bestPhotos,
+        coverImage
     } = req.body;
 
 
@@ -191,6 +193,7 @@ const updatePhotographer = asyncHandler(async (req, res) => {
     if(awards) photographer.awards = awards
     if(achievements) photographer.achievements = achievements
     if(bestPhotos) photographer.bestPhotos = bestPhotos
+    if(coverImage) photographer.coverImage = coverImage
 
     await photographer.save();
 

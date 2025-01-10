@@ -55,6 +55,9 @@ const photographerSchema = new mongoose.Schema({
     type: String,
     required: false
   },
+  coverImage: {
+    type: String
+  },
   username: {
     type: String,
   },
@@ -79,9 +82,9 @@ const photographerSchema = new mongoose.Schema({
   },
   accountType: {
     type: String,
-    enum: ['freelance', 'studio', 'agency'],
+    enum: ['individual', 'freelance', 'studio', 'agency'],
     required: true,
-    default: 'freelance'
+    default: 'individual'
   },
   isCompany: {
     type: Boolean,
@@ -143,8 +146,8 @@ const photographerSchema = new mongoose.Schema({
   },
   rank: {
     type: String, 
-    enum: ['master', 'influencer', 'ambassador'],
-    default: 'master'
+    enum: ['master', 'professional', 'ambassador'],
+    default: 'professional'
   },
   photographerStatus: {
         type: String,
@@ -175,8 +178,6 @@ const photographerSchema = new mongoose.Schema({
       city: { type: String,  },
       landmark: { type: String, },
       area: { type: String,  },
-      mobile: { type: Number },
-      email: { type: String,  },
       pincode: { type: String, },
       state: { type: String },
     },
