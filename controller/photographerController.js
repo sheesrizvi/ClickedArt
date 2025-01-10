@@ -7,6 +7,7 @@ const { sendResetEmail, sendVerificationEmail } = require("../middleware/handleE
 const { differenceInYears, parseISO, isValid } = require('date-fns');
 const ImageVault = require('../models/imagebase/imageVaultModel.js')
 const Referral = require('../models/referralModel.js')
+const { sendApprovedMail, sendRejectionEmail } = require('../middleware/handleEmail.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
     const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode } = req.body
@@ -247,9 +248,17 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
              user.photographer = photographer._id
              await user.save()
          }
+         const name = `${photographer.firstName} ${photographer.lastName}`
+         const email = photographer.email
+         sendApprovedMail(name, email)
+
      } else if (action === 'rejected') {
          photographer.photographerStatus = 'rejected',
          photographer.rejectedAt = new Date()
+         const name = `${photographer.firstName} ${photographer.lastName}`
+         const email = photographer.email
+         sendRejectionEmail(name, email)
+         
      } else {
          return res.status(400).json({status: false, message: "Invalid Action"})
      }
@@ -404,6 +413,8 @@ const verifyPhotographerProfile = asyncHandler(async (req, res) => {
     
     res.status(200).send({ message: 'OTP resent successfully', photographer: user})
 })
+
+
 
 module.exports = {
     registerPhotographer,
