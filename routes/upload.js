@@ -977,6 +977,266 @@ router.post(
 
 // new third route for testing
 
+// router.post(
+//   "/handle-photos-with-watermark-and-resolutions-options",
+//   upload1.single("image"),
+//   async (req, res) => {
+//     try {
+//       const plan = req.body.plan;
+//       const isCustomText = req.body.isCustomText === "true";
+//       const customText = req.body.customText;
+//       const imageUrl = req.body.imageUrl;
+
+//       const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+//       const imageBuffer = Buffer.from(response.data);
+
+//       let watermarkBuffer;
+
+//       if (plan === "basic") {
+//         const royaltySettings = await RoyaltySettings.findOne();
+//         if (!royaltySettings || !royaltySettings.watermarkImage) {
+//           return res.status(400).send("Watermark image not found for Basic plan.");
+//         }
+
+//         const { width, height } = await sharp(imageBuffer).metadata();
+//         watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+//       } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
+//         if (!customText) {
+//           return res.status(400).send("Custom text is required.");
+//         }
+//         const { width, height } = await sharp(imageBuffer).metadata();
+//         watermarkBuffer = await createTextImageBuffer(customText, width, height);
+//       } else if (plan === "advanced" && !isCustomText) {
+//         const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
+//         if (!customWatermark || !customWatermark.watermarkImage) {
+//           return res.status(400).send("Custom watermark image not found.");
+//         }
+//         const watermarkUrl = customWatermark.watermarkImage;
+//         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+
+//         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
+//         watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+//       } else {
+//         return res.status(400).send("Invalid plan.");
+//       }
+
+//       const addWatermark = async (buffer, width, height, isCustomImage = false) => {
+//         if (!watermarkBuffer) {
+//           return buffer;
+//         }
+
+//         if (isCustomImage) {
+//           const watermarkWidth = Math.round(width * 0.1);
+//           const watermarkHeight = Math.round(height * 0.1);
+
+//           const watermarkResized = await sharp(watermarkBuffer)
+//             .resize(watermarkWidth, watermarkHeight, { fit: "inside" })
+//             .toBuffer();
+
+//           return sharp(buffer)
+//             .composite([
+//               {
+//                 input: watermarkResized,
+//                 gravity: "center",
+//                 blend: "over",
+//               },
+//             ])
+//             .toBuffer();
+//         } else {
+//           return sharp(buffer)
+//             .composite([
+//               {
+//                 input: watermarkBuffer,
+//                 gravity: "center",
+//                 blend: "over",
+//               },
+//             ])
+//             .toBuffer();
+//         }
+//       };
+
+//       const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+//         let processedBuffer = await sharp(buffer)
+//             .resize(targetResolution.width, targetResolution.height)
+//             .toBuffer();
+    
+//         if (format === "jpeg" || format === "jpg") {
+//             let quality = 90;
+//             while (true) {
+//                 processedBuffer = await sharp(processedBuffer)
+//                     .jpeg({ quality })
+//                     .toBuffer();
+    
+//                 if (processedBuffer.length <= targetSize || quality <= 10) {
+//                     break;
+//                 }
+//                 quality -= 5;
+//             }
+//         } else if (format === "png") {
+//             processedBuffer = await sharp(processedBuffer)
+//                 .png({ compressionLevel: 9, quality: 100 })
+//                 .toBuffer();
+//         } else if (format === "webp") {
+//             let quality = 90;
+//             while (true) {
+//                 processedBuffer = await sharp(processedBuffer)
+//                     .webp({ quality })
+//                     .toBuffer();
+    
+//                 if (processedBuffer.length <= targetSize || quality <= 10) {
+//                     break;
+//                 }
+//                 quality -= 5;
+//             }
+//         } else {
+//             processedBuffer = await sharp(processedBuffer)
+//                 .jpeg({ quality: 85 })
+//                 .toBuffer();
+//         }
+    
+//         return processedBuffer;
+//     };
+    
+
+//       const { width, height, format } = await sharp(imageBuffer).metadata();
+//       const imageSizeInMB = imageBuffer.length / (1024 * 1024);
+
+//       const sizeTargets = {
+//         small: 2.6 * 1024 * 1024, // 2.6 MB
+//         medium: 8.8 * 1024 * 1024, // 8.8 MB
+//       };
+
+//       const resolutions = {
+//         small: {
+//           width: Math.round(width * 0.6),
+//           height: Math.round(height * 0.6),
+//         },
+//         medium: {
+//           width: Math.round(width * 0.75),
+//           height: Math.round(height * 0.75),
+//         },
+//       };
+
+//       const conversionTargets =
+//         imageSizeInMB > 10
+//           ? ["small", "medium"]
+//           : imageSizeInMB > 4
+//           ? ["small"]
+//           : [];
+
+//       const uploadPromises = ["thumbnail", "original", ...conversionTargets].map(async (key) => {
+//         const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.body.imageUrl.split("/").pop()}`;
+//         const fileKey = `images/${fileName}`;
+
+//         let processedBuffer;
+//         if (key === "thumbnail") {
+//           processedBuffer = await addWatermark(imageBuffer, width, height, plan === "advanced" && !isCustomText);
+//         } else if (key === "original") {
+//           processedBuffer = imageBuffer;
+//         } else {
+//           const targetResolution = resolutions[key];
+//           const targetSize = sizeTargets[key];
+//           processedBuffer = await convertToTargetSizeAndResolution(
+//             imageBuffer,
+//             targetSize,
+//             targetResolution,
+//             format
+//           );
+//         }
+
+//         const upload = new Upload({
+//           client: s3,
+//           params: {
+//             Bucket: process.env.AWS_BUCKET,
+//             Key: fileKey,
+//             Body: processedBuffer,
+//             ContentType: response.headers["content-type"],
+//           },
+//         });
+
+//         await upload.done();
+
+//         return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
+//       });
+
+//       const uploadResults = await Promise.all(uploadPromises);
+
+//       const urls = uploadResults.reduce((acc, { key, url }) => {
+//         acc[key] = url;
+//         return acc;
+//       }, {});
+
+//       const returnedResolutions = { thumbnail: { width, height }, original: { width, height } };
+//       if (imageSizeInMB > 10) {
+//         returnedResolutions.medium = resolutions.medium;
+//         returnedResolutions.small = resolutions.small;
+//       } else if (imageSizeInMB > 4) {
+//         returnedResolutions.small = resolutions.small;
+//       }
+
+//       res.send({ urls, resolutions: returnedResolutions });
+//     } catch (error) {
+//       console.error("Error processing image:", error);
+//       res.status(500).send("Failed to upload image.");
+//     }
+//   }
+// );
+
+
+// const createTextImageBuffer = async (text, width, height) => {
+//   const svg = `
+//     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+//       <text x="50%" y="50%" class="text" fill="rgba(255, 255, 255, 0.3)" font-family="'Brush Script MT', cursive" font-size="${Math.round(
+//         height * 0.07
+//       )}" text-anchor="middle" dominant-baseline="middle">${text}</text>
+//     </svg>
+//   `;
+//   return Buffer.from(svg);
+// };
+
+
+// const removeBackgroundWithSharp = async (buffer) => {
+//   try {
+//     const rgbaImage = await sharp(buffer)
+//       .ensureAlpha()  
+//       .toBuffer();
+
+   
+//     const { data, info } = await sharp(rgbaImage)
+//       .raw()
+//       .toBuffer({ resolveWithObject: true });
+
+//     for (let i = 0; i < data.length; i += info.channels) {
+//       const r = data[i];     
+//       const g = data[i + 1]; 
+//       const b = data[i + 2]; 
+//       const alpha = data[i + 3]; 
+//       if (r > 180 && g > 180 && b > 180) {
+//         data[i + 3] = 0; 
+//       }
+//     }
+
+//     const transparentImage = await sharp(data, {
+//       raw: {
+//         width: info.width,
+//         height: info.height,
+//         channels: 4, 
+//       },
+//     })
+//       .toFormat('png')
+//       .toBuffer();
+
+//     return transparentImage;
+//   } catch (error) {
+//     console.error("Error removing background aggressively with sharp:", error);
+//     throw new Error("Failed to aggressively remove background from watermark image.");
+//   }
+// };
+
+
+// handle fourth testing
+
+
 router.post(
   "/handle-photos-with-watermark-and-resolutions-options",
   upload1.single("image"),
@@ -1055,72 +1315,69 @@ router.post(
         }
       };
 
-      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+      const convertToTargetSizeAndResolution = async (buffer, targetResolution, format) => {
         let processedBuffer = await sharp(buffer)
-            .resize(targetResolution.width, targetResolution.height)
-            .toBuffer();
-    
+          .resize(targetResolution.width, targetResolution.height)
+          .toBuffer();
+
         if (format === "jpeg" || format === "jpg") {
-            let quality = 90;
-            while (true) {
-                processedBuffer = await sharp(processedBuffer)
-                    .jpeg({ quality })
-                    .toBuffer();
-    
-                if (processedBuffer.length <= targetSize || quality <= 10) {
-                    break;
-                }
-                quality -= 5;
+          let quality = 90;
+          while (true) {
+            processedBuffer = await sharp(processedBuffer)
+              .jpeg({ quality })
+              .toBuffer();
+
+            if (quality <= 10) {
+              break;
             }
+            quality -= 5;
+          }
         } else if (format === "png") {
-            processedBuffer = await sharp(processedBuffer)
-                .png({ compressionLevel: 9, quality: 100 })
-                .toBuffer();
+          processedBuffer = await sharp(processedBuffer)
+            .png({ compressionLevel: 9, quality: 100 })
+            .toBuffer();
         } else if (format === "webp") {
-            let quality = 90;
-            while (true) {
-                processedBuffer = await sharp(processedBuffer)
-                    .webp({ quality })
-                    .toBuffer();
-    
-                if (processedBuffer.length <= targetSize || quality <= 10) {
-                    break;
-                }
-                quality -= 5;
-            }
-        } else {
+          let quality = 90;
+          while (true) {
             processedBuffer = await sharp(processedBuffer)
-                .jpeg({ quality: 85 })
-                .toBuffer();
+              .webp({ quality })
+              .toBuffer();
+
+            if (quality <= 10) {
+              break;
+            }
+            quality -= 5;
+          }
+        } else {
+          processedBuffer = await sharp(processedBuffer)
+            .jpeg({ quality: 85 })
+            .toBuffer();
         }
-    
+
         return processedBuffer;
-    };
-    
+      };
 
       const { width, height, format } = await sharp(imageBuffer).metadata();
-      const imageSizeInMB = imageBuffer.length / (1024 * 1024);
-
-      const sizeTargets = {
-        small: 2.6 * 1024 * 1024, // 2.6 MB
-        medium: 8.8 * 1024 * 1024, // 8.8 MB
-      };
-
+      const imageSizeInMP = (width * height) / 1_000_000;
+      console.log(`Original Image Size: ${imageSizeInMP.toFixed(2)} MP`);
       const resolutions = {
         small: {
-          width: Math.round(width * 0.6),
-          height: Math.round(height * 0.6),
+          width: Math.round(Math.sqrt(2 * 1_000_000 * (width / height))),
+          height: Math.round(Math.sqrt(2 * 1_000_000 * (height / width))),
         },
         medium: {
-          width: Math.round(width * 0.75),
-          height: Math.round(height * 0.75),
+          width: Math.round(Math.sqrt(12 * 1_000_000 * (width / height))),
+          height: Math.round(Math.sqrt(12 * 1_000_000 * (height / width))),
         },
       };
 
+      console.log(`Small Resolution: ${resolutions.small.width}x${resolutions.small.height} (${(resolutions.small.width * resolutions.small.height / 1_000_000).toFixed(2)} MP)`);
+      console.log(`Medium Resolution: ${resolutions.medium.width}x${resolutions.medium.height} (${(resolutions.medium.width * resolutions.medium.height / 1_000_000).toFixed(2)} MP)`);
+
       const conversionTargets =
-        imageSizeInMB > 10
+        imageSizeInMP > 12
           ? ["small", "medium"]
-          : imageSizeInMB > 4
+          : imageSizeInMP > 4
           ? ["small"]
           : [];
 
@@ -1135,10 +1392,8 @@ router.post(
           processedBuffer = imageBuffer;
         } else {
           const targetResolution = resolutions[key];
-          const targetSize = sizeTargets[key];
           processedBuffer = await convertToTargetSizeAndResolution(
             imageBuffer,
-            targetSize,
             targetResolution,
             format
           );
@@ -1167,10 +1422,10 @@ router.post(
       }, {});
 
       const returnedResolutions = { thumbnail: { width, height }, original: { width, height } };
-      if (imageSizeInMB > 10) {
+      if (imageSizeInMP > 12) {
         returnedResolutions.medium = resolutions.medium;
         returnedResolutions.small = resolutions.small;
-      } else if (imageSizeInMB > 4) {
+      } else if (imageSizeInMP > 2) {
         returnedResolutions.small = resolutions.small;
       }
 
@@ -1181,7 +1436,6 @@ router.post(
     }
   }
 );
-
 
 const createTextImageBuffer = async (text, width, height) => {
   const svg = `
@@ -1194,46 +1448,44 @@ const createTextImageBuffer = async (text, width, height) => {
   return Buffer.from(svg);
 };
 
-
 const removeBackgroundWithSharp = async (buffer) => {
   try {
     const rgbaImage = await sharp(buffer)
-      .ensureAlpha()  
+      .ensureAlpha()
       .toBuffer();
 
-   
     const { data, info } = await sharp(rgbaImage)
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    for (let i = 0; i < data.length; i += info.channels) {
-      const r = data[i];     
-      const g = data[i + 1]; 
-      const b = data[i + 2]; 
-      const alpha = data[i + 3]; 
-      if (r > 180 && g > 180 && b > 180) {
-        data[i + 3] = 0; 
+    const transparentData = Buffer.from(data);
+
+    for (let i = 0; i < transparentData.length; i += info.channels) {
+      const r = transparentData[i];
+      const g = transparentData[i + 1];
+      const b = transparentData[i + 2];
+      const a = transparentData[i + 3];
+
+      if (r > 200 && g > 200 && b > 200) {
+        transparentData[i + 3] = 0; 
+      } else {
+        transparentData[i + 3] = a; 
       }
     }
 
-    const transparentImage = await sharp(data, {
+    return sharp(transparentData, {
       raw: {
         width: info.width,
         height: info.height,
-        channels: 4, 
+        channels: info.channels,
       },
     })
-      .toFormat('png')
       .toBuffer();
-
-    return transparentImage;
   } catch (error) {
-    console.error("Error removing background aggressively with sharp:", error);
-    throw new Error("Failed to aggressively remove background from watermark image.");
+    console.error("Error in removeBackgroundWithSharp:", error);
+    throw error;
   }
 };
-
-
 
 
 module.exports = router

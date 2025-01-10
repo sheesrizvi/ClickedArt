@@ -33,6 +33,7 @@ const couponRoutes = require('./routes/couponRoutes.js')
 const photographerAnalyticsRoutes = require('./routes/photographerAnalyticsRoutes.js')
 const userAnalyticsRoutes = require('./routes/userAnalyticsRoutes.js')
 const referralRoutes = require('./routes/referralRoutes.js')
+const monetizationRoutes = require('./routes/monetizationRoutes.js')
 const upload  = require("./routes/upload");
 
 
@@ -76,6 +77,7 @@ app.use('/api/coupon', couponRoutes)
 app.use('/api/photographeranalytics', photographerAnalyticsRoutes)
 app.use('/api/useranalytics', userAnalyticsRoutes)
 app.use('/api/referral', referralRoutes)
+app.use('/api/monetization', monetizationRoutes)
 
 dbConnect()
 
