@@ -371,96 +371,106 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   res.status(200).send({  featuredArtwork, pageCount })
 })
 
-const searchImages = asyncHandler(async(req, res) => {
-  const { Query, pageNumber = 1, pageSize = 20 } = req.query
+const searchImages = asyncHandler(async (req, res) => {
+  const { Query, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const images = await ImageVault.aggregate([
+  const pipeline = [
     {
-      $lookup: {
-        from: 'categories',
-        localField: 'category',
-        foreignField: '_id',
-        as:'category'
-      },
-    },
-    {
-      $lookup: {
-        from: 'photographers',
-        localField: 'photographer',
-        foreignField: '_id',
-        as: 'photographer'
+      $search: {
+        index: "imagesearchindex",
+        compound: {
+          should: [
+            {
+              text: {
+                query: Query,
+                path: "title",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "description",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "story",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "keywords",
+                fuzzy: { maxEdits: 2 }
+              }
+            }
+          ]
+        }
       }
     },
-    {
-      $match: {
-        $or: [
-          { title : { $regex: Query, $options: 'i' } },
-          { description: { $regex: Query, $options: 'i' } },
-          { story : { $regex: Query, $options: 'i' } },
-          { keywords : { $regex: Query, $options: 'i' } },
-          { 'category.name': { $regex: Query , $options: 'i'} },
-          { 'category.description': { $regex: Query , $options: 'i'} },
-          { 'photographer.name': { $regex: Query , $options: 'i'} }
-        ]
-      }
-    },
-    {
-      $skip: (pageNumber - 1) * pageSize
-    },
-    {
-      $limit: pageSize
-    },
-  ])
+    { $match: { isActive: true } },
+    { $skip: (pageNumber - 1) * pageSize },
+    { $limit: pageSize }
+  ];
 
-  const totalDocuments = await ImageVault.aggregate([
+  const totalPipeline = [
     {
-      $lookup: {
-        from: 'categories',
-        localField: 'category',
-        foreignField: '_id',
-        as:'category'
-      },
-    },
-    {
-      $lookup: {
-        from: 'photographers',
-        localField: 'photographer',
-        foreignField: '_id',
-        as: 'photographer'
+      $search: {
+        index: "imagesearchindex",
+        compound: {
+          should: [
+            {
+              text: {
+                query: Query,
+                path: "title",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "description",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "story",
+                fuzzy: { maxEdits: 2 }
+              }
+            },
+            {
+              text: {
+                query: Query,
+                path: "keywords",
+                fuzzy: { maxEdits: 2 }
+              }
+            }
+          ]
+        }
       }
     },
-    {
-      $match: {
-        $and: [
-          {
-            $or: [
-              { title : { $regex: Query, $options: 'i' } },
-              { description: { $regex: Query, $options: 'i' } },
-              { story : { $regex: Query, $options: 'i' } },
-              { keywords : { $regex: Query, $options: 'i' } },
-              { 'category.name': { $regex: Query , $options: 'i'} },
-              { 'category.description': { $regex: Query , $options: 'i'} },
-              { 'photographer.name': { $regex: Query , $options: 'i'} }
-            ]
-          },
-          {
-            isActive: true
-          }
-        ]
-        
-      }
-    },
-    {
-      $count: 'total'
-    }
-  ]) 
+    { $match: { isActive: true } },
+    { $count: "total" }
+  ];
+
+  const results = await ImageVault.aggregate(pipeline);
+  const totalDocuments = await ImageVault.aggregate(totalPipeline);
   
-  const count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0
-  
-  const pageCount = Math.ceil(count/pageSize)
-  res.status(200).send({ images, pageCount })
-  
-})
+  const count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
+  const pageCount = Math.ceil(count / pageSize);
+
+  res.status(200).send({ results, pageCount });
+});
+
+
+
+
 
 
 const updateImageViewCount = asyncHandler(async (req, res) => {
@@ -536,5 +546,5 @@ module.exports = {
     getFeaturedArtwork,
     searchImages,
     updateImageViewCount,
-    getImageAnalytics
+    getImageAnalytics,
 }

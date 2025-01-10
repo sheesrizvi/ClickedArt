@@ -1,6 +1,7 @@
 const express = require('express')
 const { registerPhotographer, photographerLogin, resetPassword, getAllPhotographers, getPhotographerById, getAllPendingPhotographersForAdmin, updatePhotographer, updatePhotographerRank, getFeaturedPhotographer,
-    toggleFeaturedPhotographer, verifyPhotographerProfile
+    toggleFeaturedPhotographer, verifyPhotographerProfile,
+    searchPhotographers
  } = require('../controller/photographerController')
 const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
 const { resendOTP } = require('../controller/userController')
@@ -20,4 +21,5 @@ router.post('/toggle-featured-photographer', isAdmin, toggleFeaturedPhotographer
 router.post('/verify-photographer-profile', verifyPhotographerProfile)
 router.get('/get-featured-photographers', getFeaturedPhotographer)
 router.post('/resent-otp', resendOTP)
+router.get('/search-photographer', searchPhotographers)
 module.exports = router

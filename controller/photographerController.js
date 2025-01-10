@@ -415,6 +415,59 @@ const verifyPhotographerProfile = asyncHandler(async (req, res) => {
 })
 
 
+const searchPhotographers = async (req, res) => {
+    const { Query, pageSize = 20, pageNumber = 1 } = req.query;
+    
+      const results = await Photographer.aggregate([
+        {
+          $search: {
+            index: 'photographerindex',
+            text: {
+              query: Query,
+              path: ['firstName', 'lastName', 'email', 'bio'],
+              fuzzy: {
+                maxEdits: 2,
+                prefixLength: 3
+              }
+            }
+          }
+        },
+        {
+            $match: {
+                active: true
+            }
+        },
+        {
+            $skip: (pageNumber - 1) * pageSize
+        },
+        {
+            $limit: pageSize
+        }
+      ]);
+
+      const totalDocuments = await Photographer.aggregate([
+        {
+            $search: {
+              index: 'photographerindex',
+              text: {
+                query: Query,
+                path: ['firstName', 'lastName', 'email', 'bio'],
+                fuzzy: {
+                  maxEdits: 2,
+                  prefixLength: 3
+                }
+              }
+            }
+          },
+          { $count: "total" }
+      ])
+      const total = totalDocuments.length > 0 ? totalDocuments[0].total : 1
+      const pageCount = Math.ceil(total/pageSize)
+      res.status(200).json({results, pageCount});
+    
+  };
+  
+
 
 module.exports = {
     registerPhotographer,
@@ -429,5 +482,6 @@ module.exports = {
     toggleFeaturedPhotographer,
     getFeaturedPhotographer,
     verifyPhotographerProfile,
-    resendOTP
+    resendOTP,
+    searchPhotographers
 }
