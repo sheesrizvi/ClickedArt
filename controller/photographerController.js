@@ -417,7 +417,9 @@ const verifyPhotographerProfile = asyncHandler(async (req, res) => {
 
 const searchPhotographers = async (req, res) => {
     const { Query, pageSize = 20, pageNumber = 1 } = req.query;
-    
+    if(!Query) {
+        return res.status(400).send({ message: 'Query is required' })
+      }
       const results = await Photographer.aggregate([
         {
           $search: {

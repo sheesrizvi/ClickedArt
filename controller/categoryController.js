@@ -89,10 +89,66 @@ const getAllCategory = asyncHandler(async (req, res) => {
     res.status(200).send({ categories, pageCount })
 })
 
+
+
+const searchCategories = async (req, res) => {
+  const { Query, pageNumber = 1, pageSize = 20 } = req.query;  
+  
+  if(!Query) {
+    return res.status(400).send({ message: 'Query is required' })
+  }
+    const results = await Category.aggregate([
+      {
+        $search: {
+          index: 'categoryIndex',  
+          text: {
+            query: Query,
+            path: ['name', 'tags', 'description'],
+            fuzzy: {
+              maxEdits: 2,
+              prefixLength: 3
+            }
+          }
+        }
+      },
+      {
+        $skip: (pageNumber - 1) * pageSize
+      },
+      {
+        $limit: pageSize
+      }
+    ]);
+    
+    const totalDocuments = await Category.aggregate([
+        {
+            $search: {
+              index: 'photographerindex',
+              text: {
+                query: Query,
+                path: ['firstName', 'lastName', 'email', 'bio'],
+                fuzzy: {
+                  maxEdits: 2,
+                  prefixLength: 3
+                }
+              }
+            }
+          },
+          { $count: "total" }
+      ])
+
+
+      const total = totalDocuments.length > 0 ? totalDocuments[0].total : 1
+      const pageCount = Math.ceil(total/pageSize)
+      res.status(200).send({ results, pageCount })
+
+};
+
+
 module.exports = {
     createCategory,
     updateCategory,
     deleteCategory,
     getCategoryById,
-    getAllCategory
+    getAllCategory,
+    searchCategories
 }
