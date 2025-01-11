@@ -13,6 +13,7 @@ const RoyaltySettings = require('../../models/imagebase/royaltyModel.js')
 const Order = require('../../models/orderModel.js')
 const {  sendApprovedImageMail,
   sendUnapprovedImageMail } = require('../../middleware/handleEmail.js')
+const Subscription = require('../../models/subscriptionModel.js')
 
 const config = {
     region: process.env.AWS_BUCKET_REGION,
@@ -29,6 +30,31 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
+
+    const subscription = await Subscription.findOne({
+      'userInfo.user': photographer,
+      'userInfo.userType': 'Photographer',
+      isActive: true,
+    }).populate('planId');
+ 
+    let imageLimit;
+      if (subscription?.planId?.name === 'Basic') {
+        imageLimit = 10;
+      } else if (subscription?.planId?.name === 'Intermediate') {
+        imageLimit = 50;
+      } else if (subscription?.planId?.name === 'Premium') {
+        imageLimit = Infinity; 
+      } else {
+        imageLimit = 10; 
+      }
+
+
+    const uploadedImagesCount = await ImageVault.countDocuments({ photographer });
+    
+    if (uploadedImagesCount >= imageLimit) {
+      return res.status(400).send({ message: `You have reached your upload limit of ${imageLimit} images for the ${subscription.planId.name} plan.` });
+    }
+    
   const royaltyShare = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
   const sizePricingModifiers = royaltyShare.sizePricingModifiers;
 

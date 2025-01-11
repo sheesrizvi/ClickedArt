@@ -1,7 +1,7 @@
 const Monetization = require('../models/monetizationModel.js');
 const Photographer = require('../models/photographerModel.js');
 const asyncHandler = require('express-async-handler');
-
+const { sendMonetizationMail, sendMonetizationDisApprovalMail } = require('../middleware/handleEmail.js')
 
 const createMonetization = asyncHandler(async (req, res) => {
     const { photographerId, panPhoto, panNumber, country, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount } = req.body;
@@ -41,13 +41,22 @@ const getMonetizationByPhotographerId = asyncHandler(async (req, res) => {
 });
 
 const updateMonetizationStatus = asyncHandler(async (req, res) => {
-    const { id, status } = req.body
-    const monetization = await Monetization.findById(id);
+    const { id, status, reasons } = req.body
+    const monetization = await Monetization.findById(id).populate('photographer');
     if (!monetization) {
         return res.status(404).json({ message: 'Monetization request not found' });
     }
 
     monetization.status = status;
+    const photographerName = `${monetization.photographer.firstName} ${monetization.photographer.lastName}`
+    const email = monetization.photographer.email
+    
+    if(status === 'rejected') {
+        sendMonetizationDisApprovalMail(photographerName, email, reasons)
+    } else if(status === 'approved') {
+        sendMonetizationMail(photographerName, email)
+    }
+
     await monetization.save();
     res.status(200).json({ message: 'Monetization status updated successfully', monetization });
 });

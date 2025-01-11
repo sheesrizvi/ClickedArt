@@ -8,6 +8,7 @@ const { differenceInYears, parseISO, isValid } = require('date-fns');
 const ImageVault = require('../models/imagebase/imageVaultModel.js')
 const Referral = require('../models/referralModel.js')
 const { sendApprovedMail, sendRejectionEmail } = require('../middleware/handleEmail.js')
+const Subscription = require('../models/subscriptionModel.js')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
     const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body

@@ -10,6 +10,7 @@ const ReferralBalance = require("../models/referralBalanceModel");
 const User = require("../models/userModel.js");
 const Referral = require("../models/referralModel.js");
 const Razorpay = require("razorpay");
+const Monetization = require('../models/monetizationModel.js')
 
 const createOrder = asyncHandler(async (req, res) => {
  

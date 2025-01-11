@@ -197,6 +197,79 @@ Empowering Photographers Everywhere
 });
 
 
+const sendMonetizationMail = asyncHandler(async (photographerName, email  ) => {
+
+
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Monetization Approved – Start Earning with ClickedArt.com!",
+      text: `
+Dear ${photographerName},
+We are thrilled to inform you that your monetization request has been approved! You are 
+now eligible to earn royalties for your work through ClickedArt.com. 
+Royalty Model Details: 
+Here’s how your earnings are calculated based on your membership plan: 
+Basic User (Initial Membership) 
+• Digital Download Sales: 50% of the sale value 
+• Print Orders: 10% flat on the sale value 
+Intermediate User (Upgrade Available) 
+• Digital Download Sales: 70% of the sale value 
+• Print Orders: 10% flat on the sale value 
+Premium User (Upgrade Available) 
+• Digital Download Sales: 90% of the sale value 
+• Print Orders: 10% flat on the sale value 
+Key Points to Note: 
+• You are currently on the Basic Membership plan. To increase your royalty percentage, 
+you can upgrade your membership from your profile page at any time. 
+• Taxes such as TDS and other applicable government levies will be deducted as per 
+norms. 
+• You can track your sales, earnings, and payouts through your dashboard on 
+ClickedArt.com. 
+We are excited to help you showcase your creativity and turn your passion into a source of 
+income. If you have any questions or need assistance, feel free to reach out to us 
+at support@clickedart.com  
+Congratulations again, and let’s create magic together! 
+      `,
+  });
+  return true;
+});
+
+
+const sendMonetizationDisApprovalMail = asyncHandler(async (photographerName, email, reasons = [" Insufficient portfolio quality to meet our standards.", " Required verification documents were incomplete or unclear.",]  ) => {
+
+  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
+  ? reasons.map((reason) => `• ${reason}`).join("\n")
+  : "No specific reasons provided.";
+
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Monetization Request Update",
+      text: `
+Dear ${photographerName},
+Thank you for submitting your request for monetization on ClickedArt.com. After reviewing 
+your application, we regret to inform you that your monetization request has not been 
+approved at this time. 
+Reason(s) for Disapproval: 
+${formattedReasons}
+You are welcome to re-apply for monetization after 24 hours, ensuring that the concerns 
+mentioned above are addressed. We highly encourage you to review your portfolio and 
+account details to strengthen your next application. 
+If you need further assistance or clarification regarding this decision, please don’t hesitate to 
+reach out to us at support@clickedart.com  
+We appreciate your effort and dedication and look forward to assisting you in your journey as 
+a creative photographer with ClickedArt.com  
+Warm regards, 
+Team ClickedArt.com 
+Empowering Photographers Everywhere
+      `,
+  });
+  return true;
+});
+
+
+
 
   module.exports = {
     sendResetEmail,
@@ -205,5 +278,7 @@ Empowering Photographers Everywhere
     sendApprovedMail,
     sendRejectionEmail,
     sendApprovedImageMail,
-    sendUnapprovedImageMail
+    sendUnapprovedImageMail,
+    sendMonetizationMail,
+    sendMonetizationDisApprovalMail
   }

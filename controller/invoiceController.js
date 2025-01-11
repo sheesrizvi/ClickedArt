@@ -7,6 +7,7 @@ const Photographer = require('../models/photographerModel.js')
 const ReferralBalance = require('../models/referralBalanceModel.js')
 const mongoose = require('mongoose');
 const Subscription = require('../models/subscriptionModel.js');
+const Monetization = require('../models/monetizationModel.js')
 
 const generateInvoice = async (req, res) => {
   try {
@@ -54,7 +55,8 @@ const generateInvoice = async (req, res) => {
       });
     }
 
-    const gstRecord = await GST.findOne({ 'userInfo.user': photographerId });
+   // const gstRecord = await GST.findOne({ 'userInfo.user': photographerId });
+   const gstRecord = await Monetization.findOne({ photographer: photographerId  });
     const subscription = await Subscription.findOne({
       'userInfo.user': photographerId,
       'userInfo.userType': 'Photographer',
@@ -62,11 +64,11 @@ const generateInvoice = async (req, res) => {
     }).populate('planId');
 
     let royaltyShare;
-    if (!subscription || subscription.planId.name === 'Basic') {
+    if (!subscription || subscription?.planId?.name === 'Basic') {
       royaltyShare = 50;
-    } else if (subscription.planId.name === 'Intermediate') {
+    } else if (subscription?.planId?.name === 'Intermediate') {
       royaltyShare = 70;
-    } else if (subscription.planId.name === 'Premium') {
+    } else if (subscription?.planId?.name === 'Premium') {
       royaltyShare = 90;
     } else {
       royaltyShare = 50;
@@ -154,11 +156,11 @@ const generateSingleOrderInvoice = async (req, res) => {
     }).populate('planId');
 
     let royaltyShare;
-    if (!subscription || subscription.planId.name === 'Basic') {
+    if (!subscription || subscription?.planId?.name === 'Basic') {
       royaltyShare = 50;
-    } else if (subscription.planId.name === 'Intermediate') {
+    } else if (subscription?.planId?.name === 'Intermediate') {
       royaltyShare = 70;
-    } else if (subscription.planId.name === 'Premium') {
+    } else if (subscription?.planId?.name === 'Premium') {
       royaltyShare = 90;
     } else {
       royaltyShare = 50;

@@ -11,7 +11,7 @@ const { isAdmin } = require('../middleware/authMiddleware')
 router.post('/create-monetization', createMonetization)
 router.post('/update-monetization', updateMonetization)
 router.get('/getMonetizationByPhotographerId', getMonetizationByPhotographerId)
-router.get('/update-monetization-status',isAdmin, updateMonetizationStatus)
+router.post('/update-monetization-status',isAdmin, updateMonetizationStatus)
 router.delete('/delete-monetization', deleteMonetizationRequest)
 
 module.exports = router
