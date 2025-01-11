@@ -1320,39 +1320,39 @@ router.post(
           .resize(targetResolution.width, targetResolution.height)
           .toBuffer();
 
-        if (format === "jpeg" || format === "jpg") {
-          let quality = 90;
-          while (true) {
-            processedBuffer = await sharp(processedBuffer)
-              .jpeg({ quality })
-              .toBuffer();
+        // if (format === "jpeg" || format === "jpg") {
+        //   let quality = 90;
+        //   while (true) {
+        //     processedBuffer = await sharp(processedBuffer)
+        //       .jpeg({ quality })
+        //       .toBuffer();
 
-            if (quality <= 10) {
-              break;
-            }
-            quality -= 5;
-          }
-        } else if (format === "png") {
-          processedBuffer = await sharp(processedBuffer)
-            .png({ compressionLevel: 9, quality: 100 })
-            .toBuffer();
-        } else if (format === "webp") {
-          let quality = 90;
-          while (true) {
-            processedBuffer = await sharp(processedBuffer)
-              .webp({ quality })
-              .toBuffer();
+        //     if (quality <= 10) {
+        //       break;
+        //     }
+        //     quality -= 5;
+        //   }
+        // } else if (format === "png") {
+        //   processedBuffer = await sharp(processedBuffer)
+        //     .png({ compressionLevel: 9, quality: 100 })
+        //     .toBuffer();
+        // } else if (format === "webp") {
+        //   let quality = 90;
+        //   while (true) {
+        //     processedBuffer = await sharp(processedBuffer)
+        //       .webp({ quality })
+        //       .toBuffer();
 
-            if (quality <= 10) {
-              break;
-            }
-            quality -= 5;
-          }
-        } else {
-          processedBuffer = await sharp(processedBuffer)
-            .jpeg({ quality: 85 })
-            .toBuffer();
-        }
+        //     if (quality <= 10) {
+        //       break;
+        //     }
+        //     quality -= 5;
+        //   }
+        // } else {
+        //   processedBuffer = await sharp(processedBuffer)
+        //     .jpeg({ quality: 85 })
+        //     .toBuffer();
+        // }
 
         return processedBuffer;
       };
