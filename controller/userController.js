@@ -287,6 +287,18 @@ const resendOTP = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'OTP resent successfully', user})
 })
 
+
+const getUserByUserName = asyncHandler(async (req, res) => {
+    const { username } = req.query
+
+    const user = await User.findOne({ username })
+
+    if(!user) return res.status(400).send({ message: 'User not found' })
+
+    res.status(200).send({ user })
+})
+
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -297,7 +309,8 @@ module.exports = {
     userProfileUpdate,
     deleteUserProfile,
     verifyUserProfile,
-    resendOTP
+    resendOTP,
+    getUserByUserName
 }
 
 

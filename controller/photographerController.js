@@ -472,7 +472,16 @@ const searchPhotographers = async (req, res) => {
       res.status(200).json({results, pageCount});
     
   };
-  
+
+  const getPhotographerByUserName = asyncHandler(async (req, res) => {
+    const { username } = req.query
+
+    const user = await Photographer.findOne({ username })
+
+    if(!user) return res.status(400).send({ message: 'User not found' })
+
+    res.status(200).send({ user })
+})
 
 
 module.exports = {
@@ -489,5 +498,6 @@ module.exports = {
     getFeaturedPhotographer,
     verifyPhotographerProfile,
     resendOTP,
-    searchPhotographers
+    searchPhotographers,
+    getPhotographerByUserName
 }
