@@ -190,6 +190,10 @@ const photographerSchema = new mongoose.Schema({
   },
   referralcode: {
     type: String
+  },
+  isMonetized: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

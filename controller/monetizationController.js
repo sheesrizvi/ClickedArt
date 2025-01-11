@@ -5,8 +5,11 @@ const asyncHandler = require('express-async-handler');
 
 const createMonetization = asyncHandler(async (req, res) => {
     const { photographerId, panPhoto, panNumber, country, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount } = req.body;
+   
+    const photographer = await Photographer.findByIdAndUpdate(photographerId, {
+        $set: { isMonetized: true }
+    }, { new: true });
 
-    const photographer = await Photographer.findById(photographerId);
     if (!photographer) {
         return res.status(404).json({ message: 'Photographer not found' });
     }

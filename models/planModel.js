@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const planSchema = new mongoose.Schema({
     name: {
         type: String,
-        enum: ['Basic', 'Intermediate', 'Advanced'],
+        enum: ['Basic', 'Intermediate', 'Premium'],
         required: true
     },
     cost: [{
