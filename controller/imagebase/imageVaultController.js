@@ -452,7 +452,20 @@ const searchImages = asyncHandler(async (req, res) => {
     },
     { $match: { isActive: true } },
     { $skip: (pageNumber - 1) * pageSize },
-    { $limit: pageSize }
+    { $limit: pageSize },
+    {
+      $addFields: {
+        relevanceScore: { $meta: "searchScore" },
+      },
+    },
+    {
+      $match: {
+        relevanceScore: { $gte: 0.6 }, 
+      },
+    },
+  {
+      $limit: pageSize,
+  }
   ];
 
   const totalPipeline = [
