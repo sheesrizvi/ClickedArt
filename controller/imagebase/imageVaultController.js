@@ -523,11 +523,15 @@ const searchImages = asyncHandler(async (req, res) => {
     { $count: "total" }
   ];
 
-  const results = await ImageVault.aggregate(pipeline);
+  let results = await ImageVault.aggregate(pipeline);
   const totalDocuments = await ImageVault.aggregate(totalPipeline);
   
   const count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
   const pageCount = Math.ceil(count / pageSize);
+
+  const imageIds = results.map((result) => result._id)
+  
+  results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license')
 
   res.status(200).send({ results, pageCount });
 });
