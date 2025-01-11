@@ -2,6 +2,7 @@ const Category = require('../models/categoryModel')
 const asyncHandler = require('express-async-handler')
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
+const ImageVault = require('../models/imagebase/imageVaultModel.js')
 
 const config = {
     region: process.env.AWS_BUCKET_REGION,
@@ -97,49 +98,47 @@ const searchCategories = async (req, res) => {
   if(!Query) {
     return res.status(400).send({ message: 'Query is required' })
   }
-    const results = await Category.aggregate([
-      {
-        $search: {
-          index: 'categoryIndex',  
-          text: {
-            query: Query,
-            path: ['name', 'tags', 'description'],
-            fuzzy: {
-              maxEdits: 2,
-              prefixLength: 3
-            }
-          }
-        }
-      },
-      {
-        $skip: (pageNumber - 1) * pageSize
-      },
-      {
-        $limit: pageSize
-      }
-    ]);
+
+
+  // const results = await Category.aggregate([
+  //   {
+  //     $search: {
+  //       index: 'categoryIndex',  
+  //       text: {
+  //         query: Query,
+  //         path: ['name', 'tags', 'description'],
+  //         fuzzy: {
+  //           maxEdits: 2,
+  //           prefixLength: 3
+  //         }
+  //       }
+  //     }
+  //   },
+  //   {
+  //     $skip: (pageNumber - 1) * pageSize
+  //   },
+  //   {
+  //     $limit: pageSize
+  //   }
+  // ]);
+
+    const categories = await Category.find({ $or: [
+      { name: { $regex: Query, $options: 'i' } },
+      { description: { $regex: Query, $options: 'i' } }
+    ] })
     
-    const totalDocuments = await Category.aggregate([
-        {
-            $search: {
-              index: 'photographerindex',
-              text: {
-                query: Query,
-                path: ['firstName', 'lastName', 'email', 'bio'],
-                fuzzy: {
-                  maxEdits: 2,
-                  prefixLength: 3
-                }
-              }
-            }
-          },
-          { $count: "total" }
-      ])
+    const categoriesIds = categories.map((category) => category._id)
 
+    const results = await ImageVault.find({ 
+        category: { $in: categoriesIds }
+     }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
-      const total = totalDocuments.length > 0 ? totalDocuments[0].total : 1
-      const pageCount = Math.ceil(total/pageSize)
-      res.status(200).send({ results, pageCount })
+     const totalDocuments = await ImageVault.countDocuments({
+        category: { $in: categoriesIds }
+     })
+
+     const pageCount = Math.ceil(totalDocuments/pageSize)
+    res.status(200).send({ results, pageCount })
 
 };
 

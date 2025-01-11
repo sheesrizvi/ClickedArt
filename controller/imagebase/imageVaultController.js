@@ -451,26 +451,24 @@ const searchImages = asyncHandler(async (req, res) => {
       }
     },
     { $match: { isActive: true } },
+   
+    // {$addFields: {score: {$meta: "searchScore"}}},
+    // {$setWindowFields: {output: {maxScore: {$max: "$score"}}}},
+    // {$addFields: {normalizedScore: {$divide: ["$score", "$maxScore"]}}},
+    // {$match: {normalizedScore: {$gte: 0.9}}},
+    // {$sort: {normalizedScore: -1}},
+    {
+      $addFields: {
+        relevanceScore: { $meta: "searchScore" },
+      },
+    },
+    {
+      $match: {
+        relevanceScore: { $gte: 0.6 }, 
+      },
+    },
     { $skip: (pageNumber - 1) * pageSize },
     { $limit: pageSize },
-    {$addFields: {score: {$meta: "searchScore"}}},
-    {$setWindowFields: {output: {maxScore: {$max: "$score"}}}},
-    {$addFields: {normalizedScore: {$divide: ["$score", "$maxScore"]}}},
-    {$match: {normalizedScore: {$gte: 0.9}}},
-    {$sort: {normalizedScore: -1}},
-  //   {
-  //     $addFields: {
-  //       relevanceScore: { $meta: "searchScore" },
-  //     },
-  //   },
-  //   {
-  //     $match: {
-  //       relevanceScore: { $gte: 0.6 }, 
-  //     },
-  //   },
-  // {
-  //     $limit: pageSize,
-  // }
   ];
 
   const totalPipeline = [
@@ -510,6 +508,16 @@ const searchImages = asyncHandler(async (req, res) => {
           ]
         }
       }
+    },
+    {
+      $addFields: {
+        relevanceScore: { $meta: "searchScore" },
+      },
+    },
+    {
+      $match: {
+        relevanceScore: { $gte: 0.6 }, 
+      },
     },
     { $match: { isActive: true } },
     { $count: "total" }
