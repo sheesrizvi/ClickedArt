@@ -7,7 +7,7 @@ const UserType = require('../models/typeModel')
 const cron = require('node-cron');
 
 const createSubscription = asyncHandler(async (req, res) => {
-    const { userId, planId, price } = req.body
+    const { userId, planId, price, duration } = req.body
     const userType = await UserType.findOne({ user: userId }).select('type -_id')
     const type = userType?.type || null;
 
@@ -21,10 +21,16 @@ const createSubscription = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: 'Plan not found' });
     }
 
+    const selectedCost = plan.cost.find(cost => cost.duration === duration && cost.price === price);
+
+    if (!selectedCost) {
+      return res.status(400).json({ message: 'Invalid price or duration selected' });
+    }
+
     const startDate = new Date()
     const endDate = new Date()
 
-    switch (plan.duration) {
+    switch (duration) {
         case 'monthly':
           endDate.setMonth(endDate.getMonth() + 1);
           break;
