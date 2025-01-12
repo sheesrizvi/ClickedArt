@@ -1267,13 +1267,13 @@ router.post(
           watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
         }
        
-      } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
+      } else if (plan === "intermediate" || (plan === "premium" && isCustomText)) {
         if (!customText) {
           return res.status(400).send("Custom text is required.");
         }
         const { width, height } = await sharp(imageBuffer).metadata();
         watermarkBuffer = await createTextImageBuffer(customText, width, height);
-      } else if (plan === "advanced" && !isCustomText) {
+      } else if (plan === "premium" && !isCustomText) {
         const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
         if (!customWatermark || !customWatermark.watermarkImage) {
           return res.status(400).send("Custom watermark image not found.");
@@ -1394,7 +1394,7 @@ router.post(
 
         let processedBuffer;
         if (key === "thumbnail") {
-          processedBuffer = await addWatermark(imageBuffer, width, height, plan === "advanced" && !isCustomText);
+          processedBuffer = await addWatermark(imageBuffer, width, height, plan === "premium" && !isCustomText);
         } else if (key === "original") {
           processedBuffer = imageBuffer;
         } else {
