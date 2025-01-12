@@ -88,7 +88,6 @@ const imageVaultSchema = mongoose.Schema({
 
 
 
-
 const ImageVault = mongoose.model('ImageVault', imageVaultSchema)
 
 module.exports = ImageVault

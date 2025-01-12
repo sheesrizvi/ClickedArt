@@ -60,8 +60,7 @@ const orderSchema = new mongoose.Schema(
     }
     ],
    gst: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'GST',
+      type: String,
       required: false,
     },
     orderStatus: {
@@ -70,7 +69,8 @@ const orderSchema = new mongoose.Schema(
       default: 'completed',
     },
     isPaid: {
-      type: Boolean
+      type: Boolean,
+      default: true
     }, 
     paymentMethod: {
         type: String

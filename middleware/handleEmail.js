@@ -268,8 +268,218 @@ Empowering Photographers Everywhere
   return true;
 });
 
+const setApprovedImageOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) =>{
+  const info = await transporter.sendMail({
+    from: process.env.USER_EMAIL,
+    to: email,
+    subject: "Your Photo Has Been Approved and is Ready for Sale! ",
+    text: `
+Dear ${photographerName},
+
+We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
+It is now live on your ClickedArt.com profile and available for purchase by buyers. 
+
+WHAT HAPPENS NEXT? 
+
+• Digital Sales: Earn up to [50%/70%/90%] on digital downloads, depending on your membership 
+tier. 
+• Print Sales: Receive a flat 10% royalty on every printed copy sold. 
+• You can monitor your sales, earnings, and buyer interactions on your [Dashboard Link]. 
+
+BOOST YOUR VISIBILITY 
+
+• Share your ClickedArt profile link on social media to attract potential buyers. 
+• Regularly upload high-quality photos to expand your portfolio and increase your chances of 
+sales. 
+Thank you for being part of ClickedArt.com! Your creativity inspires us all. 
+
+Warm regards, 
+Team ClickedArt.com 
+Empowering Photographers Everywhere
+    `,
+});
+return true;
+})
+
+const setApprovedImageOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) => {
+  const info = await transporter.sendMail({
+    from: process.env.USER_EMAIL,
+    to: email,
+    subject: " Your Photo Has Been Approved By ClickedArt! ",
+    text: `
+Dear ${photographerName},
+
+We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
+
+What’s Next? 
+
+• Your approved photo is now visible in your catalog on ClickedArt.com. 
+• Currently, it is available for browsing by buyers, but since your monetization is pending 
+approval, it is not yet available for sale. 
+
+Apply for Monetization 
+
+To enable sales and start earning royalties, please apply for monetization from your profile 
+page. Here’s how: 
+
+1. Log in to your account on ClickedArt.com. 
+2. Navigate to your profile page. 
+3. Click the “Apply for Monetization” button and follow the instructions. 
+
+Once monetization is approved, your approved photos will be listed for sale, and you’ll earn 
+royalties based on your user tier: 
+
+• Basic User: 50% on digital downloads, 10% on print orders 
+• Intermediate User: 70% on digital downloads, 10% on print orders 
+• Premium User: 90% on digital downloads, 10% on print orders 
+
+For any assistance, feel free to contact us at support@clickedart.com. 
+
+Thank you for being a valued part of the ClickedArt community. We can’t wait to see you 
+thrive! 
+
+Warm regards, 
+Team ClickedArt.com 
+Empowering Photographers Everywhere 
+
+    `,
+});
+return true;
+})
 
 
+const sendUnapprovedImageMailOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit.",]) => {
+
+
+  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
+      ? reasons.map((reason) => `• ${reason}`).join("\n")
+      : "No specific reasons provided.";
+
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Your Photo Upload Requires Revisions ",
+      text: `
+Dear ${photographerName},
+
+Thank you for submitting your image titled "${imageTitle}" to ClickedArt.com.
+
+Upon review, we regret to 
+inform you that your submission did not meet our platform's guidelines and has been rejected.
+
+Reason(s) for Disapproval:
+${formattedReasons}
+
+NEXT STEPS: 
+
+You can revise your photo and re-upload it for review. To avoid future rejections, please adhere to the 
+following guidelines: 
+
+  • Ensure the resolution is at least 250 DPI and the minimum size is 2000 x 2500 pixels. 
+  • Avoid watermarks, logos, or text overlays. 
+  • Provide accurate metadata (title, description, keywords). 
+
+NEED ASSISTANCE? 
+
+Our team is here to help! If you have questions about the rejection or need support, feel free to reach out to 
+us at support@clickedart.com  
+
+We value your contribution to ClickedArt.com and look forward to seeing your updated submission soon. 
+
+Warm regards, 
+Team ClickedArt.com 
+Empowering Photographers Everywhere
+      `,
+  });
+  return true;
+});
+
+
+const sendUnapprovedImageMailOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit.",]) => {
+
+
+  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
+      ? reasons.map((reason) => `• ${reason}`).join("\n")
+      : "No specific reasons provided.";
+
+  const info = await transporter.sendMail({
+      from: process.env.USER_EMAIL,
+      to: email,
+      subject: "Update on Your Photo Upload",
+      text: `
+Dear ${photographerName},
+
+Thank you for sharing your work with ClickedArt.com. .
+
+After careful review, we regret to 
+inform you that your uploaded photo, ${imageTitle}, could not be approved due to the 
+following reason(s): 
+${formattedReasons}
+
+Next Steps 
+
+Please address the issues mentioned above and re-upload the photo after 24 hours for review. 
+To ensure approval, make sure your photo meets the following guidelines: 
+
+Technical Requirements 
+
+• Upload photos in JPEG or PNG format. 
+• Ensure the resolution is at least 300 DPI for print-quality images. 
+• Minimum dimensions: 2000 x 2500 pixels (or equivalent aspect ratio). 
+• File size should be between 5 MB to 50 MB. 
+
+Content Standards 
+
+• Only upload original work; plagiarism or copyright infringement is strictly prohibited. 
+• Avoid images with watermarks, logos, or text overlays. 
+• Ensure the photo does not contain offensive, explicit, or illegal content. 
+• Photos should not depict or promote violence, hatred, or discrimination. 
+• Wildlife and nature photos must adhere to ethical practices (e.g., no baiting or staged 
+wildlife shots). 
+Aesthetic and Quality Requirements 
+• Images should be sharp and free from excessive noise, blurriness, or over-processing. 
+• Avoid over-saturation or unnatural color corrections. 
+• Composition should be visually appealing and follow basic photography rules (e.g., 
+rule of thirds, leading lines). 
+• No visible branding or distracting elements in the frame unless it's part of the subject 
+(e.g., product photography). 
+
+Metadata and Descriptions 
+
+• Provide accurate titles, descriptions, and keywords for each photo. 
+• Avoid misleading tags or keywords to ensure proper categorization. 
+• Ensure the title and description are free of grammatical errors and typos. 
+Legal and Ethical Compliance 
+• Obtain necessary model or property releases for photos featuring identifiable people 
+or private property. 
+• Respect privacy rights—do not upload images taken without consent in private 
+settings. 
+• Do not upload photos that violate local laws or community standards. 
+Additional Tips 
+• Photos with unique perspectives or storytelling elements are more likely to attract 
+buyers. 
+• Experiment with lighting, angles, and post-processing to make your work stand out. 
+• Upload high-quality series or collections to increase your chances of bulk sales 
+
+Monetization Reminder 
+
+Once your photos are approved, you can apply for monetization to start earning royalties for 
+your work. To apply: 
+
+1. Log in to your account. 
+2. Navigate to your profile page. 
+3. Click “Apply for Monetization” and complete the process. 
+
+If you have questions or need help, feel free to reach out at support@clickedart.com. 
+We appreciate your efforts and look forward to seeing more of your creative work! 
+
+Warm regards, 
+Team ClickedArt.com 
+Empowering Photographers Everywhere
+      `,
+  });
+  return true;
+});
 
   module.exports = {
     sendResetEmail,
@@ -280,5 +490,9 @@ Empowering Photographers Everywhere
     sendApprovedImageMail,
     sendUnapprovedImageMail,
     sendMonetizationMail,
-    sendMonetizationDisApprovalMail
+    sendMonetizationDisApprovalMail,
+    setApprovedImageOfMonetizedProfile,
+    setApprovedImageOfNonMonetizedProfile,
+    sendUnapprovedImageMailOfMonetizedProfile,
+    sendUnapprovedImageMailOfNonMonetizedProfile
   }

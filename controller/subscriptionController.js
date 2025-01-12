@@ -4,6 +4,7 @@ const User = require('../models/userModel')
 const Plan = require('../models/planModel')
 const Photographer = require('../models/photographerModel')
 const UserType = require('../models/typeModel')
+const cron = require('node-cron');
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price } = req.body
@@ -86,9 +87,29 @@ const cancelSubscriptions = asyncHandler(async(req, res) => {
     });
 })
 
+const checkAndUpdateSubscriptions = asyncHandler(async () => {
+
+    const plans = await Plan.find({ name: { $nin: ['Basic'] } });
+    const planIds = plans.map((plan) => plan._id);
+    const basicPlan = await Plan.findOne({ name: 'Basic' })
+    const basicPlanId = basicPlan._id
+    const now = Date.now()
+    await Subscription.updateMany({
+        endDate: { $lte: now },
+        isActive: true,
+        planId: { $in: planIds }
+    }, {
+      $set: {
+        planId: basicPlanId,
+      }
+    })
+    
+})
+
 
 module.exports = {
     createSubscription,
     getUserSubscriptions,
-    cancelSubscriptions
+    cancelSubscriptions,
+    checkAndUpdateSubscriptions
 }

@@ -299,6 +299,39 @@ const getUserByUserName = asyncHandler(async (req, res) => {
 })
 
 
+const updateCoverImage = asyncHandler(async (req, res) => {
+    const { photographerId, coverImage } = req.query
+ 
+    const user = await User.findOneAndUpdate({
+       _id: photographerId
+    }, {
+     $set: { coverImage }
+    }, {
+     new: true
+    })
+ 
+    if(!user) {
+     return res.status(400).send({ message: 'User not found to update' })
+    }
+ 
+    res.status(200).send({ message: 'User Cover Image Updated' })
+
+
+ })
+ 
+const checkUserNameExist = asyncHandler(async (req, res) => {
+    const { username } = req.body
+
+    const user = await User.findOne({ username })
+    if(user) {
+        return res.status(400).send({ exists: true })
+    } 
+
+    res.status(200).send({ exists: false })
+
+})
+
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -310,7 +343,9 @@ module.exports = {
     deleteUserProfile,
     verifyUserProfile,
     resendOTP,
-    getUserByUserName
+    getUserByUserName,
+    updateCoverImage,
+    checkUserNameExist
 }
 
 

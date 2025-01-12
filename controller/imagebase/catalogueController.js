@@ -1,5 +1,6 @@
 const Catalogue = require('../../models/imagebase/catalogueModel.js')
 const asyncHandler = require('express-async-handler');
+const Subscription = require('../subscriptionController.js')
 
 const createCatalogue = asyncHandler(async (req, res) => {
     const { name, description, photographer, images } = req.body;
@@ -7,6 +8,30 @@ const createCatalogue = asyncHandler(async (req, res) => {
     if(catalogueExist) {
         return res.status(400).send({ message: 'Catalogue already exist with same name for photographer' })
     }
+
+
+    const subscription = await Subscription.findOne({
+      'userInfo.user': photographer,
+      'userInfo.userType': 'Photographer',
+      isActive: true,
+    }).populate('planId');
+ 
+      let catalogueLimit;
+      if (subscription?.planId?.name === 'Basic') {
+        catalogueLimit = 1;
+      } else if (subscription?.planId?.name === 'Intermediate') {
+        catalogueLimit = 5;
+      } else if (subscription?.planId?.name === 'Premium') {
+        catalogueLimit = Infinity; 
+      } else {
+        catalogueLimit = 1; 
+      }
+      const uploadedCatalogueCount = await Catalogue.countDocuments({ photographer });
+
+      if(uploadedCatalogueCount >= catalogueLimit) {
+        return res.status(400).send({ message: 'Catalogue Uploaded Limit reached for this plan' })
+      }
+
     const catalogue = new Catalogue({ name, description, photographer, images })
     await catalogue.save();
     res.status(200).send({message: 'Catalogue created Successfully', catalogue})

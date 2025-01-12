@@ -7,18 +7,18 @@ const royaltySettingsSchema = mongoose.Schema({
         required: true,
         default: 'exclusive'
     },
-    rankWiseRoyaltyShare: {
-        professional: {
+    planWiseRoyaltyShare: {
+        basic: {
+            type: Number,
+            default: 50
+        },
+        intermediate: {
             type: Number,
             default: 70
         },
-        ambassador: {
+        premium: {
             type: Number,
-            default: 80
-        },
-        master: {
-            type: Number,
-            default: 100
+            default: 90
         }
     },
     printRoyaltyShare: {

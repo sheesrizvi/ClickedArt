@@ -12,7 +12,11 @@ const Photographer = require('../../models/photographerModel.js')
 const RoyaltySettings = require('../../models/imagebase/royaltyModel.js')
 const Order = require('../../models/orderModel.js')
 const {  sendApprovedImageMail,
-  sendUnapprovedImageMail } = require('../../middleware/handleEmail.js')
+  sendUnapprovedImageMail, setApprovedImageOfMonetizedProfile,
+  setApprovedImageOfNonMonetizedProfile, 
+  sendUnapprovedImageMailOfMonetizedProfile,
+  sendUnapprovedImageMailOfNonMonetizedProfile } = require('../../middleware/handleEmail.js')
+
 const Subscription = require('../../models/subscriptionModel.js')
 
 const config = {
@@ -82,6 +86,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
  await Photographer.findOneAndUpdate({_id: photographer}, { $inc: { photosCount: 1 } })
  res.status(201).send({ photo: newImage })
 })
+
 
 const updateImageInVault = asyncHandler(async (req, res) => {
     const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license } = req.body
@@ -308,7 +313,7 @@ const approveImage = asyncHandler(async (req, res) => {
       }
   
       const image = await ImageVault.findById(imageId).populate('photographer');
-      if (!image) {
+      if (!image || !image.photographer) {
         return res.status(404).json({ message: 'Image not found.' });
       }
   
@@ -322,16 +327,28 @@ const approveImage = asyncHandler(async (req, res) => {
         const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
         const email = image.photographer.email
         const reasons = image.rejectionReason
-        
-        sendUnapprovedImageMail(photographerName, email, imageTitle,  reasons)
+        const isMonetized = image.photographer.isMonetized
+
+        if(isMonetized) {
+          sendUnapprovedImageMailOfMonetizedProfile(photographerName, email, imageTitle, reasons)
+        } else {
+          sendUnapprovedImageMailOfNonMonetizedProfile(photographerName, email, imageTitle,  reasons)
+        }
       } else if (status === 'approved') {
         const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
-        
+        const isMonetized = image.photographer.isMonetized
+
         const email = image.photographer.email
         const imageTitle = image.title
         image.rejectionReason = null; 
         image.isActive = true
-        sendApprovedImageMail(photographerName, email, imageTitle)
+        
+        if(isMonetized) {
+          setApprovedImageOfMonetizedProfile(photographerName, email, imageTitle)
+        } else {
+          setApprovedImageOfNonMonetizedProfile(photographerName, email, imageTitle)
+        }
+
       } else if (status === 'review') {
         image.rejectionReason = null; 
         image.isActive = false
@@ -412,6 +429,20 @@ const searchImages = asyncHandler(async (req, res) => {
   if(!Query) {
     return res.status(400).send({ message: 'Query is required' })
   }
+
+  // const pipeline = [
+  //   {
+  //     $search: {
+  //       index: 'default',
+  //       text: {
+  //         query: searchQuery,
+  //         path: ['title', 'description', 'story', 'keywords'],
+  //         fuzzy: { maxEdits: 2, prefixLength: 2 }
+  //       }
+  //     }
+  //   },
+  // ]
+  
   const pipeline = [
     {
       $search: {
@@ -422,28 +453,28 @@ const searchImages = asyncHandler(async (req, res) => {
               text: {
                 query: Query,
                 path: "title",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2  }
               }
             },
             {
               text: {
                 query: Query,
                 path: "description",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2  }
               }
             },
             {
               text: {
                 query: Query,
                 path: "story",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2  }
               }
             },
             {
               text: {
                 query: Query,
                 path: "keywords",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2  }
               }
             }
           ]
@@ -481,21 +512,21 @@ const searchImages = asyncHandler(async (req, res) => {
               text: {
                 query: Query,
                 path: "title",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2 }
               }
             },
             {
               text: {
                 query: Query,
                 path: "description",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2 }
               }
             },
             {
               text: {
                 query: Query,
                 path: "story",
-                fuzzy: { maxEdits: 2 }
+                fuzzy: { maxEdits: 2, prefixLength: 2 }
               }
             },
             {
@@ -599,6 +630,9 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
 
  res.status(200).send({ message: 'Image Analytics' , imageAnalytics })
 })
+
+
+
 module.exports = {
     addImageInVault,
     updateImageInVault,

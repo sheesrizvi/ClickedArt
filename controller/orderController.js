@@ -12,6 +12,7 @@ const Referral = require("../models/referralModel.js");
 const Razorpay = require("razorpay");
 const Monetization = require('../models/monetizationModel.js')
 
+
 const createOrder = asyncHandler(async (req, res) => {
  
   const {
@@ -24,6 +25,8 @@ const createOrder = asyncHandler(async (req, res) => {
     orderStatus,
     invoiceId,
     coupon,
+    isPaid,
+    gst
   } = req.body;
 
   
@@ -31,9 +34,9 @@ const createOrder = asyncHandler(async (req, res) => {
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
-  const gst = await GST.findOne({ "userInfo.user": userId });
-  const gstId = gst ? gst._id : null;
+  
   const orderExist = await Order.findOne({ "userInfo.user": userId });
+ 
 
   const groupedOrders = orderItems.reduce((acc, item) => {
 
@@ -57,14 +60,15 @@ const createOrder = asyncHandler(async (req, res) => {
         userType: type
       },
       orderItems: items,
-      gst: gstId,
       paymentMethod,
       shippingAddress,
       discount,
       totalAmount,
       orderStatus,
       invoiceId,
-      finalAmount
+      finalAmount,
+      isPaid,
+      gst
     });
 
 
@@ -103,8 +107,6 @@ const createOrder = asyncHandler(async (req, res) => {
   
   res.status(201).send(orders);
 });
-
-
 
 
 

@@ -484,6 +484,41 @@ const searchPhotographers = async (req, res) => {
 })
 
 
+
+
+const updateCoverImage = asyncHandler(async (req, res) => {
+    const { photographerId, coverImage } = req.query
+ 
+    const photographer = await Photographer.findOneAndUpdate({
+       _id: photographerId
+    }, {
+     $set: { coverImage }
+    }, {
+     new: true
+    })
+ 
+    if(!photographer) {
+     return res.status(400).send({ message: 'Photographer not found to update' })
+    }
+ 
+    res.status(200).send({ message: 'Profile Cover Image Updated' })
+
+
+ })
+
+ 
+ const checkPhotographerUserNameExist = asyncHandler(async (req, res) => {
+    const { username } = req.body
+
+    const user = await Photographer.findOne({ username })
+    if(user) {
+        return res.status(400).send({ exists: true })
+    } 
+
+    res.status(200).send({ exists: false })
+
+})
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -499,5 +534,7 @@ module.exports = {
     verifyPhotographerProfile,
     resendOTP,
     searchPhotographers,
-    getPhotographerByUserName
+    getPhotographerByUserName,
+    updateCoverImage,
+    checkPhotographerUserNameExist
 }

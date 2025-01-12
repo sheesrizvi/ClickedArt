@@ -14,7 +14,7 @@ const {
         getFeaturedArtwork,
         searchImages,
         updateImageViewCount,
-        getImageAnalytics
+        getImageAnalytics,
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin } = require('../../middleware/authMiddleware')
 
@@ -38,5 +38,6 @@ router.get('/search-images', searchImages)
 
 router.post('/add-image-views-count', updateImageViewCount)
 router.get('/get-image-analytics', getImageAnalytics)
+
 
 module.exports = router

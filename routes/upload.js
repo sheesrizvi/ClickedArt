@@ -1254,12 +1254,19 @@ router.post(
 
       if (plan === "basic") {
         const royaltySettings = await RoyaltySettings.findOne();
-        if (!royaltySettings || !royaltySettings.watermarkImage) {
-          return res.status(400).send("Watermark image not found for Basic plan.");
+
+        if(royaltySettings && royaltySettings.watermarkImage ) {
+          const response = await axios.get(royaltySettings.watermarkImage, {
+            responseType: 'arraybuffer'
+          })
+          watermarkBuffer = Buffer.from(response.data)
         }
 
-        const { width, height } = await sharp(imageBuffer).metadata();
-        watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        if(!royaltySettings || !royaltySettings.watermarkImage || !watermarkBuffer) {
+          const { width, height } = await sharp(imageBuffer).metadata();
+          watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        }
+       
       } else if (plan === "intermediate" || (plan === "advanced" && isCustomText)) {
         if (!customText) {
           return res.status(400).send("Custom text is required.");
