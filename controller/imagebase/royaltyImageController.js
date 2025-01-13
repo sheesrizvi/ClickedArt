@@ -18,7 +18,7 @@ const createRoyalty = asyncHandler(async (req, res) => {
 })
 
 const updateRoyalty = asyncHandler(async (req, res) => {
-    const { id, licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
+    const { id, licensingType, planWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
 
     const royalty = await Royalty.findOne({ _id: id })
     if(!royalty) return res.status(400).send({ message: 'Royalty not found' })
