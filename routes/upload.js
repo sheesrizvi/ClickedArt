@@ -1283,9 +1283,7 @@ router.post(
        
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
-        const pngBuffer = await sharp(originalWatermarkBuffer).png().toBuffer();
-        watermarkBuffer = await removeBackgroundWithSharp(pngBuffer);
-        // watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+        watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
        
       } else {
         return res.status(400).send("Invalid plan.");
@@ -1436,7 +1434,7 @@ router.post(
       if (imageSizeInMP > 12) {
         returnedResolutions.medium = resolutions.medium;
         returnedResolutions.small = resolutions.small;
-      } else if (imageSizeInMP > 2) {
+      } else if (imageSizeInMP > 4) {
         returnedResolutions.small = resolutions.small;
       }
 
