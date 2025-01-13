@@ -128,7 +128,7 @@ const searchCategories = async (req, res) => {
     ] })
     
     const categoriesIds = categories.map((category) => category._id)
-
+    
     const results = await ImageVault.find({ 
         category: { $in: categoriesIds }
      }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)

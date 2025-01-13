@@ -430,7 +430,7 @@ const searchPhotographers = async (req, res) => {
             index: 'photographerindex',
             text: {
               query: Query,
-              path: ['firstName', 'lastName', 'email', 'bio'],
+              path: ['firstName', 'lastName', 'username', 'email', 'bio'],
               fuzzy: {
                 maxEdits: 2,
                 prefixLength: 3
