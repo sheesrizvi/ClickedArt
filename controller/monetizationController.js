@@ -104,7 +104,7 @@ const getAllMonetizations = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
     const [ monetizations, totalDocuments ] = await Promise.all([
-        Monetization.find({}).populate('photographer').skip((pageNumber - 1) * pageSize).limit(pageSize),
+        Monetization.find({}).populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
         Monetization.countDocuments({})
     ])
 
