@@ -1242,6 +1242,7 @@ router.post(
   upload1.single("image"),
   async (req, res) => {
     try {
+
       const plan = req.body.plan;
       const isCustomText = req.body.isCustomText === "true";
       const customText = req.body.customText;
@@ -1279,10 +1280,13 @@ router.post(
           return res.status(400).send("Custom watermark image not found.");
         }
         const watermarkUrl = customWatermark.watermarkImage;
+       
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
-
         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
-        watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+        const pngBuffer = await sharp(originalWatermarkBuffer).png().toBuffer();
+        watermarkBuffer = await removeBackgroundWithSharp(pngBuffer);
+        // watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+       
       } else {
         return res.status(400).send("Invalid plan.");
       }
@@ -1456,42 +1460,43 @@ const createTextImageBuffer = async (text, width, height) => {
 };
 
 const removeBackgroundWithSharp = async (buffer) => {
-  try {
-    const rgbaImage = await sharp(buffer)
-      .ensureAlpha()
-      .toBuffer();
+  return buffer
+  // try {
+  //   const rgbaImage = await sharp(buffer)
+  //     .ensureAlpha()
+  //     .toBuffer();
 
-    const { data, info } = await sharp(rgbaImage)
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+  //   const { data, info } = await sharp(rgbaImage)
+  //     .raw()
+  //     .toBuffer({ resolveWithObject: true });
 
-    const transparentData = Buffer.from(data);
+  //   const transparentData = Buffer.from(data);
 
-    for (let i = 0; i < transparentData.length; i += info.channels) {
-      const r = transparentData[i];
-      const g = transparentData[i + 1];
-      const b = transparentData[i + 2];
-      const a = transparentData[i + 3];
+  //   for (let i = 0; i < transparentData.length; i += info.channels) {
+  //     const r = transparentData[i];
+  //     const g = transparentData[i + 1];
+  //     const b = transparentData[i + 2];
+  //     const a = transparentData[i + 3];
 
-      if (r > 200 && g > 200 && b > 200) {
-        transparentData[i + 3] = 0; 
-      } else {
-        transparentData[i + 3] = a; 
-      }
-    }
+  //     if (r > 200 && g > 200 && b > 200) {
+  //       transparentData[i + 3] = 0; 
+  //     } else {
+  //       transparentData[i + 3] = a; 
+  //     }
+  //   }
 
-    return sharp(transparentData, {
-      raw: {
-        width: info.width,
-        height: info.height,
-        channels: info.channels,
-      },
-    })
-      .toBuffer();
-  } catch (error) {
-    console.error("Error in removeBackgroundWithSharp:", error);
-    throw error;
-  }
+  //   return sharp(transparentData, {
+  //     raw: {
+  //       width: info.width,
+  //       height: info.height,
+  //       channels: info.channels,
+  //     },
+  //   })
+  //     .toBuffer();
+  // } catch (error) {
+  //   console.error("Error in removeBackgroundWithSharp:", error);
+  //   throw error;
+  // }
 };
 
 
