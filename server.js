@@ -37,6 +37,7 @@ const monetizationRoutes = require('./routes/monetizationRoutes.js')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
 const { checkAndUpdateSubscriptions } = require('./controller/subscriptionController.js')
+const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
 
 const app = express();
 app.use(
@@ -87,6 +88,11 @@ cron.schedule('0 0 * * *', () => {
   console.log('Running the subscription expiry check .');
   checkAndUpdateSubscriptions().catch(err => console.error('Error in subscription check:', err));
 });
+
+cron.schedule('0 0 * * 0', () => {
+  console.log('Running the rejected photographer deletion check')
+  checkAndUpdateRejectedPhotographers()
+})
 
 app.use(notFound)
 app.use(errorHandler)

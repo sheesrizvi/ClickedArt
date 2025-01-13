@@ -3,15 +3,15 @@ const asyncHandler = require('express-async-handler')
 const Royalty = require('../../models/imagebase/royaltyModel.js')
 
 const createRoyalty = asyncHandler(async (req, res) => {
-    const { licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
+    const { licensingType, planWiseRoyaltyShare, sizePricingModifiers, watermarkImage }  = req.body
 
-    if(!rankWiseRoyaltyShare || !sizePricingModifiers || !watermarkImage) {
+    if(!planWiseRoyaltyShare || !sizePricingModifiers || !watermarkImage) {
         return res.status(400).send({ message: 'All Fields are required' })
     }
     await Royalty.deleteMany({})
 
     const royalty = await Royalty.create({
-        licensingType, rankWiseRoyaltyShare, sizePricingModifiers, watermarkImage
+        licensingType, planWiseRoyaltyShare, sizePricingModifiers, watermarkImage
     })
 
     res.status(200).send({ royalty })
@@ -24,7 +24,7 @@ const updateRoyalty = asyncHandler(async (req, res) => {
     if(!royalty) return res.status(400).send({ message: 'Royalty not found' })
  
     royalty.licensingType = licensingType || royalty.licensingType
-    royalty.rankWiseRoyaltyShare = rankWiseRoyaltyShare || royalty.rankWiseRoyaltyShare
+    royalty.planWiseRoyaltyShare = planWiseRoyaltyShare || royalty.planWiseRoyaltyShare
     royalty.sizePricingModifiers = sizePricingModifiers || royalty.priceDeviationPercentage
     royalty.watermarkImage = watermarkImage || royalty.watermarkImage
 

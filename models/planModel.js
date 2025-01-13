@@ -37,6 +37,7 @@ const planSchema = new mongoose.Schema({
     },
     customPricing: {
         type: Boolean,
+        default: true,
         required: true
     },
     licensingOptions: {

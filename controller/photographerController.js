@@ -519,6 +519,14 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 
 })
 
+
+const checkAndUpdateRejectedPhotographers = asyncHandler(async (req, res) => {
+     const result = await Photographer.deleteMany({ 
+        photographerStatus: 'rejected',
+      })
+     console.log(`Deleted ${result.deletedCount} rejected photographers.`)
+})
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -536,5 +544,6 @@ module.exports = {
     searchPhotographers,
     getPhotographerByUserName,
     updateCoverImage,
-    checkPhotographerUserNameExist
+    checkPhotographerUserNameExist,
+    checkAndUpdateRejectedPhotographers
 }
