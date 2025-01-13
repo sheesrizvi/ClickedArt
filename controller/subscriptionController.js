@@ -5,6 +5,7 @@ const Plan = require('../models/planModel')
 const Photographer = require('../models/photographerModel')
 const UserType = require('../models/typeModel')
 const cron = require('node-cron');
+const Razorpay = require('razorpay');
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price, duration } = req.body
@@ -112,10 +113,43 @@ const checkAndUpdateSubscriptions = asyncHandler(async () => {
     
 })
 
+const payment = asyncHandler(async (req, res) => {
+  const { total, userId } = req.body;
+
+  if (!total || !userId) {
+    res.status(400).json({ message: "Total amount and user ID are required." });
+    return;
+  }
+
+  const user = await Photographer.findById(userId);
+  if (!user) {
+    res.status(404).json({ message: "Photographer not found." });
+    return;
+  }
+
+  const instance = new Razorpay({
+    key_id: process.env.RAZOR_PAY_ID,
+    key_secret: process.env.RAZOR_PAY_SECRET,
+  });
+
+  const result = await instance.orders.create({
+    amount: total * 100,
+    currency: "INR",
+    receipt: `receipt_${userId}`,
+    notes: {
+      userId: user._id,
+      key: process.env.RAZOR_PAY_ID,
+    },
+  });
+
+  res.status(200).json({ result });
+});
+
 
 module.exports = {
     createSubscription,
     getUserSubscriptions,
     cancelSubscriptions,
-    checkAndUpdateSubscriptions
+    checkAndUpdateSubscriptions,
+    payment
 }

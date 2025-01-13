@@ -41,7 +41,7 @@ const monetizationSchema = new mongoose.Schema({
         },
         firmPan: {
             type: String,
-            required: true,
+            required: false,
         },
         firmGstCertificate: {
             type: String, 
