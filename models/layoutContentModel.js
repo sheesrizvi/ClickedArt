@@ -5,7 +5,7 @@ const layoutContentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    heroSection: {
+    heroSectionPhotos: {
         type: [String],
         required: true
     },
