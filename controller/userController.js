@@ -130,7 +130,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
 
-    if(!users || users.length === 0) return res.status(400).send({ message: 'Users not found' })
+    if(!users || users.length === 0) { return res.status(400).send({ message: 'Users not found' }) }
 
     const totalDocuments = await User.countDocuments({ isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)

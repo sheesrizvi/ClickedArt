@@ -33,8 +33,8 @@ const getLayoutContent = asyncHandler(async (req, res) => {
 const deleteLayoutContent = asyncHandler(async (req, res) => {
     const existingContent = await LayoutContent.findOne();
     if (!existingContent) {
-        res.status(404).send({ error: 'No layout content to delete' });
-        return;
+       return res.status(404).send({ error: 'No layout content to delete' });
+       
     }
     await LayoutContent.deleteOne();
     res.status(200).send({ message: 'Layout content deleted successfully' });
