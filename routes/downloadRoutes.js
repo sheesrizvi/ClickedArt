@@ -6,7 +6,8 @@ const { createOrder ,
     getOrderByStatus,
     updateOrderStatus,
     getOrderById,
-    payment
+    payment,
+    getPendingOrders
  } = require('../controller/orderController')
 const router = express.Router()
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware.js')
@@ -19,6 +20,6 @@ router.get('/get-order-by-status', getOrderByStatus)
 router.get('/get-order-by-id', getOrderById)
 router.post('/update-order-status', isAdmin, updateOrderStatus)
 router.post('/payment', payment)
-
+router.get('/get-pending-orders', getPendingOrders)
 
 module.exports = router

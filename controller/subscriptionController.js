@@ -65,7 +65,7 @@ const createSubscription = asyncHandler(async (req, res) => {
 
 const getUserSubscriptions = asyncHandler(async (req, res) => {
     const { userId } = req.query
-    const subscriptions = await Subscription.find({ 'userInfo.user': userId }).populate('planId')
+    const subscriptions = await Subscription.find({ 'userInfo.user': userId  }).populate('planId')
 
     if (!subscriptions || subscriptions.length === 0) {
         return res.status(404).json({ message: 'No subscriptions found for this user' });
@@ -108,6 +108,7 @@ const checkAndUpdateSubscriptions = asyncHandler(async () => {
     }, {
       $set: {
         planId: basicPlanId,
+        isActive: false
       }
     })
     
@@ -145,11 +146,27 @@ const payment = asyncHandler(async (req, res) => {
   res.status(200).json({ result });
 });
 
+const getUserActiveSubscription = asyncHandler(async (req, res) => {
+    const { photographer } = req.query
 
+      const subscription = await Subscription.findOne({
+          'userInfo.user': photographer,
+          'userInfo.userType': 'Photographer',
+          isActive: true,
+        }).populate('planId');
+     
+
+    if(!subscription) {
+      return res.status(400).send({ message: 'No Active Subscription found for user' })
+    }
+
+    res.status(200).send({ subscription })
+})
 module.exports = {
     createSubscription,
     getUserSubscriptions,
     cancelSubscriptions,
     checkAndUpdateSubscriptions,
-    payment
+    payment,
+    getUserActiveSubscription
 }

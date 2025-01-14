@@ -365,6 +365,44 @@ const payment = asyncHandler(async (req, res) => {
   res.status(200).json({ result }); // Send response with result
 });
 
+const getPendingOrders = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query
+
+  const orders = await Order.find({ orderStatus: 'pending' })
+  .populate({
+    path: 'orderItems',
+    populate: [
+      {
+        path: 'imageInfo.image',
+        populate: {
+          path: 'photographer'
+        }
+      },
+      {
+        path: 'frameInfo.frame'
+      },
+      {
+        path: 'paperInfo.paper'
+      },
+      {
+        path: 'imageInfo.photographer'
+      }
+    ]
+  })
+  .populate("userInfo.user")
+  .sort({ createdAt: -1 })
+  .skip((pageNumber - 1) * pageSize)
+  .limit(pageSize);
+
+if (!orders || orders.length === 0)
+  return res.status(400).send({ message: "Order not found" });
+
+const totalDocuments = await Order.countDocuments({ orderStatus: 'pending' });
+const pageCount = Math.ceil(totalDocuments / pageSize);
+
+res.status(200).send({ orders, pageCount })
+})
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -374,4 +412,5 @@ module.exports = {
   updateOrderStatus,
   getOrderById,
   payment,
+  getPendingOrders
 };
