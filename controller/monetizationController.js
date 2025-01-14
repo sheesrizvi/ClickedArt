@@ -117,11 +117,29 @@ const getAllMonetizations = asyncHandler(async (req, res) => {
     res.status(200).send({ monetizations, pageCount })
 })
 
+const getPendingMonetizations = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
+
+    const [ monetizations, totalDocuments ] = await Promise.all([
+        Monetization.find({ status: 'pending' }).populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
+        Monetization.countDocuments({  status: 'pending'  })
+    ])
+
+    if(!monetizations || monetizations.length === 0) {
+        return res.status(400).send({ message: 'Monetization not found' })
+    }
+
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    res.status(200).send({ monetizations, pageCount })
+})
+
 module.exports = {
     createMonetization,
     getMonetizationByPhotographerId,
     updateMonetizationStatus,
     deleteMonetizationRequest,
     updateMonetization,
-    getAllMonetizations
+    getAllMonetizations,
+    getPendingMonetizations
 };
