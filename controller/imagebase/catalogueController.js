@@ -1,6 +1,6 @@
 const Catalogue = require('../../models/imagebase/catalogueModel.js')
 const asyncHandler = require('express-async-handler');
-const Subscription = require('../subscriptionController.js')
+const Subscription = require('../../models/subscriptionModel.js')
 
 const createCatalogue = asyncHandler(async (req, res) => {
     const { name, description, photographer, images } = req.body;
