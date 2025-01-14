@@ -17,10 +17,10 @@ const userRegistration = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'Email already exist. Please use a different email' })
     }
 
-    const userNameExist = await User.findOne({ username })
-    if(userNameExist) {
-        return res.status(400).send({ message: 'Username already exist. Please try again using different username.' })
-    }
+    // const userNameExist = await User.findOne({ username })
+    // if(userNameExist) {
+    //     return res.status(400).send({ message: 'Username already exist. Please try again using different username.' })
+    // }
 
     let age;
     if (dob) {
