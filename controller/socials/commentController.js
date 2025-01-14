@@ -8,6 +8,7 @@ const createComment = asyncHandler(async (req, res) => {
     const { userId, entityInfo, commentText } = req.body
 
     if (!userId || !entityInfo || !commentText || !entityInfo.entityType) return res.status(400).send({ message: 'Comment Details are required' })
+        
     const userType = await UserType.findOne({ user: userId }).select('type -_id')
     const type = userType?.type || null;
     console.log(type)

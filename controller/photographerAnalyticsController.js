@@ -103,40 +103,42 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           printCutAmount: parseFloat(data.printCutAmount.toFixed(2)),
       }));
 
-  const categories = await Order.aggregate([
-      {
-          $match: {
-              'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer)
-          }
-      },
-      { $unwind: "$orderItems" },
-      {
-          $lookup: {
-              from: "imagevaults",
-              localField: "orderItems.imageInfo.image",
-              foreignField: "_id",
-              as: "image"
-          }
-      },
-      { $unwind: "$image" },
-      {
-          $group: {
-              _id: "$image.category",
-              count: { $sum: 1 }
-          }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-      {
-          $lookup: {
-              from: "categories",
-              localField: "_id",
-              foreignField: "_id",
-              as: "categoryDetails"
-          }
-      },
-      { $unwind: "$categoryDetails" }
-  ]);
+      const categories = await Order.aggregate([
+        {
+            $match: {
+                'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer)
+            }
+        },
+        { $unwind: "$orderItems" },
+        {
+            $lookup: {
+                from: "imagevaults",
+                localField: "orderItems.imageInfo.image",
+                foreignField: "_id",
+                as: "image"
+            }
+        },
+        { $unwind: "$image" },
+        { $unwind: "$image.category" },
+        {
+            $group: {
+                _id: "$image.category",
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 10 },
+        {
+            $lookup: {
+                from: "categories",
+                localField: "_id",
+                foreignField: "_id",
+                as: "categoryDetails"
+            }
+        },
+        { $unwind: "$categoryDetails" }
+    ]);
+    
 
   let totalPaidAmount = await Invoice.aggregate([
       {

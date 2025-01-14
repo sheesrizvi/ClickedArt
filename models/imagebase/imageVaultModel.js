@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 const validator = require('validator')
 
 const imageVaultSchema = mongoose.Schema({
-    category: {
+    category: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category'
-    },
+    }],
     photographer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Photographer',

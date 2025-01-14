@@ -43,6 +43,7 @@ const userDashboardData = asyncHandler(async (req, res) => {
           },
       },
       { $unwind: "$image" },
+      { $unwind: "$image.category" },
       {
           $group: {
               _id: "$image.category",

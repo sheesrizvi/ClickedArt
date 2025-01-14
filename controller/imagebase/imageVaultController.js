@@ -35,6 +35,10 @@ const addImageInVault = asyncHandler(async (req, res) => {
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
 
+    if(category.length < 1 || category.length > 5) {
+      return res.status(400).send({ message: 'You can select at least one & at max 5 categories' })
+    }
+
     const subscription = await Subscription.findOne({
       'userInfo.user': photographer,
       'userInfo.userType': 'Photographer',
@@ -92,6 +96,10 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
+
+    if(category.length < 1 || category.length > 5) {
+      return res.status(400).send({ message: 'You can select min 1 and max 5 categories' })
+    }
 
     const photo = await ImageVault.findOne({ _id: id, photographer })
     if(!photo) return res.status(400).send({  message: 'Photo not found' })
@@ -631,7 +639,75 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
  res.status(200).send({ message: 'Image Analytics' , imageAnalytics })
 })
 
+const bestSellerPhotos = asyncHandler(async (req, res) => {
 
+  const bestSellers = await Order.aggregate([
+    {
+      $unwind: '$orderItems',
+    },
+    {
+      $group: {
+        _id: '$orderItems.imageInfo.image',
+        downloadCount: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { downloadCount: -1 },
+    },
+    {
+      $limit: 20,
+    },
+    {
+      $lookup: {
+        from: 'imagevaults',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'imageDetails',
+      },
+    },
+    {
+      $unwind: '$imageDetails',
+    },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'imageDetails.category',
+        foreignField: '_id',
+        as: 'categoryDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'photographers',
+        localField: 'imageDetails.photographer',
+        foreignField: '_id',
+        as: 'photographerDetails',
+      },
+    },
+    {
+      $lookup: {
+        from: 'licenses',
+        localField: 'imageDetails.license',
+        foreignField: '_id',
+        as: 'licenseDetails',
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        image: '$imageDetails',
+        downloadCount: 1,
+        categoryDetails: { $arrayElemAt: ['$categoryDetails', 0] },
+        photographerDetails: { $arrayElemAt: ['$photographerDetails', 0] },
+        licenseDetails: { $arrayElemAt: ['$licenseDetails', 0] },
+      },
+    },
+  ]);
+
+
+  res.status(200).send({ bestSellers })
+  
+})
 
 module.exports = {
     addImageInVault,
@@ -649,4 +725,5 @@ module.exports = {
     searchImages,
     updateImageViewCount,
     getImageAnalytics,
+    bestSellerPhotos
 }

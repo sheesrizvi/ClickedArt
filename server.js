@@ -34,10 +34,12 @@ const photographerAnalyticsRoutes = require('./routes/photographerAnalyticsRoute
 const userAnalyticsRoutes = require('./routes/userAnalyticsRoutes.js')
 const referralRoutes = require('./routes/referralRoutes.js')
 const monetizationRoutes = require('./routes/monetizationRoutes.js')
+const layoutContentRoutes = require('./routes/layoutContentRoutes.js')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
 const { checkAndUpdateSubscriptions } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
+
 
 const app = express();
 app.use(
@@ -80,6 +82,7 @@ app.use('/api/photographeranalytics', photographerAnalyticsRoutes)
 app.use('/api/useranalytics', userAnalyticsRoutes)
 app.use('/api/referral', referralRoutes)
 app.use('/api/monetization', monetizationRoutes)
+app.use('/api/layout', layoutContentRoutes)
 
 dbConnect()
 
@@ -98,6 +101,8 @@ app.use(notFound)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 8000;
+
+
 
 app.listen(PORT, () => {
     console.log(`Successfully served on port: ${PORT}.`);
