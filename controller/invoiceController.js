@@ -280,7 +280,9 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
 
 
 const updateInvoicePaymentStatus = asyncHandler(async (req, res) => {
-  const { invoiceId, status } = req.query
+  const { invoiceId, status } = req.body
+
+
 
   if(!invoiceId) {
     return res.status(400).send({ message: 'Invoice Id not found' })
