@@ -27,6 +27,6 @@ router.post('/resent-otp', resendOTP)
 router.get('/search-photographer', searchPhotographers)
 router.get('/get-photographer-by-username', getPhotographerByUserName)
 router.post('/update-cover-image', updateCoverImage)
-router.post('/check-photographer-user-name-exist', checkPhotographerUserNameExist)
+router.post('/checkUsernameAndEmailExists', checkPhotographerUserNameExist)
 
 module.exports = router
