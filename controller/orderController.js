@@ -9,6 +9,8 @@ const Coupon = require("../models/couponModel");
 const ReferralBalance = require("../models/referralBalanceModel");
 const User = require("../models/userModel.js");
 const Referral = require("../models/referralModel.js");
+const Paper = require("../models/imagebase/paperModel");
+const Frame = require('../models/imagebase/frameModel.js')
 const Razorpay = require("razorpay");
 const Monetization = require('../models/monetizationModel.js')
 
@@ -403,6 +405,77 @@ const pageCount = Math.ceil(totalDocuments / pageSize);
 res.status(200).send({ orders, pageCount })
 })
 
+const calculateCartPrice = async (req, res) => {
+  try {
+    const { items, userId } = req.body;
+
+    let totalImagePrice = 0;
+    let totalPaperPrice = 0;
+    let totalFramePrice = 0;
+    let totalFinalPrice = 0;
+
+    const frameIds = items.filter(item => item.frameId).map(item => item.frameId);
+    const paperIds = items.filter(item => item.paperId).map(item => item.paperId);
+
+    const frames = await Frame.find({ '_id': { $in: frameIds } });
+    const papers = await Paper.find({ '_id': { $in: paperIds } });
+
+    for (let item of items) {
+      const { imageId, paperId, frameId, width, height, resolution } = item;
+
+      const image = await ImageVault.findById(imageId);
+      if (!image) continue;
+
+      const imagePrice = resolution === "small" ? image.price.small : (resolution === "medium" ? image.price.medium : image.price.original);
+
+      let paperPrice = 0;
+      let framePrice = 0;
+
+      if (paperId) {
+        const paper = papers.find(p => p._id.toString() === paperId);
+        if (paper) {
+          const customDimension = paper.customDimensions.find(
+            (dim) => dim.width === width && dim.height === height
+          );
+
+          if (customDimension) {
+            paperPrice = customDimension.price;
+          } else {
+            const area = width * height;
+            paperPrice = area * paper.basePricePerSquareInch;
+          }
+        }
+      }
+
+      if (frameId) {
+        const frame = frames.find(f => f._id.toString() === frameId);
+        if (frame) {
+          const frameArea = width * height;
+          framePrice = frameArea * frame.basePricePerLinearInch;
+        }
+      }
+
+      totalImagePrice += imagePrice;
+      totalPaperPrice += paperPrice;
+      totalFramePrice += framePrice;
+      totalFinalPrice += imagePrice + paperPrice + framePrice;
+    }
+
+    res.json({
+      totalImagePrice,
+      totalPaperPrice,
+      totalFramePrice,
+      totalFinalPrice
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -412,5 +485,6 @@ module.exports = {
   updateOrderStatus,
   getOrderById,
   payment,
-  getPendingOrders
+  getPendingOrders,
+  calculateCartPrice
 };
