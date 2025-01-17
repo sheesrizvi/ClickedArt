@@ -376,10 +376,10 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   
-  const totalDocuments = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false })
+  const totalDocuments = await ImageVault.countDocuments({ status: { $in: ['pending', 'review'] }, isActive: false })
   const pageCount = Math.ceil(totalDocuments/pageSize)
 
-  const images = await ImageVault.find({ exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+  const images = await ImageVault.find({ status: { $in: ['pending', 'review'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
   const newImages = await Promise.all(
       images.map(async (image) => {
