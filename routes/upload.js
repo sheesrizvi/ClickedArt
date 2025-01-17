@@ -1959,7 +1959,6 @@ router.post(
       const customText = req.body.customText;
       const imageUrl = req.body.imageUrl;
 
-      
       const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
       const imageBuffer = Buffer.from(response.data);
       const correctedImageBuffer = await sharp(imageBuffer).rotate().toBuffer(); 
@@ -1973,8 +1972,40 @@ router.post(
           const response = await axios.get(royaltySettings.watermarkImage, {
             responseType: "arraybuffer",
           });
-          royaltyBuffer = Buffer.from(response.data);
-          watermarkBuffer = await sharp(royaltyBuffer).toBuffer(); 
+  // Changes
+          const originalImage = await sharp(correctedImageBuffer).metadata();
+          const originalWidth = originalImage.width;
+          const originalHeight = originalImage.height;
+
+          const watermarkScaleFactor = 0.4; 
+          const watermarkWidth = originalWidth * watermarkScaleFactor;
+          const watermarkHeight = originalHeight * watermarkScaleFactor;
+
+          const royaltyBuffer = Buffer.from(response.data);
+          
+          // watermarkBuffer = await sharp(royaltyBuffer)
+          // .resize(Math.round(watermarkWidth), Math.round(watermarkHeight)) 
+          // .png() 
+          // .toBuffer();
+
+            watermarkBuffer = await sharp(royaltyBuffer)
+            .resize({
+              width: Math.round(watermarkWidth),
+              height: Math.round(watermarkHeight),
+              fit: sharp.fit.inside,  
+              withoutEnlargement: true,  
+            })
+            .ensureAlpha()  
+            .modulate({
+              brightness: 1,
+              opacity: 0.05,  
+            })
+            .png()
+            .toBuffer();
+
+            // To Done         
+            // royaltyBuffer = Buffer.from(response.data);
+            // watermarkBuffer = await sharp(royaltyBuffer).png().toBuffer(); 
         }
 
         if (!royaltySettings || !royaltySettings.watermarkImage || !watermarkBuffer) {
