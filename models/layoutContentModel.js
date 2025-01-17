@@ -26,7 +26,10 @@ const layoutContentSchema = new mongoose.Schema({
               accountName: { type: String },
               accountLink: { type: String }  
             }
-        ]
+        ],
+        email: {
+            type: String
+        }
     },
     testimonials: [
         {
@@ -37,7 +40,7 @@ const layoutContentSchema = new mongoose.Schema({
             stars: { type: Number, min: 1, max: 5 }
         }
     ],
-   
+    
 })
 
 const LayoutContent = mongoose.model('LayoutContent', layoutContentSchema)
