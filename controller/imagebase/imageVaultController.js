@@ -331,7 +331,7 @@ const approveImage = asyncHandler(async (req, res) => {
         image.rejectionReason = rejectionReason || null
         image.isActive = false
         const imageTitle = image.title
-        
+        image.exclusiveLicenseStatus = status
         const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
         const email = image.photographer.email
         const reasons = image.rejectionReason
@@ -350,7 +350,7 @@ const approveImage = asyncHandler(async (req, res) => {
         const imageTitle = image.title
         image.rejectionReason = null; 
         image.isActive = true
-        
+        image.exclusiveLicenseStatus = status
         if(isMonetized) {
           setApprovedImageOfMonetizedProfile(photographerName, email, imageTitle)
         } else {
@@ -360,6 +360,7 @@ const approveImage = asyncHandler(async (req, res) => {
       } else if (status === 'review') {
         image.rejectionReason = null; 
         image.isActive = false
+        image.exclusiveLicenseStatus = status
       }
   
       await image.save();
@@ -376,10 +377,10 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   
-  const totalDocuments = await ImageVault.countDocuments({ status: { $in: ['pending', 'review'] }, isActive: false })
+  const totalDocuments = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false })
   const pageCount = Math.ceil(totalDocuments/pageSize)
 
-  const images = await ImageVault.find({ status: { $in: ['pending', 'review'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+  const images = await ImageVault.find({ exclusiveLicenseStatus : { $in: ['pending', 'review'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
   const newImages = await Promise.all(
       images.map(async (image) => {
