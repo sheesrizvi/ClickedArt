@@ -414,8 +414,8 @@ const calculateCartPrice = async (req, res) => {
     let totalFramePrice = 0;
     let totalFinalPrice = 0;
 
-    const frameIds = items.filter(item => item.frameId).map(item => item.frameId);
-    const paperIds = items.filter(item => item.paperId).map(item => item.paperId);
+    const frameIds = items?.filter(item => item.frameId).map(item => item.frameId);
+    const paperIds = items?.filter(item => item.paperId).map(item => item.paperId);
 
     const frames = await Frame.find({ '_id': { $in: frameIds } });
     const papers = await Paper.find({ '_id': { $in: paperIds } });
