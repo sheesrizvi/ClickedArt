@@ -539,6 +539,25 @@ const checkAndUpdateRejectedPhotographers = asyncHandler(async (req, res) => {
      console.log(`Deleted ${result.deletedCount} rejected photographers.`)
 })
 
+
+const changePassword = asyncHandler(async (req, res) => {
+    const { userId, newPassword } = req.query
+
+    const photographer = await Photographer.findOne({ _id: userId })
+
+    if(!photographer) {
+        return res.status(400).send({ message: 'Photographer not found' })
+    }
+
+    photographer.password = newPassword
+
+    await photographer.save()
+
+    res.status(200).send({ photographer })
+
+})
+
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -557,5 +576,6 @@ module.exports = {
     getPhotographerByUserName,
     updateCoverImage,
     checkPhotographerUserNameExist,
-    checkAndUpdateRejectedPhotographers
+    checkAndUpdateRejectedPhotographers,
+    changePassword
 }

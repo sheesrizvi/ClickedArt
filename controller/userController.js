@@ -123,6 +123,9 @@ const resetPassword = asyncHandler(async(req, res) => {
     res.status(200).send({status: true, message: 'OTP sent to your email. Please check for passwrod reset'})
   })
 
+
+
+
 const getAllUsers = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
@@ -332,6 +335,24 @@ const checkUserNameExist = asyncHandler(async (req, res) => {
 })
 
 
+const changePassword = asyncHandler(async (req, res) => {
+    const { userId, newPassword } = req.query
+
+    const photographer = await Photographer.findOne({ _id: userId })
+
+    if(!photographer) {
+        return res.status(400).send({ message: 'Photographer not found' })
+    }
+
+    photographer.password = newPassword
+
+    await photographer.save()
+
+    res.status(200).send({ photographer })
+
+})
+
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -345,7 +366,8 @@ module.exports = {
     resendOTP,
     getUserByUserName,
     updateCoverImage,
-    checkUserNameExist
+    checkUserNameExist,
+    changePassword
 }
 
 

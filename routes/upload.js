@@ -1973,7 +1973,8 @@ router.post(
           const response = await axios.get(royaltySettings.watermarkImage, {
             responseType: "arraybuffer",
           });
-          watermarkBuffer = Buffer.from(response.data);
+          royaltyBuffer = Buffer.from(response.data);
+          watermarkBuffer = await sharp(royaltyBuffer).toBuffer(); 
         }
 
         if (!royaltySettings || !royaltySettings.watermarkImage || !watermarkBuffer) {
