@@ -163,6 +163,8 @@ const getUserActiveSubscription = asyncHandler(async (req, res) => {
     res.status(200).send({ subscription })
 })
 
+
+
 module.exports = {
     createSubscription,
     getUserSubscriptions,
@@ -178,3 +180,4 @@ module.exports = {
 // order time email / subscription expire time email (3 days before, 7 days before)
 // professional -> basic, ambassador -> intermediate, premium -> master with rank update subscription 
 // at upgrade old plan 
+// user upgrade subscription

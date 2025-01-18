@@ -6,8 +6,8 @@ const dotenv = require('dotenv')
 
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  host: "smtp.gmail.com",
+  // service: "gmail",
+  host: "smtpout.secureserver.net",
   port: 465, 
   secure: true, 
 
@@ -22,6 +22,7 @@ const transporter = nodemailer.createTransport({
 const verifyTransporter = asyncHandler(async (req, res, next) => {
   try {
     await transporter.verify();
+    
     next();  
   } catch (error) {
     console.log(error)
@@ -35,7 +36,7 @@ const sendResetEmail = asyncHandler(async(email) => {
   const password = Math.floor(100000 + Math.random() * 900000);
   
     const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL, 
+      from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
       subject: `Your OTP - PASSWORD`, 
       text: `Your OTP/Temporary Password for Login is ${password}`, 
@@ -50,7 +51,7 @@ const sendResetEmail = asyncHandler(async(email) => {
   const sendVerificationEmail = asyncHandler(async(otp, email) => {
     
     const info =  await transporter.sendMail({
-      from: process.env.USER_EMAIL, 
+      from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
       subject: `Your OTP - PASSWORD`, 
       text: `Your OTP/Temporary Password for Login is ${otp}`, 
@@ -62,7 +63,7 @@ const sendResetEmail = asyncHandler(async(email) => {
 
   const sendApprovedMail = asyncHandler(async (photographerName, email) => {
     const info = await transporter.sendMail({
-        from: process.env.USER_EMAIL,
+        from: `Clicked Art ${process.env.USER_EMAIL}`,
         to: email,
         subject: "Welcome to ClickedArt.com – Your Registration is Approved!",
         text: `
@@ -105,7 +106,7 @@ const sendRejectionEmail = asyncHandler(async (name, email, reasons = []) => {
     : "No specific reasons provided.";
 
   const info = await transporter.sendMail({
-    from: process.env.USER_EMAIL,
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
     to: email,
     subject: "Registration Update on ClickedArt.com",
     text: `
@@ -134,7 +135,7 @@ Empowering Photographers Everywhere
 
 const sendApprovedImageMail = asyncHandler(async (photographerName, email, imageTitle) => {
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Your Image on ClickedArt.com has been Approved!",
       text: `
@@ -171,7 +172,7 @@ const sendUnapprovedImageMail = asyncHandler(async (photographerName, email, ima
       : "No specific reasons provided.";
 
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Update on Your Image Submission to ClickedArt.com",
       text: `
@@ -201,7 +202,7 @@ const sendMonetizationMail = asyncHandler(async (photographerName, email  ) => {
 
 
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Monetization Approved – Start Earning with ClickedArt.com!",
       text: `
@@ -243,7 +244,7 @@ const sendMonetizationDisApprovalMail = asyncHandler(async (photographerName, em
   : "No specific reasons provided.";
 
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Monetization Request Update",
       text: `
@@ -270,7 +271,7 @@ Empowering Photographers Everywhere
 
 const setApprovedImageOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) =>{
   const info = await transporter.sendMail({
-    from: process.env.USER_EMAIL,
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
     to: email,
     subject: "Your Photo Has Been Approved and is Ready for Sale! ",
     text: `
@@ -303,7 +304,7 @@ return true;
 
 const setApprovedImageOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) => {
   const info = await transporter.sendMail({
-    from: process.env.USER_EMAIL,
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
     to: email,
     subject: " Your Photo Has Been Approved By ClickedArt! ",
     text: `
@@ -356,7 +357,7 @@ const sendUnapprovedImageMailOfMonetizedProfile = asyncHandler(async (photograph
       : "No specific reasons provided.";
 
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Your Photo Upload Requires Revisions ",
       text: `
@@ -403,7 +404,7 @@ const sendUnapprovedImageMailOfNonMonetizedProfile = asyncHandler(async (photogr
       : "No specific reasons provided.";
 
   const info = await transporter.sendMail({
-      from: process.env.USER_EMAIL,
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Update on Your Photo Upload",
       text: `

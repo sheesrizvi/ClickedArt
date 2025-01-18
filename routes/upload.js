@@ -1982,7 +1982,7 @@ router.post(
           const watermarkHeight = originalHeight * watermarkScaleFactor;
 
           const royaltyBuffer = Buffer.from(response.data);
-          
+
           // watermarkBuffer = await sharp(royaltyBuffer)
           // .resize(Math.round(watermarkWidth), Math.round(watermarkHeight)) 
           // .png() 
@@ -2201,9 +2201,6 @@ router.post(
     }
   }
 );
-
-
-
 
 
 
