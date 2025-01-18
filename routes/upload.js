@@ -2028,6 +2028,7 @@ router.post(
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
         watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+        
       } else {
         return res.status(400).send("Invalid plan.");
       }
@@ -2217,7 +2218,9 @@ const createTextImageBuffer = async (text, width, height) => {
 
 
 
- 
+ const removeBackgroundWithSharp = async (buffer) => {
+  return buffer
+};
  
 
 

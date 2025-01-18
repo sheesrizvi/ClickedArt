@@ -6,6 +6,10 @@ const monetizationSchema = new mongoose.Schema({
         ref: 'Photographer',
         required: true,
     },
+    address:{
+        residentialAddress: { type: String },
+        state: { type: String }
+    },
     panPhoto: {
         type: String, 
         required: true,
@@ -17,6 +21,10 @@ const monetizationSchema = new mongoose.Schema({
     country: {
         type: String,
         required: true,
+    },
+    bankAccountName:{ 
+        type: String,
+        required: true
     },
     bankAccNumber: {
         type: String,
@@ -34,7 +42,22 @@ const monetizationSchema = new mongoose.Schema({
         type: String, 
         required: true,
     },
+    isBusinessAccount: {
+        type: Boolean,
+        default: false
+    },
     businessAccount: {
+        businessDetailsInfo: {
+            businessName: {
+                type: String,
+            },
+            natureOfBusiness: {
+                type: String,
+            },
+            businessAddress: {
+                type: String,
+            }
+        },
         gstCopy: {
             type: String, 
             required: false,
@@ -42,6 +65,10 @@ const monetizationSchema = new mongoose.Schema({
         firmPan: {
             type: String,
             required: false,
+        },
+        firmPanPhoto: {
+            type: String,
+            required: false
         },
         firmGstCertificate: {
             type: String, 
@@ -53,6 +80,18 @@ const monetizationSchema = new mongoose.Schema({
                 return !!this.businessAccount.firmGstCertificate;
             },
         },
+        gstState: {
+            type: String,
+            required: false
+        },
+        gstType: {
+            type: String,
+            required: false
+        },
+        businessAddressProof: {
+            type: String,
+            required: false
+        }
     },
     status: {
         type: String,

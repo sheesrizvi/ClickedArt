@@ -13,7 +13,8 @@ const Paper = require("../models/imagebase/paperModel");
 const Frame = require('../models/imagebase/frameModel.js')
 const Razorpay = require("razorpay");
 const Monetization = require('../models/monetizationModel.js')
-
+const { sendOrderThankYouMail } = require('../middleware/handleEmail.js')
+const moment = require('moment');
 
 const createOrder = asyncHandler(async (req, res) => {
  
@@ -36,7 +37,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
-  
+  console.log(type)
   const orderExist = await Order.findOne({ "userInfo.user": userId });
  
 
@@ -107,7 +108,38 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
   
+  const customerName = `${user.firstName} ${user.lastName}`
+  const customerEmail = user.email
+  const orderDate = moment().format('dddd, MMMM Do YYYY');
+  let itemNames = [];
+
+  for (let item of orderItems) {
+    if (item.imageInfo && item.imageInfo.image) {
+      const image = await ImageVault.findById(item.imageInfo.image).select('name');
+      if (image && image.title) {
+        itemNames.push(image.title);
+      }
+    }
+
+    if (item.frameInfo && item.frameInfo.frame) {
+      const frame = await Frame.findById(item.frameInfo.frame).select('name');
+      if (frame && frame.name) {
+        itemNames.push(frame.name);
+      }
+    }
+
+    if (item.paperInfo && item.paperInfo.paper) {
+      const paper = await Paper.findById(item.paperInfo.paper).select('name');
+      if (paper && paper.name) {
+        itemNames.push(paper.name);
+      }
+    }
+  }
+  const items = itemNames
+  await sendOrderThankYouMail(customerName, orderDate, items, customerEmail)
+
   res.status(201).send(orders);
+
 });
 
 

@@ -482,6 +482,107 @@ Empowering Photographers Everywhere
   return true;
 });
 
+
+const sendMembershipUpgradeMail = asyncHandler(async (photographerName, membershipType, email) => {
+
+  const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Welcome to Your Upgraded Membership on ClickedArt.com!",
+      text: `
+Dear ${photographerName},
+
+Congratulations on upgrading your membership to ${membershipType}! We’re thrilled to have you unlock a new level of opportunities and benefits designed to elevate your photography journey with ClickedArt.com.
+
+________________________________________
+Here’s What Your Upgrade Brings You:
+
+1. Higher Earnings:
+  • Intermediate Membership: Earn 70% royalty on digital downloads and 10% flat royalty on print orders.
+  • Premium Membership: Earn 90% royalty on digital downloads and 10% flat royalty on print orders.
+
+2. Enhanced Tools and Features:
+  • Unlimited Catalog Creation: Showcase your creativity without any restrictions.
+  • Social Media Auto-Posting: Seamlessly share your uploaded photos on your social media profiles to gain visibility.
+  • Watermarking Tool: Protect your images with a professional watermark while promoting your brand.
+  • Priority Support: Enjoy faster assistance and dedicated customer support.
+
+3. Exclusive Marketing Support:
+  • Marketing Campaigns: Intermediate and Premium members receive targeted exposure in our promotional efforts, giving your photos greater reach and visibility.
+
+4. Advanced Insights:
+  • Analytics Dashboard: Access in-depth analytics to track your performance, downloads, and customer preferences to fine-tune your offerings.
+
+________________________________________
+What’s Next?
+
+Start exploring these benefits today:
+1. Maximize Your Exposure: Update your catalog with your best works.
+2. Engage with the Tools: Use watermarking, analytics, and social media auto-posting to strengthen your brand.
+3. Grow Your Earnings: Reach out to your audience and let them know about your upgraded profile.
+
+________________________________________
+Thank you for choosing ClickedArt.com as your partner in your photography journey. Together, let’s turn your passion into profit and showcase your creativity to the world!
+
+If you have any questions or need further assistance, feel free to contact us at support@clickedart.com.
+
+Warm Regards,
+Team ClickedArt
+www.clickedart.com
+support@clickedart.com
+      `,
+  });
+  return true;
+});
+
+
+const sendOrderThankYouMail = asyncHandler(async (customerName, orderDate, items, customerEmail, orderId) => {
+  // const itemList = items.map(item => `  o ${item.name}`).join('\n');
+
+  const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: customerEmail,
+      subject: "Thank You for Your Order on ClickedArt.com!",
+      text: `
+Dear ${customerName},
+
+Thank you for placing your order with ClickedArt.com! We are thrilled to have you as part of our community that celebrates creativity and artistry.
+
+________________________________________
+Order Details:
+• Order Date: ${orderDate}
+• Items Purchased:
+${items} ...
+
+You can view your complete order details and download any digital purchases directly from your [Order History/Account Dashboard Link].
+
+________________________________________
+What Happens Next?
+• Digital Downloads:
+  For digital purchases, your files will be ready to download under your account section.
+• Print Orders:
+  If you've ordered printed photos, rest assured that our team has started processing your order. You'll receive a tracking link once the item is shipped.
+
+________________________________________
+Need Assistance?
+If you have any questions about your order, feel free to reach out to us at support@clickedart.com.
+
+________________________________________
+We hope you love your purchase and enjoy showcasing the incredible talent of our photographers! Thank you for supporting creativity and contributing to our mission of bringing unique art to life.
+
+Warm Regards,
+Team ClickedArt
+www.clickedart.com
+support@clickedart.com
+
+________________________________________
+P.S. Follow us on [Social Media Links] for updates, featured artwork, and more inspiring photos from our talented photographers!
+      `,
+  });
+  return true;
+});
+
+
   module.exports = {
     sendResetEmail,
     verifyTransporter,
@@ -495,5 +596,7 @@ Empowering Photographers Everywhere
     setApprovedImageOfMonetizedProfile,
     setApprovedImageOfNonMonetizedProfile,
     sendUnapprovedImageMailOfMonetizedProfile,
-    sendUnapprovedImageMailOfNonMonetizedProfile
+    sendUnapprovedImageMailOfNonMonetizedProfile,
+    sendMembershipUpgradeMail,
+    sendOrderThankYouMail
   }

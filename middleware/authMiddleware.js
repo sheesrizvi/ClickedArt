@@ -27,7 +27,8 @@ const isAdmin = asyncHandler(async (req, res, next) => {
     }
     
     const decoded = await jwt.verify(token, process.env.SECRET_KEY)
-    if(decoded.type === 'Admin' || decoder.type === 'admin' || decoder.type === 'finance' || decoded.type === 'seo' || decoded.type === 'print') {
+
+    if(decoded.type === 'Admin' || decoded.type === 'admin' || decoded.type === 'finance' || decoded.type === 'seo' || decoded.type === 'print') {
         req.user = decoded
         next()
     } else {
