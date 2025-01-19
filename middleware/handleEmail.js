@@ -554,7 +554,7 @@ Order Details:
 • Items Purchased:
 ${items} ...
 
-You can view your complete order details and download any digital purchases directly from your [Order History/Account Dashboard Link].
+You can view your complete order details and download any digital purchases directly from your Order History Page.
 
 ________________________________________
 What Happens Next?

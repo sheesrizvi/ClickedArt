@@ -338,17 +338,17 @@ const checkUserNameExist = asyncHandler(async (req, res) => {
 const changePassword = asyncHandler(async (req, res) => {
     const { userId, newPassword } = req.query
 
-    const photographer = await Photographer.findOne({ _id: userId })
+    const user = await User.findOne({ _id: userId })
 
-    if(!photographer) {
-        return res.status(400).send({ message: 'Photographer not found' })
+    if(!user) {
+        return res.status(400).send({ message: 'User not found' })
     }
 
-    photographer.password = newPassword
+    user.password = newPassword
 
-    await photographer.save()
+    await user.save()
 
-    res.status(200).send({ photographer })
+    res.status(200).send({ user })
 
 })
 
