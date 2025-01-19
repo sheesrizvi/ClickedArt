@@ -1977,7 +1977,7 @@ router.post(
           const originalWidth = originalImage.width;
           const originalHeight = originalImage.height;
 
-          const watermarkScaleFactor = 0.4; 
+          const watermarkScaleFactor = 0.3; 
           const watermarkWidth = originalWidth * watermarkScaleFactor;
           const watermarkHeight = originalHeight * watermarkScaleFactor;
 
@@ -2028,6 +2028,7 @@ router.post(
         const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
         watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
+
         
       } else {
         return res.status(400).send("Invalid plan.");
@@ -2041,8 +2042,8 @@ router.post(
         }
 
         if (isCustomImage) {
-          const watermarkWidth = Math.round(width * 0.1);
-          const watermarkHeight = Math.round(height * 0.1);
+          const watermarkWidth = Math.round(width * 0.2);
+          const watermarkHeight = Math.round(height * 0.2);
 
           const watermarkResized = await sharp(watermarkBuffer)
             .resize(watermarkWidth, watermarkHeight, { fit: "inside" })

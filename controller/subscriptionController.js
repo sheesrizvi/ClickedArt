@@ -6,7 +6,7 @@ const Photographer = require('../models/photographerModel')
 const UserType = require('../models/typeModel')
 const cron = require('node-cron');
 const Razorpay = require('razorpay');
-const { sendMembershipUpgradeMail } = require('../middleware/handleEmail.js')
+const { sendMembershipUpgradeMail,  sendMembershipRenewalReminderMail} = require('../middleware/handleEmail.js')
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price, duration } = req.body
@@ -423,7 +423,6 @@ const upgradeUserSubscription = asyncHandler(async (req, res) => {
   const basicPlan = await Plan.findOne({ name: 'Basic'})
   const basicPlanId = basicPlan?._id
 
-
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
 
@@ -445,6 +444,49 @@ const upgradeUserSubscription = asyncHandler(async (req, res) => {
   res.status(200).send({ subscription: newSubscription })
 })
 
+const checkAndSendSubscriptionEmails = asyncHandler(async () => {
+    const now = new Date()
+    const startRange = new Date()
+    startRange.setDate(now.getDate() + 7)
+
+    const endRange = new Date()
+    endRange.setDate(now.getDate() + 8)
+
+    const subscriptions = await Subscription.find({ endDate: { $gte: startRange , $lt: endRange}, isActive: true}).populate('userInfo.user')
+  
+    const emailPromises = subscriptions.map(async (subscription) => {
+        const photographerName = `${subscription.userInfo.user.firstName} ${subscription.userInfo.user.lastName}`;
+        const photographerEmail = subscription.userInfo.user.email;
+        await sendMembershipRenewalReminderMail(photographerName, photographerEmail);
+    });
+
+    await Promise.all(emailPromises);
+
+    console.log(`Email Sent for Renew Subscription before expiry`)
+})
+
+
+const checkAndSendExpirySubscriptionEmails = asyncHandler(async () => {
+  const now = new Date()
+  const startRange = new Date()
+  startRange.setDate(now.getDate() + 1)
+
+  const endRange = new Date()
+  endRange.setDate(now.getDate() + 2)
+  
+  const subscriptions = await Subscription.find({ endDate: { $gte: startRange , $lt: endRange}, isActive: true}).populate('userInfo.user')
+
+  const emailPromises = subscriptions.map(async (subscription) => {
+      const photographerName = `${subscription.userInfo.user.firstName} ${subscription.userInfo.user.lastName}`;
+      const photographerEmail = subscription.userInfo.user.email;
+      await sendMembershipRenewalReminderMail(photographerName, photographerEmail);
+  });
+
+  await Promise.all(emailPromises);
+
+  console.log(`Email Sent for Renew Subscription before expiry`)
+})
+
 
 
 module.exports = {
@@ -456,13 +498,9 @@ module.exports = {
     getUserActiveSubscription,
     upgradeSubscriptionByAdminWithRank,
     upgradeSubscriptionByAdmin,
-    upgradeUserSubscription
+    upgradeUserSubscription,
+    checkAndSendSubscriptionEmails,
+    checkAndSendExpirySubscriptionEmails
 }
 
 
-// upgrade subscription
-// extend subscription by admin 
-// order time email / subscription expire time email (3 days before, 7 days before)
-// professional -> basic, ambassador -> intermediate, premium -> master with rank update subscription 
-// at upgrade old plan 
-// user upgrade subscription

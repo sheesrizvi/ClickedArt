@@ -583,6 +583,64 @@ P.S. Follow us on [Social Media Links] for updates, featured artwork, and more i
 });
 
 
+const sendMembershipRenewalReminderMail = asyncHandler(async (photographerName, email) => {
+
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Your Membership with ClickedArt.com is Expiring Soon – Renew Today!",
+    text: `
+Dear ${photographerName},
+
+We hope you’ve been enjoying your membership on ClickedArt.com! We’re writing to let you know that your current membership is set to expire soon. 
+
+Don’t let your benefits lapse—renew your membership today to continue accessing the tools, features, and opportunities that help elevate your photography journey.
+
+________________________________________
+Why Renew Your Membership?
+
+1. **Higher Earnings**:
+   • Intermediate Membership: Earn 70% royalty on digital downloads and 10% flat royalty on print orders.
+   • Premium Membership: Earn 90% royalty on digital downloads and 10% flat royalty on print orders.
+
+2. **Enhanced Tools and Features**:
+   • Unlimited Catalog Creation: Showcase your creativity without any restrictions.
+   • Social Media Auto-Posting: Seamlessly share your uploaded photos on your social media profiles to gain visibility.
+   • Watermarking Tool: Protect your images with a professional watermark while promoting your brand.
+   • Priority Support: Enjoy faster assistance and dedicated customer support.
+
+3. **Exclusive Marketing Support**:
+   • Marketing Campaigns: Intermediate and Premium members receive targeted exposure in our promotional efforts, giving your photos greater reach and visibility.
+
+4. **Advanced Insights**:
+   • Analytics Dashboard: Access in-depth analytics to track your performance, downloads, and customer preferences to fine-tune your offerings.
+
+________________________________________
+How to Renew?
+
+It’s easy to renew your membership! Simply:
+1. Visit your membership dashboard on [ClickedArt.com](https://www.clickedart.com).
+2. Select “Renew Membership” under your profile settings.
+3. Complete the renewal process and continue enjoying your benefits.
+
+________________________________________
+Act Now to Secure Your Benefits!
+
+Renew soon to ensure uninterrupted access to everything you love about ClickedArt.com.
+
+If you have any questions or need assistance, please don’t hesitate to contact us at support@clickedart.com. We’re here to help!
+
+Warm Regards,  
+Team ClickedArt  
+[www.clickedart.com](https://www.clickedart.com)  
+support@clickedart.com  
+    `,
+  });
+  return true;
+});
+
+
+
   module.exports = {
     sendResetEmail,
     verifyTransporter,
@@ -598,5 +656,6 @@ P.S. Follow us on [Social Media Links] for updates, featured artwork, and more i
     sendUnapprovedImageMailOfMonetizedProfile,
     sendUnapprovedImageMailOfNonMonetizedProfile,
     sendMembershipUpgradeMail,
-    sendOrderThankYouMail
+    sendOrderThankYouMail,
+    sendMembershipRenewalReminderMail
   }

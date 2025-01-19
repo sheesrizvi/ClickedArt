@@ -566,19 +566,41 @@ const searchImages = asyncHandler(async (req, res) => {
   let results = await ImageVault.aggregate(pipeline);
   const totalDocuments = await ImageVault.aggregate(totalPipeline);
   
-  const count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
-  const pageCount = Math.ceil(count / pageSize);
+  let count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
+  // const pageCount = Math.ceil(count / pageSize);
 
   const imageIds = results.map((result) => result._id)
   
   results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license')
 
-  res.status(200).send({ results, pageCount });
+
+  const categories = await Category.find({ $or: [
+    { name: { $regex: Query, $options: 'i' } },
+    { description: { $regex: Query, $options: 'i' } }
+  ] })
+  
+  const categoriesIds = categories.map((category) => category._id)
+  
+  const categoryImageResults = await ImageVault.find({ 
+      category: { $in: categoriesIds }
+   }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+   const totalCategoryDocuments = await ImageVault.countDocuments({
+      category: { $in: categoriesIds }
+   })
+
+   results = [...results, ...categoryImageResults]
+   count = totalCategoryDocuments + count
+
+   const uniqueResults = Array.from(
+    new Map(results.map(item => [item._id, item])).values()
+  );
+
+   const pageCount = Math.ceil(count / pageSize);
+
+
+  res.status(200).send({ results: uniqueResults, pageCount });
 });
-
-
-
-
 
 
 const updateImageViewCount = asyncHandler(async (req, res) => {

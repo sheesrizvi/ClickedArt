@@ -37,7 +37,7 @@ const monetizationRoutes = require('./routes/monetizationRoutes.js')
 const layoutContentRoutes = require('./routes/layoutContentRoutes.js')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
-const { checkAndUpdateSubscriptions } = require('./controller/subscriptionController.js')
+const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
 
 
@@ -92,15 +92,25 @@ cron.schedule('0 0 * * *', () => {
   checkAndUpdateSubscriptions().catch(err => console.error('Error in subscription check:', err));
 });
 
-cron.schedule('0 0 * * 0', () => {
+cron.schedule('0 1 * * 0', () => {
   console.log('Running the rejected photographer deletion check')
   checkAndUpdateRejectedPhotographers()
+})
+
+cron.schedule('0 2 * * *', () => {
+  console.log('Running the rejected photographer deletion check')
+  checkAndSendSubscriptionEmails()
+})
+
+cron.schedule('0 3 * * *', () => {
+  console.log('Running the rejected photographer deletion check')
+  checkAndSendExpirySubscriptionEmails()
 })
 
 app.use(notFound)
 app.use(errorHandler)
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5000;
 
 
 
