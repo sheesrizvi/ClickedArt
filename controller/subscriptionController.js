@@ -235,7 +235,7 @@ const upgradeSubscriptionByAdminWithRank = asyncHandler(async (req, res) => {
   todayMidnight.setHours(0, 0, 0, 0);
 
   await Subscription.updateMany({
-    startDate: { $lt: todayMidnight },
+    _id: { $ne: newSubscription._id },
     'userInfo.user': userId,
     isActive: true
     }, {
@@ -337,7 +337,7 @@ const upgradeSubscriptionByAdmin = asyncHandler(async (req, res) => {
   todayMidnight.setHours(0, 0, 0, 0);
 
   await Subscription.updateMany({
-    startDate: { $lt: todayMidnight },
+    _id: { $ne: newSubscription._id },
     'userInfo.user': userId,
     isActive: true
     }, {
@@ -427,7 +427,7 @@ const upgradeUserSubscription = asyncHandler(async (req, res) => {
   todayMidnight.setHours(0, 0, 0, 0);
 
   await Subscription.updateMany({
-    startDate: { $lt: todayMidnight },
+    _id: { $ne: newSubscription._id },
     'userInfo.user': userId,
     isActive: true
     }, {
