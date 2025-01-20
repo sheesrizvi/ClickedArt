@@ -10,6 +10,9 @@ const monetizationSchema = new mongoose.Schema({
         residentialAddress: { type: String },
         state: { type: String }
     },
+    governmentIdProof: {
+        type: String
+    },
     panPhoto: {
         type: String, 
         required: true,
