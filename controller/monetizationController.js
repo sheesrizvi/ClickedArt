@@ -4,7 +4,7 @@ const asyncHandler = require('express-async-handler');
 const { sendMonetizationMail, sendMonetizationDisApprovalMail } = require('../middleware/handleEmail.js')
 
 const createMonetization = asyncHandler(async (req, res) => {
-    const { photographerId, panPhoto, panNumber, address, country, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, isBusinessAccount, businessAccount } = req.body;
+    const { photographerId, panPhoto, panNumber, address, country, bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, isBusinessAccount, businessAccount } = req.body;
    
     const photographer = await Photographer.findByIdAndUpdate(photographerId, {
         $set: { isMonetized: true }
@@ -19,6 +19,7 @@ const createMonetization = asyncHandler(async (req, res) => {
         panPhoto,
         panNumber,
         country,
+        bankName,
         bankAccountName,
         bankAccNumber,
         address,
@@ -75,7 +76,7 @@ const deleteMonetizationRequest = asyncHandler(async (req, res) => {
 
 
 const updateMonetization = asyncHandler(async (req, res) => {
-    const { id, panPhoto, panNumber, country , bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount, status, address } = req.body;
+    const { id, panPhoto, panNumber, country , bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount, status, address } = req.body;
 
     const monetization = await Monetization.findById(id);
     if (!monetization) {
@@ -91,6 +92,7 @@ const updateMonetization = asyncHandler(async (req, res) => {
     if (passbookOrCancelledCheque) monetization.passbookOrCancelledCheque = passbookOrCancelledCheque;
     if(bankAccountName) monetization.bankAccountName = bankAccountName
     if(address) monetization.address = address
+    if(bankName) monetization.bankName = bankName
 
     if (businessAccount) {
         if (businessAccount.gstCopy) monetization.businessAccount.gstCopy = businessAccount.gstCopy;

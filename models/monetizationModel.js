@@ -22,6 +22,10 @@ const monetizationSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    bankName: {
+        type: String,
+        required: true
+    },
     bankAccountName:{ 
         type: String,
         required: true
