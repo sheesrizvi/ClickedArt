@@ -400,7 +400,7 @@ const payment = asyncHandler(async (req, res) => {
   });
 
   const result = await instance.orders.create({
-    amount: total * 100, // Convert amount to paise
+    amount: Math.round(total * 100), // Convert amount to paise
     currency: "INR",
     receipt: `receipt_${userId}`,
     notes: {
@@ -409,7 +409,7 @@ const payment = asyncHandler(async (req, res) => {
     },
   });
 
-  res.status(200).json({ result }); // Send response with result
+  res.status(200).json({ result });
 });
 
 const getPendingOrders = asyncHandler(async (req, res) => {
