@@ -207,6 +207,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
     ]
   })
   .populate("userInfo.user")
+  .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
 
@@ -248,6 +249,7 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
       ]
     })
     .populate("userInfo.user")
+    .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize);
 
   if (!orders || orders.length === 0) {
@@ -353,6 +355,7 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
     ]
   })
   .populate("userInfo.user")
+  .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageNumber);
 
