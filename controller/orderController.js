@@ -454,7 +454,7 @@ res.status(200).send({ orders, pageCount })
 
 const calculateCartPrice = async (req, res) => {
   try {
-    const { items, userId } = req.body;
+    const { items } = req.body;
 
     let totalImagePrice = 0;
     let totalPaperPrice = 0;
@@ -505,7 +505,7 @@ const calculateCartPrice = async (req, res) => {
       totalImagePrice += imagePrice;
       totalPaperPrice += paperPrice;
       totalFramePrice += framePrice;
-      totalFinalPrice += imagePrice + paperPrice + framePrice;
+      totalFinalPrice += paperPrice ? paperPrice + framePrice : imagePrice + paperPrice + framePrice;
     }
 
     res.json({
