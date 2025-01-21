@@ -117,12 +117,14 @@ const createOrder = asyncHandler(async (req, res) => {
 
   for (let item of orderItems) {
     if (item.imageInfo && item.imageInfo.image) {
-      const image = await ImageVault.findById(item.imageInfo.image).select('name');
+      const image = await ImageVault.findById(item.imageInfo.image)
       if (image && image.title) {
         itemNames.push(image.title);
       }
+     
       if(image && image._id) {
-        const downloads = await Order.countDocuments({ 'imageInfo.image': image._id })
+        const downloads = await Order.countDocuments({ 'orderItems.imageInfo.image': image._id })
+       
         await ImageAnalytics.findOneAndUpdate({ image: image._id }, {
           downloads
         })
