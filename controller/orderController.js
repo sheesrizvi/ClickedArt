@@ -122,8 +122,8 @@ const createOrder = asyncHandler(async (req, res) => {
         itemNames.push(image.title);
       }
       if(image && image._id) {
-        const downloads = await Order.countDocuments({ 'imageInfo.image': image?._id })
-        await ImageAnalytics.findOneAndUpdate({ image: image?._id }, {
+        const downloads = await Order.countDocuments({ 'imageInfo.image': image._id })
+        await ImageAnalytics.findOneAndUpdate({ image: image._id }, {
           downloads
         })
       }
