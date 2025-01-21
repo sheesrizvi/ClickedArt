@@ -171,6 +171,7 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+
             return {
                 ...image.toObject(),
                 imageAnalytics,
@@ -678,7 +679,7 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
       $sort: { downloadCount: -1 },
     },
     {
-      $limit: 20,
+      $limit: 10,
     },
     {
       $lookup: {

@@ -13,8 +13,10 @@ const Paper = require("../models/imagebase/paperModel");
 const Frame = require('../models/imagebase/frameModel.js')
 const Razorpay = require("razorpay");
 const Monetization = require('../models/monetizationModel.js')
+const ImageAnalytics = require('../models/imagebase/imageAnalyticsModel.js')
 const { sendOrderThankYouMail } = require('../middleware/handleEmail.js')
 const moment = require('moment');
+
 
 const createOrder = asyncHandler(async (req, res) => {
  
@@ -119,6 +121,12 @@ const createOrder = asyncHandler(async (req, res) => {
       if (image && image.title) {
         itemNames.push(image.title);
       }
+      if(image && image._id) {
+        const downloads = await Order.countDocuments({ 'imageInfo.image': image?._id })
+        await ImageAnalytics.findOneAndUpdate({ image: image?._id }, {
+          downloads
+        })
+      }
     }
 
     if (item.frameInfo && item.frameInfo.frame) {
@@ -137,6 +145,8 @@ const createOrder = asyncHandler(async (req, res) => {
   }
   const items = itemNames
   await sendOrderThankYouMail(customerName, orderDate, items, customerEmail)
+
+  
 
   res.status(201).send(orders);
 
