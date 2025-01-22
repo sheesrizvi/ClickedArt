@@ -132,7 +132,6 @@ Empowering Photographers Everywhere
   return true;
 });
 
-
 const sendApprovedImageMail = asyncHandler(async (photographerName, email, imageTitle) => {
   const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,

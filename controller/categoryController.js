@@ -130,11 +130,13 @@ const searchCategories = async (req, res) => {
     const categoriesIds = categories.map((category) => category._id)
     
     const results = await ImageVault.find({ 
-        category: { $in: categoriesIds }
+        category: { $in: categoriesIds },
+        isActive: true
      }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
      const totalDocuments = await ImageVault.countDocuments({
-        category: { $in: categoriesIds }
+        category: { $in: categoriesIds },
+        isActive: true
      })
 
      const pageCount = Math.ceil(totalDocuments/pageSize)

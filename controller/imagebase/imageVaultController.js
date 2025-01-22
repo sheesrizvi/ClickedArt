@@ -306,9 +306,9 @@ const deleteAllResolutions = asyncHandler(async (images) => {
     if(photo.imageLinks) {
        deleteAllResolutions(photo.imageLinks)
     }
-    await ImageVault.findOneAndDelete({ _id: id })
-    await Photographer.findOneAndUpdate({_id: photo.photographer}, { $inc: { photosCount: -1 } })
-    await ImageAnalytics.findOneAndDelete({ image: photo._id })
+    await ImageVault.findOneAndUpdate({ _id: id }, { $set: { isActive: false } })
+    // await Photographer.findOneAndUpdate({_id: photo.photographer}, { $inc: { photosCount: -1 } })
+    // await ImageAnalytics.findOneAndDelete({ image: photo._id })
 
     res.status(200).send({ message: 'Image deleted' })
 })
@@ -583,11 +583,13 @@ const searchImages = asyncHandler(async (req, res) => {
   const categoriesIds = categories.map((category) => category._id)
   
   const categoryImageResults = await ImageVault.find({ 
-      category: { $in: categoriesIds }
+      category: { $in: categoriesIds },
+      isActive: true
    }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
    const totalCategoryDocuments = await ImageVault.countDocuments({
-      category: { $in: categoriesIds }
+      category: { $in: categoriesIds },
+      isActive: true
    })
 
    results = [...results, ...categoryImageResults]

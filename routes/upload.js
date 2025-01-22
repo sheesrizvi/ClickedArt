@@ -49,7 +49,7 @@ router.post(
   upload.single("image"),
   async (req, res) => {
     const result = req.file;
-
+   
     if (!result) {
       return res.status(400).send("No file uploaded.");
     }
@@ -2223,6 +2223,66 @@ const createTextImageBuffer = async (text, width, height) => {
   return buffer
 };
  
+
+router.post("/upload-watermark-image", async (req, res) => {
+  const { imageUrl } = req.body;
+
+  if (!imageUrl) {
+    return res.status(400).send("No image URL provided.");
+  }
+
+  try {
+    const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+    
+    const imageBuffer = Buffer.from(response.data);
+
+    const processedBuffer = await sharp(imageBuffer)
+  .ensureAlpha() 
+  .raw() 
+  .toBuffer({ resolveWithObject: true }) 
+  .then(({ data, info }) => {
+   
+    const pixelData = Buffer.from(data);
+    for (let i = 3; i < pixelData.length; i += 4) {
+      pixelData[i] = Math.round(pixelData[i] * 0.5); 
+    }
+    return sharp(pixelData, {
+      raw: {
+        width: info.width,
+        height: info.height,
+        channels: info.channels,
+      },
+    })
+      .toFormat("png") 
+      .toBuffer();
+  });
+
+
+      const fileName = `${Date.now()}_${Math.round(
+        Math.random() * 1e9
+      )}_watermark_${req.body.imageUrl.split("/").pop()}`;
+      const fileKey = `images/${fileName}`;
+
+
+    const upload = new Upload({
+      client: s3,
+      params: {
+        Bucket: process.env.AWS_BUCKET,
+        Key: fileKey,
+        Body: processedBuffer,
+        // ContentType: req.file.mimetype,
+      },
+    });
+
+    await upload.done();
+
+    res.send({ message: "Image processed and uploaded", url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` });
+  } catch (error) {
+    console.error("Error processing image:", error);
+    res.status(500).send("Failed to process and upload the image.");
+  }
+});
+
 
 
 
