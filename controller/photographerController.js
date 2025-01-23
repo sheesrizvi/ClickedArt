@@ -554,6 +554,15 @@ const changePassword = asyncHandler(async (req, res) => {
 })
 
 
+const deletePhotographer = asyncHandler(async (req, res) => {
+    const { photographer } = req.query
+
+    await ImageVault.updateMany({ photographer }, { isActive: false })
+    await Photographer.findOneAndUpdate({ _id: photographer }, { active: false })
+
+    res.status(200).send({ message: 'Photographer profile deactivated successfully' })
+})
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -573,5 +582,6 @@ module.exports = {
     updateCoverImage,
     checkPhotographerUserNameExist,
     checkAndUpdateRejectedPhotographers,
-    changePassword
+    changePassword,
+    deletePhotographer
 }
