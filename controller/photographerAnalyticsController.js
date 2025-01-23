@@ -65,6 +65,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   }
 
   let totalSales = 0;
+  let totalPrintSales = 0;
   let totalRoyaltyAmount = 0;
   let totalPrintCutAmount = 0;
   let downloads = 0;
@@ -83,6 +84,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           const printCut = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
           const orderMonth = new Date(order.createdAt).getMonth();
 
+          totalPrintSales += subTotal;
           totalSales += price;
           totalRoyaltyAmount += royalty;
           totalPrintCutAmount += printCut;
@@ -183,9 +185,10 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   res.status(200).send({
       totalUploadingImgCount,
       pendingImagesCount,
-      totalSales: parseFloat(totalSales.toFixed(2)),
-      totalRoyaltyAmount: parseFloat(totalRoyaltyAmount.toFixed(2)),
-      totalPrintCutAmount: parseFloat(totalPrintCutAmount.toFixed(2)),
+      totalSales: parseFloat(totalSales?.toFixed(2)),
+      totalRoyaltyAmount: parseFloat(totalRoyaltyAmount?.toFixed(2)),
+      totalPrintCutAmount: parseFloat(totalPrintCutAmount?.toFixed(2)),
+      totalPrintSales: parseFloat(totalPrintSales?.toFixed(2)),
       monthlyData: formattedMonthlyData,
       downloads,
       frequentlyUsedCategories: categories,
