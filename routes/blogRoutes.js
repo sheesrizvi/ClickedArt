@@ -11,7 +11,8 @@ const {
     getAllSuccessStories,
     searchSuccessStory,
     getMySuccessStory,
-    updateBlogStatus
+    updateBlogStatus,
+    getAllPendingBlogs
 } = require('../controller/socials/blogController')
 
 const router = express.Router()
@@ -29,5 +30,6 @@ router.get('/search-blog', searchBlog)
 router.get('/get-featured-blogs', getFeaturedBlogs)
 router.get('/get-my-success-story', getMySuccessStory)
 router.post('/update-blog-status', isAdmin, updateBlogStatus)
+router.get('/get-pending-blogs', getAllPendingBlogs)
 
 module.exports = router

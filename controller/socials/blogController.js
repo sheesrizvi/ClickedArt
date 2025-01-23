@@ -292,6 +292,21 @@ const updateBlogStatus = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Blog updated successfully' })
 })
 
+const getAllPendingBlogs = asyncHandler(async(req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
+
+    const blogs = await Blog.find({ isActive: false }).populate('authorInfo.author').populate('photographer').skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+    if(!blogs || blogs.length === 0) {
+        return res.status(400).send({ message: 'Blog not found' })
+    }
+
+    const totalDocuments = await Blog.countDocuments({ isActive: false })
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    res.status(200).send({ blogs, pageCount })
+})
+
 module.exports =  {
     addBlog,
     updateBlog,
@@ -305,5 +320,6 @@ module.exports =  {
     getMySuccessStory,
     getAllSuccessStories,
     searchSuccessStory,
-    updateBlogStatus
+    updateBlogStatus,
+    getAllPendingBlogs
 }
