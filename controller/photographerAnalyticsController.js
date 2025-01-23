@@ -83,7 +83,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           const royalty = price * (royaltyShare / 100);
           const printCut = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
           const orderMonth = new Date(order.createdAt).getMonth();
-
+          const subTotal = orderItem.subTotal || 0;
           totalPrintSales += subTotal;
           totalSales += price;
           totalRoyaltyAmount += royalty;
