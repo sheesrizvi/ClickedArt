@@ -336,7 +336,7 @@ const checkUserNameExist = asyncHandler(async (req, res) => {
 
 
 const changePassword = asyncHandler(async (req, res) => {
-    const { userId, newPassword } = req.query
+    const { userId, newPassword } = req.body
 
     const user = await User.findOne({ _id: userId })
 

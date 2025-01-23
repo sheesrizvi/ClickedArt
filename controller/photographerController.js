@@ -537,7 +537,7 @@ const checkAndUpdateRejectedPhotographers = asyncHandler(async (req, res) => {
 
 
 const changePassword = asyncHandler(async (req, res) => {
-    const { userId, newPassword } = req.query
+    const { userId, newPassword } = req.body
 
     const photographer = await Photographer.findOne({ _id: userId })
 
