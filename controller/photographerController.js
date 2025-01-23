@@ -141,10 +141,6 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         }
     }
 
-    if (firstName && firstName !== photographer.firstName) {
-        const username = generateFromEmail(firstName, 4);
-        photographer.username = username;
-    }
 
     let age;
     if (dob) {
