@@ -157,6 +157,29 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
 
   totalPaidAmount = totalPaidAmount && totalPaidAmount.length > 0 ? totalPaidAmount[0].amount : 0
 
+
+  const payoutHistory = await Invoice.aggregate([
+    { 
+      $match: { 
+        photographer: new mongoose.Types.ObjectId(photographer), 
+        paymentStatus: 'paid'
+      }
+    },
+    {
+      $sort: { createdAt: -1 } 
+    },
+    {
+      $project: {
+        _id: 0,
+        orderDetails: 1, 
+        totalAmountPayable: 1, 
+        gst: 1, 
+        createdAt: 1,
+      }
+    }
+  ]);
+
+
   res.status(200).send({
       totalUploadingImgCount,
       pendingImagesCount,
@@ -166,7 +189,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       monthlyData: formattedMonthlyData,
       downloads,
       frequentlyUsedCategories: categories,
-      totalPaidAmount
+      totalPaidAmount,
+      payoutHistory
   });
 });
 

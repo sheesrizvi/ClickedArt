@@ -7,7 +7,7 @@ const ImageAnalyticsSchema = new mongoose.Schema({
     likes: { type: Number, default: 0 },
     comments: {type: Number, default: 0},
     shares: { type: Number, default: 0 }, 
-    pulseScore: { type: Number, default: 0 },
+    pulseScore: { type: Number, default: 0 }
   }, { timestamps: true })
   
 

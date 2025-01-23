@@ -4,108 +4,55 @@ const Order = require('../models/orderModel.js')
 const User = require('../models/userModel.js')
 const Photographer = require('../models/photographerModel.js')
 
+
 const getRevenueOverview = asyncHandler(async (req, res) => {
-    
+    const { categoryType = 'Prints' } = req.query;
+
     const totalRevenue = await Order.aggregate([
         { $match: { orderStatus: 'completed', isPaid: true } },
         { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } },
-      ]);
-  
-      const revenueByFiscalYear = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
-        {
-          $group: {
-            _id: { year: { $year: '$createdAt' } },
-            yearlyRevenue: { $sum: '$totalAmount' },
-          },
-        },
-      ]);
-  
-      const revenueByMonth = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
-        {
-          $group: {
-            _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
-            monthlyRevenue: { $sum: '$totalAmount' },
-          },
-        },
-      ]);
+    ]);
 
-   
-      const revenueByCategory = await Order.aggregate([
+    const revenueByFiscalYear = await Order.aggregate([
         { $match: { orderStatus: 'completed', isPaid: true } },
-        {
-            $unwind: "$items",
-        },
         {
             $group: {
-                _id: "$items.category", 
-                revenue: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ["$items.category", categoryType === "Prints" ? "Prints" : "Digital Downloads"] }, 
-                            categoryType === "Prints" ? "$items.subTotal" : "$items.imageInfo.price",
-                            0 
-                        ],
-                    },
-                },
+                _id: { year: { $year: '$createdAt' } },
+                yearlyRevenue: { $sum: '$totalAmount' },
             },
         },
     ]);
 
-      res.status(200).send({ totalRevenue, revenueByFiscalYear, revenueByMonth, revenueByCategory })
-})
+    const revenueByMonth = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },
+        {
+            $group: {
+                _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+                monthlyRevenue: { $sum: '$totalAmount' },
+            },
+        },
+    ]);
 
-
-
-const getRevenueOverviewByTime = asyncHandler(async (req, res) => {
-    const { startDate, endDate, categoryType } = req.query;
-
-    const matchStage = {
-        orderStatus: 'completed',
-        isPaid: true,
-    };
-
-    if (startDate) matchStage.createdAt = { $gte: new Date(startDate) };
-    if (endDate) {
-        matchStage.createdAt = matchStage.createdAt
-            ? { ...matchStage.createdAt, $lte: new Date(endDate) }
-            : { $lte: new Date(endDate) };
-    }
-
-
-    const totalRevenue = await Order.aggregate([
-        { $match: matchStage },
-        { $unwind: "$items" },
+    const revenueByCategory = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $unwind: "$orderItems" },
+        {
+            $match: {
+                $or: [
+                    { "orderItems.subTotal": { $exists: true, $ne: null } },
+                    { "orderItems.imageInfo.price": { $exists: true, $ne: null } }
+                ],
+            },
+        },
         {
             $group: {
                 _id: null,
-                totalRevenue: {
-                    $sum: {
-                        $cond: [
-                            { $eq: ["$items.category", categoryType === "Prints" ? "Prints" : "Digital Downloads"] },
-                            categoryType === "Prints" ? "$items.subTotal" : "$items.imageInfo.price",
-                            0,
-                        ],
-                    },
-                },
-            },
-        },
-    ]);
-
- 
-    const revenueByCategory = await Order.aggregate([
-        { $match: matchStage },
-        { $unwind: "$items" },
-        {
-            $group: {
-                _id: "$items.category",
                 revenue: {
                     $sum: {
                         $cond: [
-                            { $eq: ["$items.category", categoryType === "Prints" ? "Prints" : "Digital Downloads"] },
-                            categoryType === "Prints" ? "$items.subTotal" : "$items.imageInfo.price",
-                            0,
+                            { $eq: [categoryType, "Prints"] },
+                            { $ifNull: ["$orderItems.subTotal", 0] },
+                            { $ifNull: ["$orderItems.imageInfo.price", 0] }
                         ],
                     },
                 },
@@ -113,116 +60,115 @@ const getRevenueOverviewByTime = asyncHandler(async (req, res) => {
         },
     ]);
 
+    const totalRevenueAmount = totalRevenue.length > 0 ? totalRevenue[0].totalRevenue : 0;
+    const revenueByFiscalYearData = revenueByFiscalYear.map(item => ({
+        year: item._id.year,
+        yearlyRevenue: item.yearlyRevenue,
+    }));
+    const revenueByMonthData = revenueByMonth.map(item => ({
+        year: item._id.year,
+        month: item._id.month,
+        monthlyRevenue: item.monthlyRevenue,
+    }));
+    const revenueByCategoryAmount = revenueByCategory.length > 0 ? revenueByCategory[0].revenue : 0;
+
     res.status(200).send({
-        totalRevenue: totalRevenue[0]?.totalRevenue || 0, 
-        revenueByCategory,
+        totalRevenue: totalRevenueAmount,
+        revenueByFiscalYear: revenueByFiscalYearData,
+        revenueByMonth: revenueByMonthData,
+        revenueByCategory: revenueByCategoryAmount,
+    });
+});
+
+
+const revenueByCategory = asyncHandler(async (req, res) => {
+    const { categoryType = "Prints", startDate, endDate } = req.query;
+
+    if (!startDate || !endDate || isNaN(new Date(startDate)) || isNaN(new Date(endDate))) {
+        return res.status(400).send({ message: "Invalid startDate or endDate provided" });
+    }
+
+    const startOfDay = new Date(new Date(startDate).setHours(0, 0, 0, 0)); 
+    const endOfDay = new Date(new Date(endDate).setHours(23, 59, 59, 999)); 
+
+    const revenueByCategory = await Order.aggregate([
+        {
+            $match: {
+                orderStatus: 'completed',
+                isPaid: true,
+                createdAt: { 
+                    $gte: startOfDay,
+                    $lte: endOfDay,
+                },
+            },
+        },
+        { $unwind: "$orderItems" },
+        {
+            $match: {
+                $or: [
+                    { "orderItems.subTotal": { $exists: true, $ne: null } }, 
+                    { "orderItems.imageInfo.price": { $exists: true, $ne: null } }, 
+                ],
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                revenue: {
+                    $sum: {
+                        $cond: [
+                            { $eq: [categoryType, "Prints"] },
+                            { $ifNull: ["$orderItems.subTotal", 0] },
+                            { $ifNull: ["$orderItems.imageInfo.price", 0] },
+                        ],
+                    },
+                },
+            },
+        },
+    ]);
+
+
+    let totalRevenue = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true, createdAt: { 
+            $gte: startOfDay,
+            $lte: endOfDay,
+        }, } },
+        { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } },
+      ]);
+
+    totalRevenue = totalRevenue && totalRevenue.length > 0 ? totalRevenue[0]?.totalRevenue : 0
+
+    res.status(200).send({
+        categoryType,
+        startDate: startOfDay.toISOString(),
+        endDate: endOfDay.toISOString(),
+        revenue: revenueByCategory[0]?.revenue || 0,
+        totalRevenue
     });
 });
 
 
 
-const getSalesMetrics = asyncHandler(async (req, res) => {
-    try {
-        const { period = 'total', timeframe } = req.query;
-        let matchStage = { orderStatus: { $ne: 'cancelled' } };
-
-        if (period !== 'total') {
-            let startDate, endDate;
-            if (period === 'fy') {
-                const year = parseInt(timeframe);
-                startDate = new Date(`${year}-04-01T00:00:00.000Z`);
-                endDate = new Date(`${year + 1}-04-01T00:00:00.000Z`);
-            } else if (period === 'month') {
-                startDate = new Date(`${timeframe}-01T00:00:00.000Z`);
-                endDate = new Date(new Date(startDate).setMonth(startDate.getMonth() + 1));
-            } else if (period === 'day') {
-                startDate = new Date(`${timeframe}T00:00:00.000Z`);
-                endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 1));
-            }
-            matchStage.createdAt = { $gte: startDate, $lt: endDate };
-        }
-
-        const metrics = await Order.aggregate([
-            { $match: matchStage },
-            { $unwind: '$orderItems' },
-            {
-                $group: {
-                    _id: null,
-                    totalDownloads: {
-                        $sum: { $cond: [{ $eq: ['$orderItems.subTotal', 0] }, 1, 0] },
-                    },
-                    totalPrints: {
-                        $sum: { $cond: [{ $gt: ['$orderItems.subTotal', 0] }, 1, 0] },
-                    },
-                    totalOrders: { $sum: 1 },
-                    totalDispatched: {
-                        $sum: { $cond: [{ $eq: ['$orderStatus', 'dispatched'] }, 1, 0] },
-                    },
-                    totalDelivered: {
-                        $sum: { $cond: [{ $eq: ['$orderStatus', 'completed'] }, 1, 0] },
-                    },
-                    totalReturned: {
-                        $sum: { $cond: [{ $eq: ['$orderStatus', 'returned'] }, 1, 0] },
-                    },
-                    totalSales: { $sum: '$totalAmount' },
-                    topSellingProducts: { $push: { image: '$orderItems.imageInfo.image', quantity: 1 } }
-                },
-            },
-            {
-                $project: {
-                    _id: 0,
-                    totalDownloads: 1,
-                    totalPrints: 1,
-                    orderCounts: {
-                        total: '$totalOrders',
-                        dispatched: '$totalDispatched',
-                        delivered: '$totalDelivered',
-                        returned: '$totalReturned'
-                    },
-                    averageOrderValue: { $divide: ['$totalSales', '$totalOrders'] },
-                    topSellingProducts: 1
-                },
-            },
-            {$unwind: "$topSellingProducts"},
-            {$group: {
-                _id: "$topSellingProducts.image",
-                count: {$sum: "$topSellingProducts.quantity"}
-            }},
-            {$sort: {count: -1}},
-            {$limit: 5},
-            {$project: {
-                _id: 0,
-                image: "$_id",
-                count: 1
-            }}
-        ]);
-
-        res.status(200).json(metrics.length > 0 ? metrics[0] : {message: "No metrics available for this period"});
-    } catch (error) {
-        console.error("Error fetching sales metrics:", error);
-        res.status(500).json({ message: 'Error fetching sales metrics' });
-    }
-});
-
-
 const getSalesDataMetrics = asyncHandler(async (req, res) => {
-    const { startDate, endDate } = req.query; 
+    const { startDate, endDate } = req.query;
+
+    const startOfDay = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
+    const endOfDay = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
 
     const matchStage = { orderStatus: 'completed', isPaid: true };
-
-    if (startDate) matchStage.createdAt = { $gte: new Date(startDate) };
-    if (endDate) {
+    if (startOfDay) matchStage.createdAt = { $gte: startOfDay };
+    if (endOfDay) {
         matchStage.createdAt = matchStage.createdAt
-            ? { ...matchStage.createdAt, $lte: new Date(endDate) }
-            : { $lte: new Date(endDate) };
+            ? { ...matchStage.createdAt, $lte: endOfDay }
+            : { $lte: endOfDay };
     }
 
     const totalDownloads = await Order.aggregate([
         { $match: matchStage },
-        { $unwind: "$items" },
+        { $unwind: "$orderItems" }, 
         {
             $match: {
-                "items.category": "Digital Downloads", 
+                "orderItems.imageInfo.price": { $exists: true }, 
             },
         },
         {
@@ -236,10 +182,10 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
 
     const totalPrints = await Order.aggregate([
         { $match: matchStage },
-        { $unwind: "$items" }, 
+        { $unwind: "$orderItems" }, 
         {
             $match: {
-                "items.category": "Prints", 
+                "orderItems.subTotal": { $exists: true }, 
             },
         },
         {
@@ -256,8 +202,8 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         {
             $group: {
                 _id: null,
-                totalRevenue: { $sum: "$totalAmount" }, 
-                orderCount: { $sum: 1 },
+                totalRevenue: { $sum: "$totalAmount" },
+                orderCount: { $sum: 1 }, 
             },
         },
         {
@@ -270,30 +216,108 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
 
 
     res.status(200).send({
-        totalDownloads: totalDownloads[0]?.count || 0,
-        totalPrints: totalPrints[0]?.count || 0,
-        averageOrderValue: averageOrderValue[0]?.aov || 0,
+        totalDownloads: totalDownloads[0]?.count || 0, 
+        totalPrints: totalPrints[0]?.count || 0,       
+        averageOrderValue: averageOrderValue[0]?.aov || 0, 
     });
 });
 
 
 const getCustomerInsights = asyncHandler(async (req, res) => {
+    const activeBuyers = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $group: { _id: "$userInfo.user" } },  
+        { $count: "activeBuyers" },  
+    ]);
 
-})
+    const activePhotographers = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $unwind: "$orderItems" }, 
+        { $group: { _id: "$orderItems.imageInfo.photographer" } }, 
+        { $count: "activePhotographers" }, 
+    ]);
+
+    const repeatPurchaseRateData = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $group: { _id: "$userInfo.user", orderCount: { $sum: 1 } } },  
+        { $match: { orderCount: { $gt: 1 } } },  
+    ]);
+
+    const totalBuyersCount = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } }, 
+        { $group: { _id: "$userInfo.user" } },  
+        { $count: "totalBuyers" }  
+    ]);
+
+    const repeatPurchaseRate = totalBuyersCount[0]?.totalBuyers
+        ? ((repeatPurchaseRateData.length || 0) / totalBuyersCount[0]?.totalBuyers) * 100
+        : 0;
+    const clvData = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $group: { _id: "$userInfo.user", totalSpent: { $sum: "$totalAmount" } } },  
+        { $group: { _id: null, avgCLV: { $avg: "$totalSpent" } } },  
+    ]);
+
+    const customerLifetimeValue = clvData[0]?.avgCLV || 0;
+
+    res.status(200).send({
+        activeBuyers: activeBuyers[0]?.activeBuyers || 0,  
+        activePhotographers: activePhotographers[0]?.activePhotographers || 0,  
+        repeatPurchaseRate: repeatPurchaseRate.toFixed(2),  
+        customerLifetimeValue: customerLifetimeValue.toFixed(2), 
+    });
+});
 
 const getPhotographerEarnings = asyncHandler(async (req, res) => {
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const startOfDay = new Date().setHours(0, 0, 0, 0);
+    const endOfDay = new Date().setHours(23, 59, 59, 999);
 
-})
+    const calculatePayouts = async (paymentStatus, startDate, endDate = null) => {
+        const matchStage = { paymentStatus };
+        if (startDate) matchStage.createdAt = { $gte: startDate };
+        if (endDate) matchStage.createdAt.$lte = endDate;
 
-const getCustomReports = asyncHandler(async (req, res) => {
+        const result = await Invoice.aggregate([
+            { $match: matchStage },
+            {
+                $group: {
+                    _id: null,
+                    totalAmount: { $sum: "$totalAmountPayable" },
+                },
+            },
+        ]);
+        return result[0]?.totalAmount || 0;
+    };
 
-})
+    const payoutsThisYear = await calculatePayouts('paid', startOfYear);
+    const payoutsThisMonth = await calculatePayouts('paid', startOfMonth);
+    const payoutsToday = await calculatePayouts('paid', startOfDay, endOfDay);
+
+    const pendingThisYear = await calculatePayouts('pending', startOfYear);
+    const pendingThisMonth = await calculatePayouts('pending', startOfMonth);
+    const pendingToday = await calculatePayouts('pending', startOfDay, endOfDay);
+
+    res.status(200).send({
+        payouts: {
+            thisYear: payoutsThisYear,
+            thisMonth: payoutsThisMonth,
+            today: payoutsToday,
+        },
+        pending: {
+            thisYear: pendingThisYear,
+            thisMonth: pendingThisMonth,
+            today: pendingToday,
+        },
+    });
+});
+
 
 module.exports = {
     getRevenueOverview,
-    getRevenueOverviewByTime,
-    getSalesMetrics,
     getCustomerInsights,
     getPhotographerEarnings,
-    getCustomReports
+    revenueByCategory,
+    getSalesDataMetrics
 }

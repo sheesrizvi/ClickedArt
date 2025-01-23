@@ -641,6 +641,7 @@ const updateImageViewCount = asyncHandler(async (req, res) => {
 const getImageAnalytics = asyncHandler(async (req, res) => {
   const { imageId } = req.query
   const downloads = await Order.countDocuments({ 'imageInfo.image': imageId })
+
   const imageAnalytics = await ImageAnalytics.findOneAndUpdate({ image: imageId }, {
     downloads
   }).populate({
@@ -662,7 +663,23 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
   return res.status(400).send({ message: 'No Image Analytics Found' })
  }
 
- res.status(200).send({ message: 'Image Analytics' , imageAnalytics })
+ const salesCount = await Order.aggregate([
+  { $match: { orderStatus: 'completed', isPaid: true } }, 
+  { $unwind: "$orderItems" }, 
+  { $match: { "orderItems.imageInfo.image": new mongoose.Types.ObjectId(imageId) } }, 
+  { $count: "totalSales" }
+]);
+
+const totalSales = salesCount[0]?.totalSales || 0; 
+const totalViews = imageAnalytics.views; 
+
+const conversionRate = totalViews ? Math.min((totalSales / totalViews) * 100, 100) : 0;
+ 
+const imageAnalyticsData = {
+  ...imageAnalytics.toObject(),
+  conversionRate
+}
+ res.status(200).send({ message: 'Image Analytics' , imageAnalytics: imageAnalyticsData })
 })
 
 const bestSellerPhotos = asyncHandler(async (req, res) => {

@@ -35,6 +35,8 @@ const userAnalyticsRoutes = require('./routes/userAnalyticsRoutes.js')
 const referralRoutes = require('./routes/referralRoutes.js')
 const monetizationRoutes = require('./routes/monetizationRoutes.js')
 const layoutContentRoutes = require('./routes/layoutContentRoutes.js')
+const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes.js')
+
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
 const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails } = require('./controller/subscriptionController.js')
@@ -83,6 +85,7 @@ app.use('/api/useranalytics', userAnalyticsRoutes)
 app.use('/api/referral', referralRoutes)
 app.use('/api/monetization', monetizationRoutes)
 app.use('/api/layout', layoutContentRoutes)
+app.use('/api/adminanalytics', adminAnalyticsRoutes)
 
 dbConnect()
 
