@@ -20,6 +20,15 @@ const blogSchema = mongoose.Schema({
     blogType: { type: String, enum: ['blog', 'successstory'], default: 'blog', required: true },
     photographer: { type: mongoose.Schema.Types.ObjectId, ref: 'Photographer' },
     achievements: [{ type: String }],
+    createdBy: {
+        type: String,
+        enum: ['Admin', 'User'],
+        default: 'User'
+    },
+    isActive: { 
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true })
 
 const Blog = mongoose.model('Blog', blogSchema)
