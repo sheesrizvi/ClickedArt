@@ -5,10 +5,10 @@ const { registerPhotographer, photographerLogin, resetPassword, getAllPhotograph
     getPhotographerByUserName,
     updateCoverImage,
     checkPhotographerUserNameExist,
-    changePassword
+    changePassword, resendOTP
  } = require('../controller/photographerController')
 const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
-const { resendOTP } = require('../controller/userController')
+// const { resendOTP } = require('../controller/userController')
 const router = express.Router()
 
 
