@@ -197,6 +197,32 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
     ]);
 
 
+    const analytics = await Order.aggregate([
+        {
+          $match: { 
+            printStatus: { $ne: 'no-print' } 
+          }
+        },
+        {
+          $group: {
+            _id: '$printStatus',
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+      
+      const result = {
+        processing: 0,
+        dispatched: 0,
+        delivered: 0,
+        returned: 0,
+      };
+  
+      analytics.forEach((item) => {
+        result[item._id] = item.count; 
+      });
+  
+
     const averageOrderValue = await Order.aggregate([
         { $match: matchStage },
         {
@@ -219,6 +245,7 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         totalDownloads: totalDownloads[0]?.count || 0, 
         totalPrints: totalPrints[0]?.count || 0,       
         averageOrderValue: averageOrderValue[0]?.aov || 0, 
+        printData: result
     });
 });
 

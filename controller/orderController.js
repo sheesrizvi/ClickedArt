@@ -521,6 +521,17 @@ const calculateCartPrice = async (req, res) => {
   }
 };
 
+const updatePrintStatus = asyncHandler(async (req, res) => {
+  const { orderId } = req.body
+
+  const order = await Order.findOne({ _id: orderId })
+
+  order.printStatus = printStatus
+
+  await order.save()
+
+  res.status(200).send({ message: 'Print Status updated successfully' })
+})
 
 
 module.exports = {
@@ -533,5 +544,6 @@ module.exports = {
   getOrderById,
   payment,
   getPendingOrders,
-  calculateCartPrice
+  calculateCartPrice,
+  updatePrintStatus
 };

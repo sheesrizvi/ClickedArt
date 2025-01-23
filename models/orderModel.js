@@ -68,6 +68,11 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'completed', 'cancelled'],
       default: 'pending',
     },
+    printStatus: {
+      type: String,
+      enum: ['no-print', 'processing', 'dispatched', 'delivered', 'returned'],
+      default: 'processing'
+    },
     isPaid: {
       type: Boolean,
       default: true
