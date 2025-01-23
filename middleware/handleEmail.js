@@ -88,7 +88,9 @@ const sendResetEmail = asyncHandler(async(email) => {
   Start uploading your masterpieces today and let the world discover your talent!
 
   Warm Regards,  
-  Team ClickedArt.com  
+  Team ClickedArt.com
+  www.clickedart.com
+  support@clickedart.com
   Empowering Photographers Everywhere
           `,
     });
@@ -125,6 +127,8 @@ If you have any questions or need clarification regarding this decision, please 
 
 Warm Regards,  
 Team ClickedArt.com  
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
     `,
   });
@@ -157,6 +161,8 @@ Keep up the great work, and continue sharing your masterpieces with the world!
 
 Warm Regards,  
 Team ClickedArt.com  
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
       `,
   });
@@ -190,6 +196,8 @@ If you need any clarification or assistance regarding the review process, feel f
 
 Warm Regards,  
 Team ClickedArt.com  
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
       `,
   });
@@ -229,7 +237,13 @@ ClickedArt.com.
 We are excited to help you showcase your creativity and turn your passion into a source of 
 income. If you have any questions or need assistance, feel free to reach out to us 
 at support@clickedart.com  
-Congratulations again, and let’s create magic together! 
+Congratulations again, and let’s create magic together!
+
+Warm Regards,  
+Team ClickedArt.com  
+www.clickedart.com
+support@clickedart.com
+Empowering Photographers Everywhere
       `,
   });
   return true;
@@ -262,6 +276,8 @@ We appreciate your effort and dedication and look forward to assisting you in yo
 a creative photographer with ClickedArt.com  
 Warm regards, 
 Team ClickedArt.com 
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
       `,
   });
@@ -295,6 +311,8 @@ Thank you for being part of ClickedArt.com! Your creativity inspires us all.
 
 Warm regards, 
 Team ClickedArt.com 
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
     `,
 });
@@ -340,6 +358,8 @@ thrive!
 
 Warm regards, 
 Team ClickedArt.com 
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere 
 
     `,
@@ -388,6 +408,8 @@ We value your contribution to ClickedArt.com and look forward to seeing your upd
 
 Warm regards, 
 Team ClickedArt.com 
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
       `,
   });
@@ -475,6 +497,8 @@ We appreciate your efforts and look forward to seeing more of your creative work
 
 Warm regards, 
 Team ClickedArt.com 
+www.clickedart.com
+support@clickedart.com
 Empowering Photographers Everywhere
       `,
   });
