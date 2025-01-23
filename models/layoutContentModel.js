@@ -29,6 +29,10 @@ const layoutContentSchema = new mongoose.Schema({
         ],
         email: {
             type: String
+        },
+        content: {
+            title: { type: String, required: true },
+            body:  { type: String, required: true }
         }
     },
     testimonials: [
