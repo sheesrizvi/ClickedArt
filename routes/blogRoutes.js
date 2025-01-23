@@ -29,7 +29,7 @@ router.get('/get-blog-by-id', getBlogById)
 router.get('/search-blog', searchBlog)
 router.get('/get-featured-blogs', getFeaturedBlogs)
 router.get('/get-my-success-story', getMySuccessStory)
-router.post('/update-blog-status', isAdmin, updateBlogStatus)
+router.post('/update-blog-status', updateBlogStatus)
 router.get('/get-pending-blogs', getAllPendingBlogs)
 
 module.exports = router
