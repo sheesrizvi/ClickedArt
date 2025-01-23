@@ -66,27 +66,28 @@ const deleteBlog = asyncHandler(asyncHandler(async (req, res) => {
     const blog = await Blog.findOne({ _id: blogId  })
     if(!blog) return res.status(400).send({ message: 'No Blog found' })
 
-    const f1 = blog.coverImage
-    if (f1) {
 
-        const config = {
-            region: process.env.AWS_BUCKET_REGION,
-            credentials: {
-              accessKeyId: process.env.AWS_ACCESS_KEY,
-              secretAccessKey: process.env.AWS_SECRET_KEY,
-            },
-          };
-        const s3 = new S3Client(config);
-
-        const fileName = f1.split("//")[1].split("/")[1];
-      
-        const command = new DeleteObjectCommand({
-            Bucket: process.env.AWS_BUCKET,
-            Key: fileName,
-        });
-        const response = await s3.send(command);
-       
+    if(blog && blog.coverImage && blog.coverImage.length > 0) {
+        for(let f1 of blog.coverImage) {
+            const config = {
+                region: process.env.AWS_BUCKET_REGION,
+                credentials: {
+                  accessKeyId: process.env.AWS_ACCESS_KEY,
+                  secretAccessKey: process.env.AWS_SECRET_KEY,
+                },
+              };
+            const s3 = new S3Client(config);
+    
+            const fileName = f1.split("//")[1].split("/")[1];
+           
+            const command = new DeleteObjectCommand({
+                Bucket: process.env.AWS_BUCKET,
+                Key: fileName,
+            });
+            const response = await s3.send(command);    
+        }
     }
+
     await Blog.findOneAndDelete({ _id: blogId })
 
     res.status(200).send({ message: 'Blog Deleted successfully' })
