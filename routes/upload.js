@@ -2016,9 +2016,12 @@ router.post(
         if (!customText) {
           return res.status(400).send("Custom text is required.");
         }
+        console.log('premium && customText')
         const { width, height } = await sharp(correctedImageBuffer).metadata();
+        
         watermarkBuffer = await createTextImageBuffer(customText, width, height);
       } else if (plan === "premium" && !isCustomText) {
+        console.log('premium' && 'no custom text')
         const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
         if (!customWatermark || !customWatermark.watermarkImage) {
           return res.status(400).send("Custom watermark image not found.");
