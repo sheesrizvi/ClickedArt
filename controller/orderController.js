@@ -315,23 +315,23 @@ const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(orderId)
   .populate({
     path: 'orderItems',
-    populate: [
-      {
-        path: 'imageInfo.image',
-        populate: {
-          path: 'photographer'
-        }
-      },
-      {
-        path: 'frameInfo.frame'
-      },
-      {
-        path: 'paperInfo.paper'
-      },
-      {
-        path: 'imageInfo.photographer'
-      }
-    ]
+    // populate: [
+    //   {
+    //     path: 'imageInfo.image',
+    //     populate: {
+    //       path: 'photographer'
+    //     }
+    //   },
+    //   {
+    //     path: 'frameInfo.frame'
+    //   },
+    //   {
+    //     path: 'paperInfo.paper'
+    //   },
+    //   {
+    //     path: 'imageInfo.photographer'
+    //   }
+    // ]
   })
   .populate("userInfo.user")
 

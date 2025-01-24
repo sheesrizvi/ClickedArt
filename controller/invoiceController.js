@@ -114,15 +114,13 @@ const generateInvoice = async (req, res) => {
     const orderDetails = [];
     
     for (const order of orders) {
-      console.log(order.orderItems.length)
+    
       for (const orderItem of order.orderItems) {
-
         const { image, resolution, price } = orderItem.imageInfo;
-
+        
         if (!image || !resolution || typeof price !== 'number') {
           throw new Error('Image, resolution, or price missing in order item.');
         }
-
         const royaltyAmount = (price * royaltyShare) / 100;
         const royaltyWithGST = gstRecord ? royaltyAmount * 1.18 : royaltyAmount;
         totalRoyaltyAmount += royaltyAmount;
@@ -145,7 +143,7 @@ const generateInvoice = async (req, res) => {
     }
 
     totalAmountPayable += totalReferralAmount;
-    const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount + totalReferralAmount);
+    const gst = totalAmountPayable - (totalRoyaltyAmount +  totalPrintcutAmount + totalReferralAmount);
     
     const tdsPercentage = 10;
     const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
@@ -157,12 +155,12 @@ const generateInvoice = async (req, res) => {
       photographer: photographerId,
       orderDetails,
       totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
-      totalPrintcutAmount: Math.round(totalPrintcutAmount),
+      totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
       totalReferralAmount: totalReferralAmount,
       gst: gst.toFixed(2),
-      totalAmountPayable: totalAmountPayable.toFixed(2),
+      totalAmountPayable: totalAmountPayable.toFixed(1),
       paymentStatus: 'pending',
-      tdsAmount
+      tdsAmount: Math.round(tdsAmount)
     });
 
     await invoice.save();
@@ -299,14 +297,14 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
   const invoices = await Invoice.find({ photographer })
     .populate('orderDetails.order')
     .populate('orderDetails.image')
-    .populate({
-      path: 'orderDetails.order',
-      populate: [
-        { path: 'orderItems.imageInfo.image', model: 'ImageVault' },
-        { path: 'orderItems.paperInfo.paper', model: 'Paper' },
-        { path: 'orderItems.frameInfo.frame', model: 'Frame' },
-      ],
-    })
+    // .populate({
+    //   path: 'orderDetails.order',
+    //   populate: [
+    //     { path: 'orderItems.imageInfo.image', model: 'ImageVault' },
+    //     { path: 'orderItems.paperInfo.paper', model: 'Paper' },
+    //     { path: 'orderItems.frameInfo.frame', model: 'Frame' },
+    //   ],
+    // })
     .sort({ createdAt: -1 });
 
   if (!invoices || invoices.length === 0) {
