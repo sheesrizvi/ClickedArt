@@ -185,7 +185,7 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         { $unwind: "$orderItems" }, 
         {
             $match: {
-                "orderItems.subTotal": { $exists: true }, 
+                "orderItems.subTotal": { $exists: true, $ne: 0 }, 
             },
         },
         {
@@ -195,6 +195,7 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
             },
         },
     ]);
+    
 
 
     const analytics = await Order.aggregate([

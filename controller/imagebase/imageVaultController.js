@@ -785,6 +785,7 @@ const getRejectedImages = asyncHandler(async (req, res) => {
   res.status(200).send({ photos : newImages, pageCount })
 })
 
+
 module.exports = {
     addImageInVault,
     updateImageInVault,

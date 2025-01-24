@@ -31,7 +31,8 @@ const createOrder = asyncHandler(async (req, res) => {
     invoiceId,
     coupon,
     isPaid,
-    gst
+    gst,
+    printStatus
   } = req.body;
 
   
@@ -73,7 +74,8 @@ const createOrder = asyncHandler(async (req, res) => {
       invoiceId,
       finalAmount,
       isPaid,
-      gst
+      gst,
+      printStatus
     });
 
 

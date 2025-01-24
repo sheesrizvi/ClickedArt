@@ -71,7 +71,7 @@ const orderSchema = new mongoose.Schema(
     printStatus: {
       type: String,
       enum: ['no-print', 'processing', 'dispatched', 'delivered', 'returned'],
-      default: 'processing'
+      default: 'no-print'
     },
     isPaid: {
       type: Boolean,
