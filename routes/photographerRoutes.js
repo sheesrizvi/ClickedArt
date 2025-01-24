@@ -6,7 +6,8 @@ const { registerPhotographer, photographerLogin, resetPassword, getAllPhotograph
     updateCoverImage,
     checkPhotographerUserNameExist,
     changePassword, resendOTP,
-    deletePhotographer
+    deletePhotographer,
+    getPendingImagesByPhotographer
  } = require('../controller/photographerController')
 const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
 // const { resendOTP } = require('../controller/userController')
@@ -32,4 +33,5 @@ router.post('/update-cover-image', updateCoverImage)
 router.post('/checkUsernameAndEmailExists', checkPhotographerUserNameExist)
 router.post('/change-password', changePassword)
 router.delete('/delete-photographer', deletePhotographer)
+router.get('/get-pending-images-by-photographer', getPendingImagesByPhotographer)
 module.exports = router

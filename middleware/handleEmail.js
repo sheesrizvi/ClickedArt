@@ -53,9 +53,28 @@ const sendResetEmail = asyncHandler(async(email) => {
     const info =  await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
-      subject: `Your OTP - PASSWORD`, 
-      text: `Your OTP/Temporary Password for Login is ${otp}`, 
-      html: `<h4>Verification OTP: ${otp}</h4>`, 
+      subject: `Your One-Time Password (OTP) for Login`, 
+      text: `
+ Hello,
+
+We’ve generated a One-Time Password (OTP) for your account to help you log in securely.
+
+Your OTP/Temporary Password is: ${otp}
+
+Please note:
+
+This OTP is valid only for one-time use.
+Keep it confidential and do not share it with anyone.
+Once you’ve logged in, we recommend changing your password to ensure your account’s security.
+If you didn’t request this OTP, please contact us immediately.
+We’re here to assist if you have any questions or need help.
+
+Team ClickedArt.com  
+www.clickedart.com
+support@clickedart.com
+Empowering Photographers Everywhere
+      `, 
+     
     });
     return true
     

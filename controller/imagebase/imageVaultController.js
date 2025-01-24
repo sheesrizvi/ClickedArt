@@ -422,8 +422,8 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query
 
   const [ featuredArtwork, totalDocuments ] = await Promise.all([
-    ImageVault.find({ featuredArtwork: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
-    ImageVault.countDocuments({ featuredArtwork : true })
+    ImageVault.find({ featuredArtwork: true, isActive: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+    ImageVault.countDocuments({ featuredArtwork : true, isActive: true })
   ])
 
   if(!featuredArtwork || featuredArtwork.length === 0) {

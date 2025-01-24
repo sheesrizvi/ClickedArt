@@ -563,6 +563,23 @@ const deletePhotographer = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Photographer profile deactivated successfully' })
 })
 
+const getPendingImagesByPhotographer = asyncHandler(async (req, res) => {
+    const { photographer } = req.query
+
+    const [pendingImages, totalDocuments] = await Promise.all([
+       ImageVault.find({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false }),
+       ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false }),
+    ])
+
+    if(!pendingImages || pendingImages.length === 0) {
+        return res.status(400).send({ message: 'No Pending Images found' })
+    }
+
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    res.status(200).send({ pendingImages, pageCount })
+})
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -583,5 +600,6 @@ module.exports = {
     checkPhotographerUserNameExist,
     checkAndUpdateRejectedPhotographers,
     changePassword,
-    deletePhotographer
+    deletePhotographer,
+    getPendingImagesByPhotographer
 }

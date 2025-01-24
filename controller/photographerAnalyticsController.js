@@ -9,9 +9,9 @@ const Subscription = require('../models/subscriptionModel.js')
 
 const photographerDashboardData = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
-
-  const totalUploadingImgCount = await ImageVault.countDocuments({ photographer });
-  const pendingImagesCount = await ImageVault.countDocuments({ photographer, isActive: false });
+  
+  const totalUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
+  const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] }    });
 
   const orders = await Order.find({
       isPaid: true,
