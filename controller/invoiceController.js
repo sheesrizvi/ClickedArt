@@ -125,6 +125,11 @@ const generateInvoice = async (req, res) => {
     totalAmountPayable += totalReferralAmount;
     const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount + totalReferralAmount);
    
+    const tdsPercentage = 10;
+    const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
+    totalAmountPayable  = totalAmountPayable - tdsAmount;
+
+
     const invoice = new Invoice({
       photographer: photographerId,
       orderDetails,
@@ -134,6 +139,7 @@ const generateInvoice = async (req, res) => {
       gst: gst.toFixed(2),
       totalAmountPayable: totalAmountPayable.toFixed(2),
       paymentStatus: 'pending',
+      tdsAmount
     });
 
     await invoice.save();
@@ -211,6 +217,9 @@ const generateSingleOrderInvoice = async (req, res) => {
         totalPrintcutAmount += printcutAmount;
         totalAmountPayable += printcutAmount;
 
+
+       
+
         orderDetails.push({
           order: order._id,
           image: image._id,
@@ -231,6 +240,12 @@ const generateSingleOrderInvoice = async (req, res) => {
 
     const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount);
 
+
+    const tdsPercentage = 10;
+    const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
+    totalAmountPayable  = totalAmountPayable - tdsAmount;
+
+
     const invoice = new Invoice({
       photographer: photographerId,
       orderDetails,
@@ -239,6 +254,7 @@ const generateSingleOrderInvoice = async (req, res) => {
       gst: gst.toFixed(2),
       totalAmountPayable: totalAmountPayable.toFixed(2),
       paymentStatus: 'pending',
+      tdsAmount
     });
 
     await invoice.save();

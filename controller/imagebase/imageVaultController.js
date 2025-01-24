@@ -712,6 +712,11 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
       $unwind: '$imageDetails',
     },
     {
+      $match: {
+        'imageDetails.isActive': true,
+      },
+    },
+    {
       $lookup: {
         from: 'categories',
         localField: 'imageDetails.category',

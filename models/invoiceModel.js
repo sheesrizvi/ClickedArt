@@ -18,6 +18,7 @@ const invoiceSchema = new mongoose.Schema(
     ,],
     totalRoyaltyAmount: {type: Number},
     gst: {type: Number },
+    tdsAmount: { type: Number },
     totalAmountPayable: {type: Number },
     totalPrintcutAmount: { type: Number },
     totalReferralAmount: { type: Number  },
