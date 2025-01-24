@@ -757,6 +757,34 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
   
 })
 
+
+const getRejectedImages = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query
+
+  
+  const totalDocuments = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['rejected'] }, isActive: false })
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+
+  const images = await ImageVault.find({ exclusiveLicenseStatus : { $in: ['rejected'] }, isActive: false}).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+  const newImages = await Promise.all(
+      images.map(async (image) => {
+          // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+          // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+          const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+          return {
+              ...image.toObject(),
+              imageAnalytics,
+              // hasLiked: !!likeExist,
+              // hasCommented: !!commentExist,
+          };
+      })
+  );
+  
+ 
+  res.status(200).send({ photos : newImages, pageCount })
+})
+
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -773,5 +801,6 @@ module.exports = {
     searchImages,
     updateImageViewCount,
     getImageAnalytics,
-    bestSellerPhotos
+    bestSellerPhotos,
+    getRejectedImages
 }

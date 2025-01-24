@@ -128,8 +128,7 @@ const generateInvoice = async (req, res) => {
     const tdsPercentage = 10;
     const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
     totalAmountPayable  = totalAmountPayable - tdsAmount;
-
-
+    
     const invoice = new Invoice({
       photographer: photographerId,
       orderDetails,
@@ -315,10 +314,24 @@ const updateInvoicePaymentStatus = asyncHandler(async (req, res) => {
   res.status(200).send({ message: 'Invoice Payment status updated successfully' })
 })
 
+const deleteInvoice = asyncHandler(async (req, res) => {
+  const { invoiceId } = req.query
+
+  const invoice = await Invoice.findOneAndDelete({ _id: invoiceId, paymentStatus: 'pending' })
+
+  if(!invoice) {
+    return res.status(400).send({ message: 'Invoice deleted successfully' })
+  }
+
+  res.status(200).send({ message: 'Invoice Deleted Successfully'})
+
+})
+
 module.exports = {
     generateInvoice,
     generateSingleOrderInvoice,
     getAllInvoicesByPhotographers,
-    updateInvoicePaymentStatus
+    updateInvoicePaymentStatus,
+    deleteInvoice
 }
 
