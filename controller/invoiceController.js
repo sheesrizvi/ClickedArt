@@ -142,7 +142,7 @@ const generateInvoice = async (req, res) => {
 
     totalAmountPayable += totalReferralAmount;
     const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount + totalReferralAmount);
-   
+    
     const tdsPercentage = 10;
     const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
     totalAmountPayable  = totalAmountPayable - tdsAmount;
@@ -337,7 +337,7 @@ const updateInvoicePaymentStatus = asyncHandler(async (req, res) => {
 const deleteInvoice = asyncHandler(async (req, res) => {
   const { invoiceId } = req.query
 
-  const invoice = await Invoice.findOneAndDelete({ _id: invoiceId, paymentStatus: 'pending' })
+  const invoice = await Invoice.findOneAndDelete({ _id: invoiceId })
 
   if(!invoice) {
     return res.status(400).send({ message: 'Invoice deleted successfully' })
