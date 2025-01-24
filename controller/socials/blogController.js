@@ -123,7 +123,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
     const totalDocuments = await Blog.countDocuments({ blogType: 'blog', isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
-    const blogs = await Blog.find({ blogType: 'blog' }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const blogs = await Blog.find({ blogType: 'blog', isActive: true }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     const newBlogs = await Promise.all(
         blogs.map(async (blog) => {
@@ -149,7 +149,7 @@ const getAllSuccessStories = asyncHandler(async (req, res) => {
     const totalDocuments = await Blog.countDocuments({ blogType: 'successstory', isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
-    const blogs = await Blog.find({ blogType: 'successstory' }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const blogs = await Blog.find({ blogType: 'successstory', isActive: true }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     const newBlogs = await Promise.all(
         blogs.map(async (blog) => {
