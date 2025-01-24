@@ -9,10 +9,28 @@ const mongoose = require('mongoose');
 const Subscription = require('../models/subscriptionModel.js');
 const Monetization = require('../models/monetizationModel.js')
 
-
 const generateInvoice = async (req, res) => {
   try {
     const { photographerId, startDate, endDate } = req.body;
+
+    const existingInvoice = await Invoice.findOne({
+      photographer: photographerId,
+      $or: [
+        {
+          startDate: { $lte: new Date(endDate) },
+          endDate: { $gte: new Date(startDate) },
+        },
+      ],
+    });
+
+    if (existingInvoice) {
+      return res.status(400).json({
+        message: `Invoice already exists for the specified date range: ${existingInvoice.startDate.toISOString()} to ${existingInvoice.endDate.toISOString()}. Please adjust the date range.`,
+        invoice: existingInvoice,
+        startDateOfExistingInvoice: existingInvoice.startDate,
+        endDateOfExistingInvoice: existingInvoice.endDate
+      });
+    }
 
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
@@ -130,6 +148,8 @@ const generateInvoice = async (req, res) => {
     totalAmountPayable  = totalAmountPayable - tdsAmount;
     
     const invoice = new Invoice({
+      startDate,
+      endDate,
       photographer: photographerId,
       orderDetails,
       totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),

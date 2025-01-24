@@ -1,6 +1,8 @@
 const mongoose = require('mongoose')
 const invoiceSchema = new mongoose.Schema(
     {
+      startDate: { type: Date },
+      endDate: { type: Date },
       photographer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Photographer',
