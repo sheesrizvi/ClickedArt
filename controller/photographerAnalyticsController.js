@@ -169,16 +169,6 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     },
     {
       $sort: { createdAt: -1 } 
-    },
-    {
-      $project: {
-        _id: 0,
-        orderDetails: 1, 
-        totalAmountPayable: 1, 
-        gst: 1, 
-        createdAt: 1,
-        tdsAmount: 1
-      }
     }
   ]);
 
