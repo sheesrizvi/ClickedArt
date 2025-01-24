@@ -31,6 +31,7 @@ const generateInvoice = async (req, res) => {
         endDateOfExistingInvoice: existingInvoice.endDate
       });
     }
+  
 
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
@@ -41,6 +42,7 @@ const generateInvoice = async (req, res) => {
       .populate('orderItems.paperInfo.paper')
       .populate('orderItems.frameInfo.frame');
 
+   console.log(orders.length)
     const referralBalance = await ReferralBalance.aggregate([
       {
         $match: {
@@ -112,7 +114,9 @@ const generateInvoice = async (req, res) => {
     const orderDetails = [];
     
     for (const order of orders) {
+      console.log(order.orderItems.length)
       for (const orderItem of order.orderItems) {
+
         const { image, resolution, price } = orderItem.imageInfo;
 
         if (!image || !resolution || typeof price !== 'number') {
@@ -144,7 +148,7 @@ const generateInvoice = async (req, res) => {
     const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount + totalReferralAmount);
     
     const tdsPercentage = 10;
-    const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
+    const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
     totalAmountPayable  = totalAmountPayable - tdsAmount;
     
     const invoice = new Invoice({
@@ -220,6 +224,7 @@ const generateSingleOrderInvoice = async (req, res) => {
     const orderDetails = [];
 
     for (const orderItem of order.orderItems) {
+      console.log(orderItem) 
       const { image, resolution, price, photographer } = orderItem.imageInfo;
 
       if (photographer.toString() === photographerId.toString()) {
@@ -236,8 +241,6 @@ const generateSingleOrderInvoice = async (req, res) => {
         totalPrintcutAmount += printcutAmount;
         totalAmountPayable += printcutAmount;
 
-
-       
 
         orderDetails.push({
           order: order._id,
@@ -261,7 +264,7 @@ const generateSingleOrderInvoice = async (req, res) => {
 
 
     const tdsPercentage = 10;
-    const tdsAmount = (totalRoyaltyAmount * tdsPercentage) / 100; 
+    const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
     totalAmountPayable  = totalAmountPayable - tdsAmount;
 
 
@@ -316,8 +319,6 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
 
 const updateInvoicePaymentStatus = asyncHandler(async (req, res) => {
   const { invoiceId, status } = req.body
-
-
 
   if(!invoiceId) {
     return res.status(400).send({ message: 'Invoice Id not found' })

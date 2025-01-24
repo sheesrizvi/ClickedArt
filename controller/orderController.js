@@ -241,7 +241,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 const getOrdersByPhotographer = asyncHandler(async (req, res) => {
   const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ "orderItems.imageInfo.photographer": photographer })
+  const orders = await Order.find({ "orderItems.imageInfo.photographer": photographer, orderStatus: 'completed' })
     .populate({
       path: 'orderItems',
       populate: [
@@ -265,7 +265,7 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
     .populate("userInfo.user")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize);
-
+ 
   if (!orders || orders.length === 0) {
     res.status(404);
     throw new Error("No Orders Found");
