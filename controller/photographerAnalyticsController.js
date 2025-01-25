@@ -160,17 +160,23 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   totalPaidAmount = totalPaidAmount && totalPaidAmount.length > 0 ? totalPaidAmount[0].amount : 0
 
 
-  const payoutHistory = await Invoice.aggregate([
-    { 
-      $match: { 
-        photographer: new mongoose.Types.ObjectId(photographer), 
-        paymentStatus: 'paid'
-      }
-    },
-    {
-      $sort: { createdAt: -1 } 
-    }
-  ]);
+//   const payoutHistory = await Invoice.aggregate([
+//     { 
+//       $match: { 
+//         photographer: new mongoose.Types.ObjectId(photographer), 
+//         paymentStatus: 'paid'
+//       }
+//     },
+//     {
+//       $sort: { createdAt: -1 } 
+//     }
+//   ]);
+
+  const payoutHistory = await Invoice.findOne({  photographer: new mongoose.Types.ObjectId(photographer), 
+    paymentStatus: 'paid' })
+    .populate('orderDetails.order')
+    .populate('orderDetails.image')
+    
 
 
   res.status(200).send({
