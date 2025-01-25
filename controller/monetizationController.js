@@ -38,7 +38,7 @@ const createMonetization = asyncHandler(async (req, res) => {
 
 const getMonetizationByPhotographerId = asyncHandler(async (req, res) => {
     const { photographerId } = req.query
-    const monetization = await Monetization.findOne({ photographer: photographerId });
+    const monetization = await Monetization.findOne({ photographer: photographerId }).populate('photographer');
     if (!monetization) {
         return res.status(404).json({ message: 'Monetization request not found' });
     }
