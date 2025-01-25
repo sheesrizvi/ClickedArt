@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const invoiceSchema = new mongoose.Schema(
     {
+      invoiceId: { type: String, unique: true },
       startDate: { type: Date },
       endDate: { type: Date },
       photographer: {

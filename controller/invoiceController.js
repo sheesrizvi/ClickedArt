@@ -8,11 +8,44 @@ const ReferralBalance = require('../models/referralBalanceModel.js')
 const mongoose = require('mongoose');
 const Subscription = require('../models/subscriptionModel.js');
 const Monetization = require('../models/monetizationModel.js')
+const Counter = require('../models/counterModel.js')
+
+const getCounter = async (financialYear) => {
+  const counterDoc = await Counter.findOne({ financialYear }).sort({ createdAt: -1 });
+  if (!counterDoc) {
+    await Counter.create({ financialYear, counter: 0 });
+    return 1;
+  }
+  return counterDoc.counter + 1;
+};
+
+const incrementCounter = async (financialYear) => {
+  await Counter.findOneAndUpdate(
+    { financialYear },
+    { $inc: { counter: 1 } },
+    { new: true }
+  );
+  return
+};
+
+
 
 const generateInvoice = async (req, res) => {
   try {
     const { photographerId, startDate, endDate } = req.body;
 
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const financialYear = currentMonth < 3
+      ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+      : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+    
+
+    const nextCounter = await getCounter(financialYear);
+    const invoiceNumber = nextCounter.toString().padStart(4, '0');
+    const invoiceId = `CA/${financialYear}/${invoiceNumber}`;
+   
     const existingInvoice = await Invoice.findOne({
       photographer: photographerId,
       $or: [
@@ -23,14 +56,18 @@ const generateInvoice = async (req, res) => {
       ],
     });
 
-    if (existingInvoice) {
-      return res.status(400).json({
-        message: `Invoice already exists for the specified date range: ${existingInvoice.startDate.toISOString()} to ${existingInvoice.endDate.toISOString()}. Please adjust the date range.`,
-        invoice: existingInvoice,
-        startDateOfExistingInvoice: existingInvoice.startDate,
-        endDateOfExistingInvoice: existingInvoice.endDate
-      });
+    if(existingInvoice) {
+      return res.status(400).send({ message: 'invoice already existed for this range' })
     }
+
+    // if (existingInvoice) {
+    //   return res.status(400).json({
+    //     message: `Invoice already exists for the specified date range: ${existingInvoice.startDate.toISOString()} to ${existingInvoice.endDate.toISOString()}. Please adjust the date range.`,
+    //     invoice: existingInvoice,
+    //     startDateOfExistingInvoice: existingInvoice.startDate,
+    //     endDateOfExistingInvoice: existingInvoice.endDate
+    //   });
+    // }
   
 
     const orders = await Order.find({
@@ -42,7 +79,7 @@ const generateInvoice = async (req, res) => {
       .populate('orderItems.paperInfo.paper')
       .populate('orderItems.frameInfo.frame');
 
-   console.log(orders.length)
+   
     const referralBalance = await ReferralBalance.aggregate([
       {
         $match: {
@@ -117,7 +154,8 @@ const generateInvoice = async (req, res) => {
     
       for (const orderItem of order.orderItems) {
         const { image, resolution, price } = orderItem.imageInfo;
-        
+        const printPrice = orderItem.subTotal
+        console.log(printPrice)
         if (!image || !resolution || typeof price !== 'number') {
           throw new Error('Image, resolution, or price missing in order item.');
         }
@@ -150,6 +188,7 @@ const generateInvoice = async (req, res) => {
     totalAmountPayable  = totalAmountPayable - tdsAmount;
     
     const invoice = new Invoice({
+      invoiceId,
       startDate,
       endDate,
       photographer: photographerId,
@@ -164,6 +203,7 @@ const generateInvoice = async (req, res) => {
     });
 
     await invoice.save();
+    await incrementCounter(financialYear);
 
     res.status(201).json({
       message: 'Invoice generated successfully.',
@@ -354,3 +394,14 @@ module.exports = {
     deleteInvoice
 }
 
+// const groupedByOrder = orderDetails.reduce((grouped, item) => {
+//   const orderId = item.order.toString(); 
+
+//   if (!grouped[orderId]) {
+//     grouped[orderId] = [];
+//   }
+
+//   grouped[orderId].push(item);
+
+//   return grouped;
+// }, {});
