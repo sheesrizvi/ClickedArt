@@ -174,6 +174,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
 
   const payoutHistory = await Invoice.findOne({  photographer: new mongoose.Types.ObjectId(photographer), 
     paymentStatus: 'paid' })
+    .populate('photographer')
     .populate('orderDetails.order')
     .populate('orderDetails.image')
     
