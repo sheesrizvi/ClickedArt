@@ -358,6 +358,7 @@ const getInvoiceById = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
   const invoice = await Invoice.findById(id)
+    .populate('photographer')
     .populate('orderDetails.order')
     .populate('orderDetails.image')
     
