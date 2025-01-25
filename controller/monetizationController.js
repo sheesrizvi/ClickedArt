@@ -6,14 +6,6 @@ const { sendMonetizationMail, sendMonetizationDisApprovalMail } = require('../mi
 const createMonetization = asyncHandler(async (req, res) => {
     const { photographerId, panPhoto, panNumber, governmentIdProof, address, country,  bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, isBusinessAccount, businessAccount } = req.body;
    
-    const photographer = await Photographer.findByIdAndUpdate(photographerId, {
-        $set: { isMonetized: true }
-    }, { new: true });
-
-    if (!photographer) {
-        return res.status(404).json({ message: 'Photographer not found' });
-    }
-
     const monetization = new Monetization({
         photographer: photographerId,
         panPhoto,
@@ -32,6 +24,11 @@ const createMonetization = asyncHandler(async (req, res) => {
     });
 
     await monetization.save();
+
+   await Photographer.findByIdAndUpdate(photographerId, {
+        $set: { isMonetized: true }
+    }, { new: true });
+
     res.status(201).json({ message: 'Monetization request created successfully', monetization });
 });
 
@@ -68,10 +65,15 @@ const updateMonetizationStatus = asyncHandler(async (req, res) => {
 
 const deleteMonetizationRequest = asyncHandler(async (req, res) => {
     const { id } = req.query
-    const monetization = await Monetization.findByIdAndDelete(id);
+    const monetization = await Monetization.findOne({ _id: id });
     if (!monetization) {
         return res.status(404).json({ message: 'Monetization request not found' });
     }
+    const photographerId = monetization.photographer
+    await Photographer.findByIdAndUpdate(photographerId, {
+        $set: { isMonetized: false }
+    }, { new: true });
+
     res.status(200).json({ message: 'Monetization request deleted successfully' });
 });
 
