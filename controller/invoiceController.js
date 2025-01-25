@@ -155,6 +155,13 @@ const generateInvoice = async (req, res) => {
       for (const orderItem of order.orderItems) {
         const { image, resolution, price } = orderItem.imageInfo;
         const printPrice = orderItem.subTotal
+        let paperInfo
+        let frameInfo
+        if(orderItem.subTotal) {
+         paperInfo = orderItem.paperInfo
+         frameInfo = orderItem.frameInfo
+        }
+
         console.log(printPrice)
         if (!image || !resolution || typeof price !== 'number') {
           throw new Error('Image, resolution, or price missing in order item.');
@@ -172,6 +179,9 @@ const generateInvoice = async (req, res) => {
           order: order._id,
           image: image._id,
           resolution,
+          printPrice,
+          frameInfo,
+          paperInfo,
           originalPrice: price,
           royaltyAmount,
           royaltyWithGST: royaltyWithGST.toFixed(2),
@@ -262,7 +272,7 @@ const generateSingleOrderInvoice = async (req, res) => {
     const orderDetails = [];
 
     for (const orderItem of order.orderItems) {
-      console.log(orderItem) 
+     
       const { image, resolution, price, photographer } = orderItem.imageInfo;
 
       if (photographer.toString() === photographerId.toString()) {
