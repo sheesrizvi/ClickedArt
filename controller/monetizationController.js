@@ -69,7 +69,7 @@ const deleteMonetizationRequest = asyncHandler(async (req, res) => {
     if (!monetization) {
         return res.status(404).json({ message: 'Monetization request not found' });
     }
-    const photographerId = monetization.photographer
+    const photographerId = monetization?.photographer
     await Photographer.findByIdAndUpdate(photographerId, {
         $set: { isMonetized: false }
     }, { new: true });
