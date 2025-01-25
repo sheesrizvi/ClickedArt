@@ -74,6 +74,7 @@ const deleteMonetizationRequest = asyncHandler(async (req, res) => {
         $set: { isMonetized: false }
     }, { new: true });
 
+    await Monetization.findOneAndDelete({ _id: id })
     res.status(200).json({ message: 'Monetization request deleted successfully' });
 });
 
