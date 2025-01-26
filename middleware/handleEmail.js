@@ -2,8 +2,20 @@ const nodemailer = require('nodemailer')
 const asyncHandler =require('express-async-handler')
 const generator = require('generate-password')
 const dotenv = require('dotenv')
+const { S3Client } = require("@aws-sdk/client-s3");
+const { S3 } = require("@aws-sdk/client-s3");
+const { GetObjectCommand } = require('@aws-sdk/client-s3');
+const axios = require('axios');
 
+const config = {
+  region: process.env.AWS_BUCKET_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY,
+    secretAccessKey: process.env.AWS_SECRET_KEY,
+  },
+};
 
+const s3 = new S3Client(config);
 
 const transporter = nodemailer.createTransport({
   // service: "gmail",
@@ -578,8 +590,12 @@ support@clickedart.com
 });
 
 
-const sendOrderThankYouMail = asyncHandler(async (customerName, orderDate, items, customerEmail, orderId) => {
+const sendOrderThankYouMail = asyncHandler(async (customerName, orderDate, items, customerEmail, s3Link, orderId) => {
   // const itemList = items.map(item => `  o ${item.name}`).join('\n');
+  let response 
+  if(s3Link) {
+    response = await axios.get(s3Link, { responseType: 'arraybuffer' });
+  }
 
   const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
@@ -620,6 +636,13 @@ support@clickedart.com
 ________________________________________
 P.S. Follow us on [Social Media Links] for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
+      attachments: [
+        {
+            filename: 'order-details.pdf', 
+            content: response?.data,
+            contentType: 'application/pdf', 
+        },
+    ],
   });
   return true;
 });

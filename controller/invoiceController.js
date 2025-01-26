@@ -60,16 +60,6 @@ const generateInvoice = async (req, res) => {
       return res.status(400).send({ message: 'invoice already existed for this range' })
     }
 
-    // if (existingInvoice) {
-    //   return res.status(400).json({
-    //     message: `Invoice already exists for the specified date range: ${existingInvoice.startDate.toISOString()} to ${existingInvoice.endDate.toISOString()}. Please adjust the date range.`,
-    //     invoice: existingInvoice,
-    //     startDateOfExistingInvoice: existingInvoice.startDate,
-    //     endDateOfExistingInvoice: existingInvoice.endDate
-    //   });
-    // }
-  
-
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
       orderStatus: 'completed',
@@ -161,16 +151,12 @@ const generateInvoice = async (req, res) => {
          paperInfo = orderItem.paperInfo
          frameInfo = orderItem.frameInfo
         }
-
-        console.log(printPrice)
         if (!image || !resolution || typeof price !== 'number') {
           throw new Error('Image, resolution, or price missing in order item.');
         }
         const royaltyAmount = (price * royaltyShare) / 100;
-        const royaltyWithGST = gstRecord ? royaltyAmount * 1.18 : royaltyAmount;
         totalRoyaltyAmount += royaltyAmount;
-        totalAmountPayable += royaltyWithGST;
-
+        totalAmountPayable += royaltyAmount;
         const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
         totalPrintcutAmount += printcutAmount;
         totalAmountPayable += printcutAmount;
@@ -184,18 +170,13 @@ const generateInvoice = async (req, res) => {
           paperInfo,
           originalPrice: price,
           royaltyAmount,
-          royaltyWithGST: royaltyWithGST.toFixed(2),
           printcutAmount: printcutAmount.toFixed(2),
         });
       }
     }
 
     totalAmountPayable += totalReferralAmount;
-    const gst = totalAmountPayable - (totalRoyaltyAmount +  totalPrintcutAmount + totalReferralAmount);
-    
-    const tdsPercentage = 10;
-    const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
-    totalAmountPayable  = totalAmountPayable - tdsAmount;
+  
     
     const invoice = new Invoice({
       invoiceId,
@@ -206,10 +187,8 @@ const generateInvoice = async (req, res) => {
       totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
       totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
       totalReferralAmount: totalReferralAmount,
-      gst: gst.toFixed(2),
       totalAmountPayable: totalAmountPayable.toFixed(1),
       paymentStatus: 'pending',
-      tdsAmount: Math.round(tdsAmount)
     });
 
     await invoice.save();
@@ -345,6 +324,7 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
 
   const invoices = await Invoice.find({ photographer })
+    .populate('photographer')
     .populate('orderDetails.order')
     .populate('orderDetails.image')
     // .populate({
@@ -368,7 +348,6 @@ const getInvoiceById = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
   const invoice = await Invoice.findById(id)
-    .populate('photographer')
     .populate('orderDetails.order')
     .populate('orderDetails.image')
     
@@ -430,3 +409,196 @@ module.exports = {
 
 //   return grouped;
 // }, {});
+
+
+// const generateInvoice = async (req, res) => {
+//   try {
+//     const { photographerId, startDate, endDate } = req.body;
+
+//     const today = new Date();
+//     const currentYear = today.getFullYear();
+//     const currentMonth = today.getMonth();
+//     const financialYear = currentMonth < 3
+//       ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+//       : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+    
+
+//     const nextCounter = await getCounter(financialYear);
+//     const invoiceNumber = nextCounter.toString().padStart(4, '0');
+//     const invoiceId = `CA/${financialYear}/${invoiceNumber}`;
+   
+//     const existingInvoice = await Invoice.findOne({
+//       photographer: photographerId,
+//       $or: [
+//         {
+//           startDate: { $lte: new Date(endDate) },
+//           endDate: { $gte: new Date(startDate) },
+//         },
+//       ],
+//     });
+
+//     if(existingInvoice) {
+//       return res.status(400).send({ message: 'invoice already existed for this range' })
+//     }
+
+//     // if (existingInvoice) {
+//     //   return res.status(400).json({
+//     //     message: `Invoice already exists for the specified date range: ${existingInvoice.startDate.toISOString()} to ${existingInvoice.endDate.toISOString()}. Please adjust the date range.`,
+//     //     invoice: existingInvoice,
+//     //     startDateOfExistingInvoice: existingInvoice.startDate,
+//     //     endDateOfExistingInvoice: existingInvoice.endDate
+//     //   });
+//     // }
+  
+
+//     const orders = await Order.find({
+//       'orderItems.imageInfo.photographer': photographerId,
+//       orderStatus: 'completed',
+//       createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+//     })
+//       .populate('orderItems.imageInfo.image')
+//       .populate('orderItems.paperInfo.paper')
+//       .populate('orderItems.frameInfo.frame');
+
+   
+//     const referralBalance = await ReferralBalance.aggregate([
+//       {
+//         $match: {
+//           photographer: new mongoose.Types.ObjectId(photographerId),
+//           createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+//         },
+//       },
+//       {
+//         $group: {
+//           _id: null,
+//           price: { $sum: '$amount' },
+//         },
+//       },
+//     ]);
+    
+//     const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
+//     if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
+//       const invoice = new Invoice({
+//         photographer: photographerId,
+//         totalAmountPayable: totalReferralAmount,
+//         totalReferralAmount,
+//         paymentStatus: 'pending',
+//       });
+//       return res.status(400).send({ invoice });
+//     }
+
+//     if (!orders || orders.length === 0) {
+//       return res.status(404).json({
+//         message: 'No completed orders found for the photographer within the given period.',
+//       });
+//     }
+
+//    const monetization = await Monetization.findOne({ photographer: photographerId  });
+  
+//    let gstRecord 
+//     if(monetization) {
+//       gstRecord =  monetization.businessAccount?.gstNumber 
+//     } else {
+//       gstRecord = null
+//     } 
+
+//     const subscription = await Subscription.findOne({
+//       'userInfo.user': photographerId,
+//       'userInfo.userType': 'Photographer',
+//       isActive: true,
+//     }).populate('planId');
+    
+//     const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
+    
+
+//     let royaltyShare;
+//     let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
+   
+
+//     if (!subscription || subscription?.planId?.name === 'Basic') {
+//       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
+//     } else if (subscription?.planId?.name === 'Intermediate') {
+//       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
+//     } else if (subscription?.planId?.name === 'Premium') {
+//       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
+//     } else {
+//       royaltyShare = 50;
+//     }
+
+//     let totalRoyaltyAmount = 0;
+//     let totalPrintcutAmount = 0;
+//     let totalAmountPayable = 0;
+//     const orderDetails = [];
+    
+//     for (const order of orders) {
+    
+//       for (const orderItem of order.orderItems) {
+//         const { image, resolution, price } = orderItem.imageInfo;
+//         const printPrice = orderItem.subTotal
+//         let paperInfo
+//         let frameInfo
+//         if(orderItem.subTotal) {
+//          paperInfo = orderItem.paperInfo
+//          frameInfo = orderItem.frameInfo
+//         }
+//         if (!image || !resolution || typeof price !== 'number') {
+//           throw new Error('Image, resolution, or price missing in order item.');
+//         }
+//         const royaltyAmount = (price * royaltyShare) / 100;
+//         const royaltyWithGST = gstRecord ? royaltyAmount * 1.18 : royaltyAmount;
+//         totalRoyaltyAmount += royaltyAmount;
+//        totalAmountPayable += royaltyWithGST;
+
+//         const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+//         totalPrintcutAmount += printcutAmount;
+//         totalAmountPayable += printcutAmount;
+
+//         orderDetails.push({
+//           order: order._id,
+//           image: image._id,
+//           resolution,
+//           printPrice,
+//           frameInfo,
+//           paperInfo,
+//           originalPrice: price,
+//           royaltyAmount,
+//           royaltyWithGST: royaltyWithGST.toFixed(2),
+//           printcutAmount: printcutAmount.toFixed(2),
+//         });
+//       }
+//     }
+
+//     totalAmountPayable += totalReferralAmount;
+//     const gst = totalAmountPayable - (totalRoyaltyAmount +  totalPrintcutAmount + totalReferralAmount);
+    
+//     const tdsPercentage = 10;
+//     const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
+//     totalAmountPayable  = totalAmountPayable - tdsAmount;
+    
+//     const invoice = new Invoice({
+//       invoiceId,
+//       startDate,
+//       endDate,
+//       photographer: photographerId,
+//       orderDetails,
+//       totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
+//       totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
+//       totalReferralAmount: totalReferralAmount,
+//       gst: gst.toFixed(2),
+//       totalAmountPayable: totalAmountPayable.toFixed(1),
+//       paymentStatus: 'pending',
+//       tdsAmount: Math.round(tdsAmount)
+//     });
+
+//     await invoice.save();
+//     await incrementCounter(financialYear);
+
+//     res.status(201).json({
+//       message: 'Invoice generated successfully.',
+//       invoice,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Internal Server Error', error: error.message });
+//   }
+// };

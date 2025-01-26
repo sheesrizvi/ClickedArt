@@ -18,7 +18,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       orderStatus: 'completed',
       'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
   });
-
+  
   if (!orders || orders.length === 0) {
       return res.json({
           totalUploadingImgCount,
@@ -69,6 +69,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   let totalRoyaltyAmount = 0;
   let totalPrintCutAmount = 0;
   let downloads = 0;
+  let totalPrintDownloads = 0;
+  let totalDigitalDownloads = 0;
 
   const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
@@ -76,8 +78,9 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       royaltyAmount: 0,
       printCutAmount: 0
   }));
-
+  
   orders.forEach(order => {
+      downloads += 1;
       order.orderItems.forEach(orderItem => {
           const price = orderItem.imageInfo?.price || 0;
           const royalty = price * (royaltyShare / 100);
@@ -88,7 +91,12 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           totalSales += price;
           totalRoyaltyAmount += royalty;
           totalPrintCutAmount += printCut;
-          downloads += 1;
+
+         if(price > 0) {
+            totalDigitalDownloads += 1
+         } else if ( subTotal > 0 ) {
+            totalPrintDownloads += 1
+         }
 
           monthlyData[orderMonth].sales += price;
           monthlyData[orderMonth].royaltyAmount += royalty;
@@ -159,19 +167,6 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
 
   totalPaidAmount = totalPaidAmount && totalPaidAmount.length > 0 ? totalPaidAmount[0].amount : 0
 
-
-//   const payoutHistory = await Invoice.aggregate([
-//     { 
-//       $match: { 
-//         photographer: new mongoose.Types.ObjectId(photographer), 
-//         paymentStatus: 'paid'
-//       }
-//     },
-//     {
-//       $sort: { createdAt: -1 } 
-//     }
-//   ]);
-
   const payoutHistory = await Invoice.findOne({  photographer: new mongoose.Types.ObjectId(photographer), 
     paymentStatus: 'paid' })
     .populate('photographer')
@@ -191,12 +186,273 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       downloads,
       frequentlyUsedCategories: categories,
       totalPaidAmount,
-      payoutHistory
+      payoutHistory,
+      totalPrintDownloads,
+      totalDigitalDownloads
   });
+
+});
+
+const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
+    const { startDate, endDate, photographer }  = req.query
+
+    if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Start date and end date are required." });
+      }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+
+    const orders = await Order.find({
+        isPaid: true,
+        orderStatus: 'completed',
+        'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
+        createdAt: { $gte: start, $lte: end },
+    });
+
+
+    
+    let totalSales = 0;
+    let totalPrintSales = 0;
+    let totalRoyaltyAmount = 0;
+    let totalPrintCutAmount = 0;
+    let downloads = 0;
+    let totalPrintDownloads = 0;
+    let totalDigitalDownloads = 0;
+        
+    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
+
+    if (!royaltySettings) {
+        return res.status(404).json({ message: 'Global royalty settings not found.' });
+    }
+
+    const subscription = await Subscription.findOne({
+        'userInfo.user': photographer,
+        'userInfo.userType': 'Photographer',
+        isActive: true,
+    }).populate('planId');
+  
+    let royaltyShare;
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
+  
+    if (!subscription || subscription?.planId?.name === 'Basic') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50;
+    } else if (subscription?.planId?.name === 'Intermediate') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
+    } else if (subscription?.planId?.name === 'Premium') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
+    } else {
+        royaltyShare = 50;
+    }
+  
+
+    orders.forEach(order => {
+        downloads += 1;
+        order.orderItems.forEach(orderItem => {
+            const price = orderItem.imageInfo?.price || 0;
+            const royalty = price * (royaltyShare / 100);
+            const printCut = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+            const subTotal = orderItem.subTotal || 0;
+            totalPrintSales += subTotal;
+            totalSales += price;
+            totalRoyaltyAmount += royalty;
+            totalPrintCutAmount += printCut;
+  
+           if(price > 0) {
+              totalDigitalDownloads += 1
+           } else if ( subTotal > 0 ) {
+              totalPrintDownloads += 1
+           }
+  
+        });
+    });
+  
+    res.status(200).send({
+        totalSales,
+        totalPrintSales,
+        totalRoyaltyAmount,
+        totalPrintCutAmount,
+        downloads,
+        totalPrintDownloads,
+        totalDigitalDownloads
+    })
+
+   
+})
+
+
+const revenueForCurrentMonth = asyncHandler(async (req, res) => {
+    const photographer = req.query.photographer;
+
+    const currentDate = new Date();
+    
+    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    
+
+    const endOfMonth = new Date(currentDate);
+
+    const orders = await Order.find({
+        isPaid: true,
+        orderStatus: 'completed',
+        'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+    });
+
+    let totalSales = 0;
+    let totalPrintSales = 0;
+    let totalRoyaltyAmount = 0;
+    let totalPrintCutAmount = 0;
+    let downloads = 0;
+    let totalPrintDownloads = 0;
+    let totalDigitalDownloads = 0;
+
+    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
+
+    if (!royaltySettings) {
+        return res.status(404).json({ message: 'Global royalty settings not found.' });
+    }
+
+    const subscription = await Subscription.findOne({
+        'userInfo.user': photographer,
+        'userInfo.userType': 'Photographer',
+        isActive: true,
+    }).populate('planId');
+
+    let royaltyShare;
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
+
+    if (!subscription || subscription?.planId?.name === 'Basic') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50;
+    } else if (subscription?.planId?.name === 'Intermediate') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
+    } else if (subscription?.planId?.name === 'Premium') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
+    } else {
+        royaltyShare = 50;
+    }
+
+    orders.forEach(order => {
+        downloads += 1;
+        order.orderItems.forEach(orderItem => {
+            const price = orderItem.imageInfo?.price || 0;
+            const royalty = price * (royaltyShare / 100);
+            const printCut = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+            const subTotal = orderItem.subTotal || 0;
+            totalPrintSales += subTotal;
+            totalSales += price;
+            totalRoyaltyAmount += royalty;
+            totalPrintCutAmount += printCut;
+
+            if (price > 0) {
+                totalDigitalDownloads += 1;
+            } else if (subTotal > 0) {
+                totalPrintDownloads += 1;
+            }
+        });
+    });
+
+    res.status(200).send({
+        totalSales,
+        totalPrintSales,
+        totalRoyaltyAmount,
+        totalPrintCutAmount,
+        downloads,
+        totalPrintDownloads,
+        totalDigitalDownloads
+    });
 });
 
 
 
+const revenueForCurrentFiscalYear = asyncHandler(async (req, res) => {
+    const photographer = req.query.photographer;
+
+    
+    const currentDate = new Date();
+    
+    let fiscalYearStart = new Date(currentDate.getFullYear(), 3, 1);  
+    
+    if (currentDate.getMonth() < 3) {
+        fiscalYearStart = new Date(currentDate.getFullYear() - 1, 3, 1);
+    }
+
+    const fiscalYearEnd = new Date(currentDate);
+
+    const orders = await Order.find({
+        isPaid: true,
+        orderStatus: 'completed',
+        'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
+        createdAt: { $gte: fiscalYearStart, $lte: fiscalYearEnd },
+    });
+
+    let totalSales = 0;
+    let totalPrintSales = 0;
+    let totalRoyaltyAmount = 0;
+    let totalPrintCutAmount = 0;
+    let downloads = 0;
+    let totalPrintDownloads = 0;
+    let totalDigitalDownloads = 0;
+
+    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
+
+    if (!royaltySettings) {
+        return res.status(404).json({ message: 'Global royalty settings not found.' });
+    }
+
+    const subscription = await Subscription.findOne({
+        'userInfo.user': photographer,
+        'userInfo.userType': 'Photographer',
+        isActive: true,
+    }).populate('planId');
+
+    let royaltyShare;
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
+
+    if (!subscription || subscription?.planId?.name === 'Basic') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50;
+    } else if (subscription?.planId?.name === 'Intermediate') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
+    } else if (subscription?.planId?.name === 'Premium') {
+        royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
+    } else {
+        royaltyShare = 50;
+    }
+
+    orders.forEach(order => {
+        downloads += 1;
+        order.orderItems.forEach(orderItem => {
+            const price = orderItem.imageInfo?.price || 0;
+            const royalty = price * (royaltyShare / 100);
+            const printCut = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+            const subTotal = orderItem.subTotal || 0;
+            totalPrintSales += subTotal;
+            totalSales += price;
+            totalRoyaltyAmount += royalty;
+            totalPrintCutAmount += printCut;
+
+            if (price > 0) {
+                totalDigitalDownloads += 1;
+            } else if (subTotal > 0) {
+                totalPrintDownloads += 1;
+            }
+        });
+    });
+
+    res.status(200).send({
+        totalSales,
+        totalPrintSales,
+        totalRoyaltyAmount,
+        totalPrintCutAmount,
+        downloads,
+        totalPrintDownloads,
+        totalDigitalDownloads
+    });
+});
+
 module.exports = {
-    photographerDashboardData
+    photographerDashboardData,
+    customPhotographerRevenueData,
+    revenueForCurrentFiscalYear,
+    revenueForCurrentMonth
 }

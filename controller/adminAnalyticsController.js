@@ -14,14 +14,42 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     ]);
 
     const revenueByFiscalYear = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
+        { 
+            $match: { 
+                orderStatus: 'completed', 
+                isPaid: true 
+            } 
+        },
+        {
+            $addFields: {
+                fiscalYear: {
+                    $cond: [
+                        { $lt: [{ $month: '$createdAt' }, 4] }, 
+                        { $subtract: [{ $year: '$createdAt' }, 1] }, 
+                        { $year: '$createdAt' } 
+                    ]
+                }
+            }
+        },
         {
             $group: {
-                _id: { year: { $year: '$createdAt' } },
-                yearlyRevenue: { $sum: '$totalAmount' },
-            },
+                _id: { fiscalYear: '$fiscalYear' },
+                fiscalYearRevenue: { $sum: '$totalAmount' }
+            }
         },
+        {
+            $sort: { '_id.fiscalYear': 1 } 
+        }
     ]);
+    // const revenueByFiscalYear = await Order.aggregate([ 
+    //     { $match: { orderStatus: 'completed', isPaid: true } },
+    //     {
+    //         $group: {
+    //             _id: { year: { $year: '$createdAt' } },
+    //             yearlyRevenue: { $sum: '$totalAmount' },
+    //         },
+    //     },
+    // ]);
 
     const revenueByMonth = await Order.aggregate([
         { $match: { orderStatus: 'completed', isPaid: true } },
@@ -62,9 +90,10 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
 
     const totalRevenueAmount = totalRevenue.length > 0 ? totalRevenue[0].totalRevenue : 0;
     const revenueByFiscalYearData = revenueByFiscalYear.map(item => ({
-        year: item._id.year,
-        yearlyRevenue: item.yearlyRevenue,
+        year: item._id.fiscalYear,
+        yearlyRevenue: item.fiscalYearRevenue,
     }));
+    
     const revenueByMonthData = revenueByMonth.map(item => ({
         year: item._id.year,
         month: item._id.month,
@@ -214,8 +243,11 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
       
       const result = {
         processing: 0,
-        dispatched: 0,
+        printing: 0,
+        packed: 0,
+        shipped: 0,
         delivered: 0,
+        cancelled: 0,
         returned: 0,
       };
   
@@ -339,6 +371,7 @@ const getPhotographerEarnings = asyncHandler(async (req, res) => {
             today: pendingToday,
         },
     });
+
 });
 
 

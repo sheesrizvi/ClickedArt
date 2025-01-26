@@ -56,6 +56,15 @@ const orderSchema = new mongoose.Schema(
       }, 
      finalPrice: {
         type: Number
+      },
+      sgst: {
+        type: Number,
+      },
+      cgst: {
+        type: Number,
+      },
+      totalGST: {
+        type: Number
       }
     }
     ],
@@ -70,7 +79,7 @@ const orderSchema = new mongoose.Schema(
     },
     printStatus: {
       type: String,
-      enum: ['no-print', 'processing', 'dispatched', 'delivered', 'returned'],
+      enum: ['no-print', 'processing', 'printing', 'packed', 'shipped', 'delivered', 'returned'],
       default: 'no-print'
     },
     isPaid: {
@@ -114,3 +123,4 @@ const orderSchema = new mongoose.Schema(
 module.exports = mongoose.model('Order', orderSchema);
 
 
+// gstPriceForThatItem = sgst + cgst

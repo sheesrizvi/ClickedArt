@@ -32,7 +32,8 @@ const createOrder = asyncHandler(async (req, res) => {
     coupon,
     isPaid,
     gst,
-    printStatus
+    printStatus,
+    link
   } = req.body;
 
   
@@ -40,7 +41,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
-  console.log(type)
+
   const orderExist = await Order.findOne({ "userInfo.user": userId });
  
 
@@ -58,14 +59,28 @@ const createOrder = asyncHandler(async (req, res) => {
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
     const totalAmount = items.reduce((sum, item) => sum + (item.finalPrice || 0), 0); 
-
     
+    const updatedItems = items.map(item => {
+      const finalPrice = item.finalPrice || 0;
+      const sgst = finalPrice * 0.09; 
+      const cgst = finalPrice * 0.09; 
+      const totalGST = (sgst + cgst) || 0;
+
+      return {
+          ...item,
+          sgst,   
+          cgst,
+          totalGST   
+      };
+    });
+
+
     const order = new Order({
       userInfo: {
         user: userId,
         userType: type
       },
-      orderItems: items,
+      orderItems: updatedItems,
       paymentMethod,
       shippingAddress,
       discount,
@@ -148,10 +163,10 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
   const items = itemNames
-  await sendOrderThankYouMail(customerName, orderDate, items, customerEmail)
+  const s3Link = link || ''
+  await sendOrderThankYouMail(customerName, orderDate, items, customerEmail, s3Link)
 
   
-
   res.status(201).send(orders);
 
 });
