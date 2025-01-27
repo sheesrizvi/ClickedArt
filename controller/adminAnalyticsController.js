@@ -101,12 +101,35 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     }));
     const revenueByCategoryAmount = revenueByCategory.length > 0 ? revenueByCategory[0].revenue : 0;
 
+    let basicPlanRevenue = 0
+    let intermediatePlanRevenue = 0
+    let advancedPlanRevenue = 0
+
+    const subscriptions = await Subscription.find({ }).populate('planId')
+
+    for(let subs of subscriptions) {
+        if(subs.planId.name === 'Basic') {
+          const baseAmount = (subs?.price * 100)/118
+          basicPlanRevenue += baseAmount
+        } else if(subs.planId.name === 'Intermediate') {
+          const baseAmount = (subs?.price * 100)/118
+          intermediatePlanRevenue += baseAmount
+        } else if (subs.planId.name === 'Advanced') {
+          const baseAmount = (subs?.price * 100)/118
+          advancedPlanRevenue += baseAmount
+        }
+    }
+
     res.status(200).send({
         totalRevenue: totalRevenueAmount,
         revenueByFiscalYear: revenueByFiscalYearData,
         revenueByMonth: revenueByMonthData,
         revenueByCategory: revenueByCategoryAmount,
+        basicPlanRevenue,
+        intermediatePlanRevenue,
+        advancedPlanRevenue
     });
+
 });
 
 

@@ -12,6 +12,8 @@ const Blog = require('../models/socials/blogModel.js')
 const Frame = require('../models/imagebase/frameModel.js')
 const Paper = require('../models/imagebase/paperModel.js')
 const Story = require('../models/storyModel.js')
+const Plan = require('../models/planModel.js')
+const { sub } = require('date-fns')
 
 const masterDataController = asyncHandler(async (req, res) => {
 
@@ -122,8 +124,28 @@ const masterDataController = asyncHandler(async (req, res) => {
           }
         }
     
+
+        let basicPlanRevenue = 0
+        let intermediatePlanRevenue = 0
+        let advancedPlanRevenue = 0
+
+        const subscriptions = await Subscription.find({ }).populate('planId')
+
+        for(let subs of subscriptions) {
+            if(subs.planId.name === 'Basic') {
+              const baseAmount = (subs?.price * 100)/118
+              basicPlanRevenue += baseAmount
+            } else if(sub.planId.name === 'Intermediate') {
+              const baseAmount = (subs?.price * 100)/118
+              intermediatePlanRevenue += baseAmount
+            } else if (sub.planId.name === 'Advanced') {
+              const baseAmount = (subs?.price * 100)/118
+              advancedPlanRevenue += baseAmount
+            }
+        }
+
         res.status(200).json({
-          masterData: result
+          masterData: result,
         });
       
 })
@@ -155,6 +177,8 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     totalOrders
   })
 })
+
+
 
 module.exports = {
     masterDataController,
