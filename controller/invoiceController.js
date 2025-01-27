@@ -138,7 +138,7 @@ const generateInvoice = async (req, res) => {
     let totalPrintcutAmount = 0;
     let totalAmountPayable = 0;
     const orderDetails = [];
-    const pendingOrderDetails = []
+    const pendingPrintDetails = []
 
     for (const order of orders) {
     
@@ -158,8 +158,9 @@ const generateInvoice = async (req, res) => {
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyAmount;
 
+        let printcutAmount = 0
         if(orderItem.subTotal && order.printStatus === 'delivered') {
-          const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+          printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
           totalPrintcutAmount += printcutAmount;
           totalAmountPayable += printcutAmount;
         }
@@ -173,10 +174,11 @@ const generateInvoice = async (req, res) => {
           paperInfo,
           originalPrice: price,
           royaltyAmount,
-          printcutAmount: printcutAmount.toFixed(2),
+          printcutAmount: printcutAmount?.toFixed(2),
         });
 
         if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
+         
           pendingPrintDetails.push({
             order: order._id,
             image: image._id,
@@ -195,7 +197,6 @@ const generateInvoice = async (req, res) => {
 
     totalAmountPayable += totalReferralAmount;
   
-    
     const invoice = new Invoice({
       invoiceId,
       startDate,
@@ -207,6 +208,7 @@ const generateInvoice = async (req, res) => {
       totalReferralAmount: totalReferralAmount,
       totalAmountPayable: totalAmountPayable.toFixed(1),
       paymentStatus: 'pending',
+      pendingPrintDetails
     });
 
     await invoice.save();
