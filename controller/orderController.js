@@ -140,7 +140,10 @@ const createOrder = asyncHandler(async (req, res) => {
       finalAmount,
       isPaid,
       gst,
-      printStatus,
+      printStatus: updatedItems.every(item => item.printStatus === 'processing') 
+      ? 'processing' 
+      : 'no-print', 
+    invoiceNumber,
       invoiceNumber
     });
 
