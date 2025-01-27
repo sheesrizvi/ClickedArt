@@ -194,7 +194,11 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     .populate('orderDetails.order')
     .populate('orderDetails.image')
     
-
+  const activeBuyers = await Order.aggregate([
+        { $match: { orderStatus: 'completed', isPaid: true, 'orderItems.imageInfo.photographer': photographer } },  
+        { $group: { _id: "$userInfo.user" } },  
+        { $count: "activeBuyers" },  
+    ]);
 
   res.status(200).send({
       totalUploadingImgCount,
@@ -209,7 +213,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       totalPaidAmount,
       payoutHistory,
       totalPrintDownloads,
-      totalDigitalDownloads
+      totalDigitalDownloads,
+      activeBuyers: activeBuyers[0]?.activeBuyers || 0
   });
 
 });
@@ -470,6 +475,7 @@ const revenueForCurrentFiscalYear = asyncHandler(async (req, res) => {
         totalDigitalDownloads
     });
 });
+
 
 module.exports = {
     photographerDashboardData,
