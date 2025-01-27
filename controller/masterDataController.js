@@ -131,7 +131,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const totalUsers = await User.countDocuments({})
   const totalPhotos = await ImageVault.countDocuments({})
   const totalPhotographers = await Photographer.countDocuments({})
-  const pendingPhotos = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['pending', 'rejected'] }, isActive: false })
+  const pendingPhotos = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: [ 'pending' ] }, isActive: false })
   const totalCategories = await Category.countDocuments({})
   const pendingPhotographers = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
   const totalblogs = await Blog.countDocuments({})
