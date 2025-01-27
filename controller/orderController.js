@@ -76,15 +76,35 @@ const createOrder = asyncHandler(async (req, res) => {
   let invoiceNumber = nextCounter.toString().padStart(4, '0');
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
-  const groupedOrders = orderItems.reduce((acc, item) => {
+  // const groupedOrders = orderItems.reduce((acc, item) => {
 
-    const photographerId = item.imageInfo?.photographer || 'print'; 
-    if (!acc[photographerId]) {
-      acc[photographerId] = [];
+  //   const photographerId = item.imageInfo?.photographer || 'print'; 
+  //   if (!acc[photographerId]) {
+  //     acc[photographerId] = [];
+  //   }
+  //   acc[photographerId].push(item);
+  //   return acc;
+  // }, {});
+
+  const groupedOrders = orderItems.reduce((acc, item) => {
+    if (item.imageInfo?.price > 0) {
+
+      const photographerId = item.imageInfo.photographer || 'unknown';
+      if (!acc[photographerId]) {
+        acc[photographerId] = [];
+      }
+      acc[photographerId].push(item);
+    } else if (item.subTotal > 0) {
+     
+      const printKey = `print-${acc.nextPrintId || 1}`; 
+      acc[printKey] = [item];
+      acc.nextPrintId = (acc.nextPrintId || 1) + 1; 
     }
-    acc[photographerId].push(item);
     return acc;
   }, {});
+  
+
+  delete groupedOrders.nextPrintId;
 
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
