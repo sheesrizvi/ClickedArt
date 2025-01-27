@@ -195,11 +195,12 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     .populate('orderDetails.image')
     
   const activeBuyers = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true, 'orderItems.imageInfo.photographer': photographer } },  
+        { $match: { orderStatus: 'completed', isPaid: true, 'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer) } },  
         { $group: { _id: "$userInfo.user" } },  
         { $count: "activeBuyers" },  
     ]);
 
+  console.log(activeBuyers)
   res.status(200).send({
       totalUploadingImgCount,
       pendingImagesCount,
