@@ -138,7 +138,8 @@ const generateInvoice = async (req, res) => {
     let totalPrintcutAmount = 0;
     let totalAmountPayable = 0;
     const orderDetails = [];
-    
+    const pendingOrderDetails = []
+
     for (const order of orders) {
     
       for (const orderItem of order.orderItems) {
@@ -156,7 +157,7 @@ const generateInvoice = async (req, res) => {
         const royaltyAmount = (price * royaltyShare) / 100;
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyAmount;
-        
+
         if(orderItem.subTotal && order.printStatus === 'completed') {
           const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
           totalPrintcutAmount += printcutAmount;
@@ -174,6 +175,22 @@ const generateInvoice = async (req, res) => {
           royaltyAmount,
           printcutAmount: printcutAmount.toFixed(2),
         });
+
+        if(orderItem.subTotal && order.printStatus === '') {
+          pendingOrderDetails.push({
+            order: order._id,
+            image: image._id,
+            resolution,
+            printPrice,
+            frameInfo,
+            paperInfo,
+            originalPrice: price,
+            royaltyAmount,
+            printcutAmount: printcutAmount.toFixed(2),
+          });
+  
+        }
+
       }
     }
 

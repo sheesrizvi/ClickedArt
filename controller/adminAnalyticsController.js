@@ -114,7 +114,7 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
         } else if(subs.planId.name === 'Intermediate') {
           const baseAmount = (subs?.price * 100)/118
           intermediatePlanRevenue += baseAmount
-        } else if (subs.planId.name === 'Advanced') {
+        } else if (subs.planId.name === 'Premium') {
           const baseAmount = (subs?.price * 100)/118
           advancedPlanRevenue += baseAmount
         }
