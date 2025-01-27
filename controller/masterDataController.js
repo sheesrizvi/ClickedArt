@@ -11,6 +11,7 @@ const Category = require('../models/categoryModel.js')
 const Blog = require('../models/socials/blogModel.js')
 const Frame = require('../models/imagebase/frameModel.js')
 const Paper = require('../models/imagebase/paperModel.js')
+const Story = require('../models/storyModel.js')
 
 const masterDataController = asyncHandler(async (req, res) => {
 
@@ -135,7 +136,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const totalCategories = await Category.countDocuments({})
   const pendingPhotographers = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
   const totalblogs = await Blog.countDocuments({})
-  const totalStories = await Blog.countDocuments({blogType: 'successstory', isActive: true })
+  const totalStories = await Story.countDocuments({})
   const totalFrame = await Frame.countDocuments({})
   const totalPapers = await Paper.countDocuments({})
   const totalOrders = await Order.countDocuments({})
