@@ -7,7 +7,7 @@ const {
     getPhotographerEarnings,
     revenueByCategory,
  } = require('../controller/adminAnalyticsController.js')
-const { masterDataController } = require('../controller/masterDataController.js')
+const { masterDataController, documentCountsForAdmin } = require('../controller/masterDataController.js')
 const router = express.Router()
 
 router.get('/get-revenue-overview', getRevenueOverview)
@@ -16,5 +16,7 @@ router.get('/get-sales-metrics', getSalesDataMetrics)
 router.get('/get-customer-insights', getCustomerInsights)
 router.get('/get-photographer-earnings', getPhotographerEarnings)
 router.get('/get-master-data', masterDataController)
+
+router.get('/get-features-count', documentCountsForAdmin)
 
 module.exports = router

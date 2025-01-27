@@ -85,6 +85,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `, 
      
     });
@@ -123,6 +125,8 @@ Empowering Photographers Everywhere
   www.clickedart.com
   support@clickedart.com
   Empowering Photographers Everywhere
+
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
           `,
     });
     return true;
@@ -161,6 +165,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
   });
 
@@ -195,6 +201,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -230,6 +238,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -275,6 +285,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -310,6 +322,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -345,6 +359,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
 });
 return true;
@@ -393,6 +409,7 @@ www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere 
 
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
 });
 return true;
@@ -442,6 +459,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -531,6 +550,8 @@ Team ClickedArt.com
 www.clickedart.com
 support@clickedart.com
 Empowering Photographers Everywhere
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -584,6 +605,8 @@ Warm Regards,
 Team ClickedArt
 www.clickedart.com
 support@clickedart.com
+________________________________________
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -634,7 +657,7 @@ www.clickedart.com
 support@clickedart.com
 
 ________________________________________
-P.S. Follow us on [Social Media Links] for updates, featured artwork, and more inspiring photos from our talented photographers!
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
       attachments: [
         {
@@ -699,6 +722,8 @@ Warm Regards,
 Team ClickedArt  
 [www.clickedart.com](https://www.clickedart.com)  
 support@clickedart.com  
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
   });
   return true;

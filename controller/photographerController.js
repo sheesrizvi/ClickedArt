@@ -311,7 +311,7 @@ const getPhotographerById = asyncHandler(async (req, res) => {
 const getAllPendingPhotographersForAdmin = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const photographers = await Photographer.find({ photographerStatus: 'pending' }).sort({
+    const photographers = await Photographer.find({ photographerStatus: 'pending', active: false }).sort({
         createdAt: - 1
     }).skip((pageNumber - 1) * pageSize).limit({ pageSize })
 
@@ -320,7 +320,7 @@ const getAllPendingPhotographersForAdmin = asyncHandler(async (req, res) => {
         throw new Error('Photographer not found')
     }
 
-    const totalDocuments = await Photographer.countDocuments({ active: false })
+    const totalDocuments = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
     res.status(200).send({ photographers, pageCount })

@@ -5,6 +5,12 @@ const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const Subscription = require('../models/subscriptionModel.js')
 const asyncHandler = require('express-async-handler')
 const Monetization = require('../models/monetizationModel.js')
+const User = require('../models/userModel.js')
+const ImageVault = require('../models/imagebase/imageVaultModel.js')
+const Category = require('../models/categoryModel.js')
+const Blog = require('../models/socials/blogModel.js')
+const Frame = require('../models/imagebase/frameModel.js')
+const Paper = require('../models/imagebase/paperModel.js')
 
 const masterDataController = asyncHandler(async (req, res) => {
 
@@ -121,6 +127,35 @@ const masterDataController = asyncHandler(async (req, res) => {
       
 })
 
+const documentCountsForAdmin = asyncHandler(async (req, res) => {
+  const totalUsers = await User.countDocuments({})
+  const totalPhotos = await ImageVault.countDocuments({})
+  const totalPhotographers = await Photographer.countDocuments({})
+  const pendingPhotos = await ImageVault.countDocuments({ exclusiveLicenseStatus: { $in: ['pending', 'rejected'] }, isActive: false })
+  const totalCategories = await Category.countDocuments({})
+  const pendingPhotographers = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
+  const totalblogs = await Blog.countDocuments({})
+  const totalStories = await Blog.countDocuments({blogType: 'successstory', isActive: true })
+  const totalFrame = await Frame.countDocuments({})
+  const totalPapers = await Paper.countDocuments({})
+  const totalOrders = await Order.countDocuments({})
+
+  res.status(200).send({
+    totalUsers,
+    totalPhotos,
+    totalPhotographers,
+    pendingPhotos,
+    totalCategories,
+    pendingPhotographers,
+    totalblogs,
+    totalStories,
+    totalFrame,
+    totalPapers,
+    totalOrders
+  })
+})
+
 module.exports = {
-    masterDataController
+    masterDataController,
+    documentCountsForAdmin
 }
