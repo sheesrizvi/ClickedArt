@@ -62,6 +62,7 @@ const generateInvoice = async (req, res) => {
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
       orderStatus: 'completed',
+      printStatus: { $in: ['no-print', 'delivered']},
       createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
     })
       .populate('orderItems.imageInfo.image')

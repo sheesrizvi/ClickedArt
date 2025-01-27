@@ -9,7 +9,7 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     const { categoryType = 'Prints' } = req.query;
 
     const totalRevenue = await Order.aggregate([
-        { $match: { orderStatus: 'completed',  isPaid: true } },
+        { $match: { orderStatus: 'completed',  isPaid: true,  printStatus: { $in: ['no-print', 'delivered']}, } },
         { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } },
     ]);
 
@@ -17,7 +17,8 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
         { 
             $match: { 
                 orderStatus: 'completed', 
-                isPaid: true 
+                isPaid: true,
+                printStatus: { $in: ['no-print', 'completed']},
             } 
         },
         {
@@ -62,7 +63,7 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     ]);
 
     const revenueByCategory = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $match: { orderStatus: 'completed', isPaid: true, printStatus: { $in: ['no-print', 'delivered']}, } },
         { $unwind: "$orderItems" },
         {
             $match: {

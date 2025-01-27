@@ -109,7 +109,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
     const totalAmount = items.reduce((sum, item) => sum + (item.finalPrice || 0), 0); 
-    
+
     const updatedItems = items.map(item => {
       const finalPrice = item.finalPrice || 0;
       const sgst = finalPrice * 0.09; 
@@ -140,7 +140,7 @@ const createOrder = asyncHandler(async (req, res) => {
       finalAmount,
       isPaid,
       gst,
-      printStatus: updatedItems.every(item => item.printStatus === 'processing') 
+      printStatus: updatedItems.every(item => item.subTotal > 0) 
       ? 'processing' 
       : 'no-print', 
     invoiceNumber,
