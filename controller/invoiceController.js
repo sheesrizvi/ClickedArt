@@ -29,7 +29,6 @@ const incrementCounter = async (financialYear) => {
 };
 
 
-
 const generateInvoice = async (req, res) => {
   try {
     const { photographerId, startDate, endDate } = req.body;
@@ -157,9 +156,12 @@ const generateInvoice = async (req, res) => {
         const royaltyAmount = (price * royaltyShare) / 100;
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyAmount;
-        const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
-        totalPrintcutAmount += printcutAmount;
-        totalAmountPayable += printcutAmount;
+        
+        if(orderItem.subTotal && order.printStatus === 'completed') {
+          const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+          totalPrintcutAmount += printcutAmount;
+          totalAmountPayable += printcutAmount;
+        }
 
         orderDetails.push({
           order: order._id,

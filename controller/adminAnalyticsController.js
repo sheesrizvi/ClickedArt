@@ -3,7 +3,7 @@ const Invoice = require('../models/invoiceModel.js')
 const Order = require('../models/orderModel.js')
 const User = require('../models/userModel.js')
 const Photographer = require('../models/photographerModel.js')
-
+const Subscription = require('../models/subscriptionModel.js')
 
 const getRevenueOverview = asyncHandler(async (req, res) => {
     const { categoryType = 'Prints' } = req.query;

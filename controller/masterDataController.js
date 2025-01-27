@@ -123,26 +123,6 @@ const masterDataController = asyncHandler(async (req, res) => {
     
           }
         }
-    
-
-        let basicPlanRevenue = 0
-        let intermediatePlanRevenue = 0
-        let advancedPlanRevenue = 0
-
-        const subscriptions = await Subscription.find({ }).populate('planId')
-
-        for(let subs of subscriptions) {
-            if(subs.planId.name === 'Basic') {
-              const baseAmount = (subs?.price * 100)/118
-              basicPlanRevenue += baseAmount
-            } else if(sub.planId.name === 'Intermediate') {
-              const baseAmount = (subs?.price * 100)/118
-              intermediatePlanRevenue += baseAmount
-            } else if (sub.planId.name === 'Advanced') {
-              const baseAmount = (subs?.price * 100)/118
-              advancedPlanRevenue += baseAmount
-            }
-        }
 
         res.status(200).json({
           masterData: result,

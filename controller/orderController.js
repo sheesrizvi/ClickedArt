@@ -86,7 +86,6 @@ const createOrder = asyncHandler(async (req, res) => {
     return acc;
   }, {});
 
-
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
     const totalAmount = items.reduce((sum, item) => sum + (item.finalPrice || 0), 0); 
