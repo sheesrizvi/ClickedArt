@@ -9,7 +9,7 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     const { categoryType = 'Prints' } = req.query;
 
     const totalRevenue = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $match: { orderStatus: 'completed',  isPaid: true } },
         { $group: { _id: null, totalRevenue: { $sum: '$totalAmount' } } },
     ]);
 

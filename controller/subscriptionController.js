@@ -61,6 +61,16 @@ const createSubscription = asyncHandler(async (req, res) => {
         price
       });
     await newSubscription.save()
+
+    await Subscription.updateMany({
+      _id: { $ne: newSubscription._id },
+      'userInfo.user': userId,
+      isActive: true
+      }, {
+        $set: {
+          isActive: false
+        }
+      })
     res.status(200).send({ subscription: newSubscription })
 })
 
