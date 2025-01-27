@@ -200,7 +200,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
         { $count: "activeBuyers" },  
     ]);
 
-  console.log(activeBuyers)
+ 
   res.status(200).send({
       totalUploadingImgCount,
       pendingImagesCount,
