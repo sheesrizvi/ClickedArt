@@ -77,7 +77,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       sales: 0,
       royaltyAmount: 0,
       printCutAmount: 0,
-      tds: 0
+      tds: 0,
+      invoiceStatus: 'unpaid', 
   }));
   
   orders.forEach(order => {
@@ -107,6 +108,21 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
        });
   });
 
+  for (let data of monthlyData) {
+    const anyDateInMonth = new Date(new Date().getFullYear(), data.month - 1, 15); 
+    const invoiceExists = await Invoice.exists({
+        photographer: photographer,
+        startDate: { $lte: anyDateInMonth },
+        endDate: { $gte: anyDateInMonth },
+        paymentStatus: 'paid',
+    });
+   
+   
+    if (invoiceExists) {
+        data.invoiceStatus = 'paid';
+    }
+  }
+
   const formattedMonthlyData = monthlyData
       .filter(data => data.sales > 0 || data.royaltyAmount > 0 || data.printCutAmount > 0)
       .map(data => ({
@@ -114,7 +130,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           sales: parseFloat(data.sales.toFixed(2)),
           royaltyAmount: parseFloat(data.royaltyAmount.toFixed(2)),
           printCutAmount: parseFloat(data.printCutAmount.toFixed(2)),
-          tdsAmount: data.tds
+          tdsAmount: data.tds,
+          invoiceStatus: data.invoiceStatus,
       }));
 
       const categories = await Order.aggregate([
