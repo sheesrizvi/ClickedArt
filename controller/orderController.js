@@ -15,8 +15,27 @@ const Razorpay = require("razorpay");
 const Monetization = require('../models/monetizationModel.js')
 const ImageAnalytics = require('../models/imagebase/imageAnalyticsModel.js')
 const { sendOrderThankYouMail } = require('../middleware/handleEmail.js')
+const BuyerCounter = require('../models/buyerCounterModel.js')
 const moment = require('moment');
 
+
+const getCounter = async (financialYear) => {
+  const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({ createdAt: -1 });
+  if (!counterDoc) {
+    await BuyerCounter.create({ financialYear, counter: 0 });
+    return 1;
+  }
+  return counterDoc.counter + 1;
+};
+
+const incrementCounter = async (financialYear) => {
+  await BuyerCounter.findOneAndUpdate(
+    { financialYear },
+    { $inc: { counter: 1 } },
+    { new: true }
+  );
+  return
+};
 
 const createOrder = asyncHandler(async (req, res) => {
  
@@ -44,6 +63,18 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const orderExist = await Order.findOne({ "userInfo.user": userId });
  
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const financialYear = currentMonth < 3
+    ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+    : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+  
+
+  const nextCounter = await getCounter(financialYear);
+  let invoiceNumber = nextCounter.toString().padStart(4, '0');
+  invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
   const groupedOrders = orderItems.reduce((acc, item) => {
 
@@ -90,7 +121,8 @@ const createOrder = asyncHandler(async (req, res) => {
       finalAmount,
       isPaid,
       gst,
-      printStatus
+      printStatus,
+      invoiceNumber
     });
 
 
@@ -98,6 +130,7 @@ const createOrder = asyncHandler(async (req, res) => {
     orders.push(savedOrder);
   }
 
+  await incrementCounter(financialYear);
   if (coupon) {
     const couponData = await Coupon.findOne({ code: coupon });
     if (couponData) {

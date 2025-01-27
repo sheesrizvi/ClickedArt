@@ -76,7 +76,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       month: i + 1,
       sales: 0,
       royaltyAmount: 0,
-      printCutAmount: 0
+      printCutAmount: 0,
+      tds: 0
   }));
   
   orders.forEach(order => {
@@ -97,11 +98,13 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
          } else if ( subTotal > 0 ) {
             totalPrintDownloads += 1
          }
+         const tds = isNaN(royalty) || isNaN(printCut) ? 0 : (royalty + printCut) * 0.1;
 
           monthlyData[orderMonth].sales += price;
           monthlyData[orderMonth].royaltyAmount += royalty;
           monthlyData[orderMonth].printCutAmount += printCut;
-      });
+          monthlyData[orderMonth].tds += tds
+       });
   });
 
   const formattedMonthlyData = monthlyData
@@ -111,6 +114,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           sales: parseFloat(data.sales.toFixed(2)),
           royaltyAmount: parseFloat(data.royaltyAmount.toFixed(2)),
           printCutAmount: parseFloat(data.printCutAmount.toFixed(2)),
+          tdsAmount: data.tds
       }));
 
       const categories = await Order.aggregate([

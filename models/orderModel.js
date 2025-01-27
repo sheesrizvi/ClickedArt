@@ -92,6 +92,9 @@ const orderSchema = new mongoose.Schema(
     invoiceId: {
         type: String,
       },
+    invoiceNumber: {
+      type: String
+    },
     totalAmount: {
         type: Number,
         required: true,

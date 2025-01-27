@@ -44,7 +44,7 @@ const generateInvoice = async (req, res) => {
 
     const nextCounter = await getCounter(financialYear);
     const invoiceNumber = nextCounter.toString().padStart(4, '0');
-    const invoiceId = `CA/${financialYear}/${invoiceNumber}`;
+    const invoiceId = `CAP/${financialYear}/${invoiceNumber}`;
    
     const existingInvoice = await Invoice.findOne({
       photographer: photographerId,
