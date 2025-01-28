@@ -53,7 +53,7 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     // ]);
 
     const revenueByMonth = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']} } },
         {
             $group: {
                 _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
@@ -153,6 +153,7 @@ const revenueByCategory = asyncHandler(async (req, res) => {
                     $gte: startOfDay,
                     $lte: endOfDay,
                 },
+                printStatus: { $in: ['no-print', 'delivered']}, 
             },
         },
         { $unwind: "$orderItems" },
@@ -182,7 +183,9 @@ const revenueByCategory = asyncHandler(async (req, res) => {
 
 
     let totalRevenue = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true, createdAt: { 
+        { $match: { orderStatus: 'completed',
+            printStatus: { $in: ['no-print', 'delivered']}, 
+            isPaid: true, createdAt: { 
             $gte: startOfDay,
             $lte: endOfDay,
         }, } },
@@ -208,7 +211,8 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
     const startOfDay = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
     const endOfDay = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
 
-    const matchStage = { orderStatus: 'completed', isPaid: true };
+    const matchStage = { orderStatus: 'completed', isPaid: true, printStatus: { $in: ['no-print', 'delivered']} };
+
     if (startOfDay) matchStage.createdAt = { $gte: startOfDay };
     if (endOfDay) {
         matchStage.createdAt = matchStage.createdAt
@@ -232,9 +236,9 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         },
     ]);
 
-
+ const matchStageForPrint = { orderStatus: 'completed', isPaid: true  };
     const totalPrints = await Order.aggregate([
-        { $match: matchStage },
+        { $match: matchStageForPrint },
         { $unwind: "$orderItems" }, 
         {
             $match: {
@@ -309,26 +313,26 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
 
 const getCustomerInsights = asyncHandler(async (req, res) => {
     const activeBuyers = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']}, } },  
         { $group: { _id: "$userInfo.user" } },  
         { $count: "activeBuyers" },  
     ]);
 
     const activePhotographers = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']} } },  
         { $unwind: "$orderItems" }, 
         { $group: { _id: "$orderItems.imageInfo.photographer" } }, 
         { $count: "activePhotographers" }, 
     ]);
 
     const repeatPurchaseRateData = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']}, } },
         { $group: { _id: "$userInfo.user", orderCount: { $sum: 1 } } },  
         { $match: { orderCount: { $gt: 1 } } },  
     ]);
 
     const totalBuyersCount = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } }, 
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']}, } }, 
         { $group: { _id: "$userInfo.user" } },  
         { $count: "totalBuyers" }  
     ]);
@@ -337,7 +341,7 @@ const getCustomerInsights = asyncHandler(async (req, res) => {
         ? ((repeatPurchaseRateData.length || 0) / totalBuyersCount[0]?.totalBuyers) * 100
         : 0;
     const clvData = await Order.aggregate([
-        { $match: { orderStatus: 'completed', isPaid: true } },  
+        { $match: { orderStatus: 'completed', isPaid: true,  printStatus: { $in: ['no-print', 'delivered']} } },  
         { $group: { _id: "$userInfo.user", totalSpent: { $sum: "$totalAmount" } } },  
         { $group: { _id: null, avgCLV: { $avg: "$totalSpent" } } },  
     ]);
@@ -398,11 +402,49 @@ const getPhotographerEarnings = asyncHandler(async (req, res) => {
 
 });
 
+const getSubsAnalytics = asyncHandler(async (req, res) => {
+    const { startDate, endDate } = req.query
+
+    if (!startDate || !endDate || isNaN(new Date(startDate)) || isNaN(new Date(endDate))) {
+        return res.status(400).send({ message: "Invalid startDate or endDate provided" });
+    }
+
+    const startOfDay = new Date(new Date(startDate).setHours(0, 0, 0, 0)); 
+    const endOfDay = new Date(new Date(endDate).setHours(23, 59, 59, 999)); 
+
+    let basicPlanRevenue = 0
+    let intermediatePlanRevenue = 0
+    let advancedPlanRevenue = 0
+
+    const subscriptions = await Subscription.find({ createdAt : { $gte: startOfDay, $lte: endOfDay } }).populate('planId')
+
+    for(let subs of subscriptions) {
+        if(subs.planId.name === 'Basic') {
+          const baseAmount = (subs?.price * 100)/118
+          basicPlanRevenue += baseAmount
+        } else if(subs.planId.name === 'Intermediate') {
+          const baseAmount = (subs?.price * 100)/118
+          intermediatePlanRevenue += baseAmount
+        } else if (subs.planId.name === 'Premium') {
+          const baseAmount = (subs?.price * 100)/118
+          advancedPlanRevenue += baseAmount
+        }
+    }
+
+    res.status(200).send({ 
+        basicPlanRevenue,
+        intermediatePlanRevenue,
+        advancedPlanRevenue
+     })
+})
+
+
 
 module.exports = {
     getRevenueOverview,
     getCustomerInsights,
     getPhotographerEarnings,
     revenueByCategory,
-    getSalesDataMetrics
+    getSalesDataMetrics,
+    getSubsAnalytics
 }

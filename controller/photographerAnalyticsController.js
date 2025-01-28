@@ -17,6 +17,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       isPaid: true,
       orderStatus: 'completed',
       'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
+      printStatus: { $in: ['no-print', 'delivered']},
   });
   
   if (!orders || orders.length === 0) {
@@ -236,6 +237,7 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         orderStatus: 'completed',
         'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
         createdAt: { $gte: start, $lte: end },
+        printStatus: { $in: ['no-print', 'delivered']},
     });
 
 
@@ -324,6 +326,7 @@ const revenueForCurrentMonth = asyncHandler(async (req, res) => {
         orderStatus: 'completed',
         'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
         createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+        printStatus: { $in: ['no-print', 'delivered']},
     });
 
     let totalSales = 0;
@@ -411,6 +414,7 @@ const revenueForCurrentFiscalYear = asyncHandler(async (req, res) => {
         orderStatus: 'completed',
         'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
         createdAt: { $gte: fiscalYearStart, $lte: fiscalYearEnd },
+        printStatus: { $in: ['no-print', 'delivered']},
     });
 
     let totalSales = 0;

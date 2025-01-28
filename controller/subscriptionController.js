@@ -497,7 +497,69 @@ const checkAndSendExpirySubscriptionEmails = asyncHandler(async () => {
   console.log(`Email Sent for Renew Subscription before expiry`)
 })
 
+const addFreeSubscriptions = asyncHandler(async (req, res) => {
+  const { userId, planId, price, duration } = req.body
 
+  const userType = await UserType.findOne({ user: userId }).select('type -_id')
+  const type = userType?.type || null;
+
+  const plan = await Plan.findById(planId);
+
+  if (!userType || !type) {
+    return res.status(404).json({ message: 'User related Info not found' });
+  }
+
+  if (!plan) {
+    return res.status(404).json({ message: 'Plan not found' });
+  }
+
+  const startDate = new Date()
+  const endDate = new Date()
+
+  switch (duration) {
+      case 'monthly':
+        endDate.setMonth(endDate.getMonth() + 1);
+        break;
+      case 'quaterly':
+        endDate.setMonth(endDate.getMonth() + 3);
+        break;
+      case 'half-yearly':
+        endDate.setMonth(endDate.getMonth() + 6);
+        break;
+      case 'yearly':
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        break;
+      default:
+        throw new Error('Invalid plan duration');
+    }
+
+  
+  const newSubscription = new Subscription({
+      userInfo: {
+          user: userId,
+          userType: type
+      },
+      planId,
+      startDate,
+      endDate,
+      price
+    });
+  await newSubscription.save()
+
+  await Subscription.updateMany({
+    _id: { $ne: newSubscription._id },
+    'userInfo.user': userId,
+    isActive: true
+    }, {
+      $set: {
+        isActive: false
+      }
+    })
+
+  res.status(200).send({ subscription: newSubscription })
+
+
+})
 
 module.exports = {
     createSubscription,
@@ -510,7 +572,8 @@ module.exports = {
     upgradeSubscriptionByAdmin,
     upgradeUserSubscription,
     checkAndSendSubscriptionEmails,
-    checkAndSendExpirySubscriptionEmails
+    checkAndSendExpirySubscriptionEmails,
+    addFreeSubscriptions
 }
 
 
