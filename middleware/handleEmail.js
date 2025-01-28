@@ -60,34 +60,34 @@ const sendResetEmail = asyncHandler(async(email) => {
   })
 
 
-  const sendVerificationEmail = asyncHandler(async(otp, email) => {
+const sendVerificationEmail = asyncHandler(async(otp, email) => {
     
     const info =  await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
       subject: `Your One-Time Password (OTP) for Login`, 
       text: `
- Hello,
+  Hello,
 
-We’ve generated a One-Time Password (OTP) for your account to help you log in securely.
+  We’ve generated a One-Time Password (OTP) for your account to help you log in securely.
 
-Your OTP/Temporary Password is: ${otp}
+  Your OTP/Temporary Password is: ${otp}
 
 Please note:
 
-This OTP is valid only for one-time use.
-Keep it confidential and do not share it with anyone.
-Once you’ve logged in, we recommend changing your password to ensure your account’s security.
-If you didn’t request this OTP, please contact us immediately.
-We’re here to assist if you have any questions or need help.
+  This OTP is valid only for one-time use.
+  Keep it confidential and do not share it with anyone.
+  Once you’ve logged in, we recommend changing your password to ensure your account’s security.
+  If you didn’t request this OTP, please contact us immediately.
+  We’re here to assist if you have any questions or need help.
 
-Team ClickedArt.com  
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere
+  Team ClickedArt.com  
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere
 
-P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
-      `, 
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+        `, 
      
     });
     return true
@@ -121,6 +121,7 @@ P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, fea
   Start uploading your masterpieces today and let the world discover your talent!
 
   Warm Regards,  
+
   Team ClickedArt.com
   www.clickedart.com
   support@clickedart.com
@@ -149,24 +150,24 @@ const sendRejectionEmail = asyncHandler(async (name, email, reasons = []) => {
     text: `
 Dear ${name},
 
-Thank you for your interest in joining ClickedArt.com. We truly appreciate your effort in registering with us and your enthusiasm to be a part of our community.
+  Thank you for your interest in joining ClickedArt.com. We truly appreciate your effort in registering with us and your enthusiasm to be a part of our community.
 
-After reviewing your registration details, we regret to inform you that your application has not been approved at this time.
+  After reviewing your registration details, we regret to inform you that your application has not been approved at this time.
 
 Reason(s) for Disapproval:
-${formattedReasons}
+  ${formattedReasons}
 
-You are welcome to re-apply for registration after 24 hours, ensuring that the concerns mentioned above are addressed. We highly value your interest and look forward to receiving your application again.
+  You are welcome to re-apply for registration after 24 hours, ensuring that the concerns mentioned above are addressed. We highly value your interest and look forward to receiving your application again.
 
-If you have any questions or need clarification regarding this decision, please don’t hesitate to contact us at support@clickedart.com. We are here to assist you in becoming a part of our vibrant photography community.
+  If you have any questions or need clarification regarding this decision, please don’t hesitate to contact us at support@clickedart.com. We are here to assist you in becoming a part of our vibrant photography community.
 
-Warm Regards,  
-Team ClickedArt.com  
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere
+  Warm Regards,  
+  Team ClickedArt.com  
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere
 
-P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
   });
 
@@ -181,9 +182,9 @@ const sendApprovedImageMail = asyncHandler(async (photographerName, email, image
       text: `
 Dear ${photographerName},
 
-Congratulations!
+ Congratulations!
 
-Your image titled "${imageTitle}" has been successfully approved and is now live on ClickedArt.com. Your work is now available for purchase by art enthusiasts and businesses worldwide.
+  Your image titled "${imageTitle}" has been successfully approved and is now live on ClickedArt.com. Your work is now available for purchase by art enthusiasts and businesses worldwide.
 
 Here’s what you can do now:
 
@@ -192,17 +193,17 @@ Here’s what you can do now:
  - You can also add more images to your portfolio to increase your exposure.
 
 
-We are excited to see your creativity flourishing on ClickedArt.com. If you have any questions or need assistance, feel free to reach out to us at support@clickedart.com.
+  We are excited to see your creativity flourishing on ClickedArt.com. If you have any questions or need assistance, feel free to reach out to us at support@clickedart.com.
 
-Keep up the great work, and continue sharing your masterpieces with the world!
+  Keep up the great work, and continue sharing your masterpieces with the world!
 
-Warm Regards,  
-Team ClickedArt.com  
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere
+  Warm Regards,  
+  Team ClickedArt.com  
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere
 
-P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -255,26 +256,31 @@ const sendMonetizationMail = asyncHandler(async (photographerName, email  ) => {
       subject: "Monetization Approved – Start Earning with ClickedArt.com!",
       text: `
 Dear ${photographerName},
+
 We are thrilled to inform you that your monetization request has been approved! You are 
 now eligible to earn royalties for your work through ClickedArt.com. 
+
 Royalty Model Details: 
+
 Here’s how your earnings are calculated based on your membership plan: 
+
 Basic User (Initial Membership) 
-• Digital Download Sales: 50% of the sale value 
-• Print Orders: 10% flat on the sale value 
+  • Digital Download Sales: 50% of the sale value 
+  • Print Orders: 10% flat on the sale value 
 Intermediate User (Upgrade Available) 
-• Digital Download Sales: 70% of the sale value 
-• Print Orders: 10% flat on the sale value 
+  • Digital Download Sales: 70% of the sale value 
+  • Print Orders: 10% flat on the sale value 
 Premium User (Upgrade Available) 
-• Digital Download Sales: 90% of the sale value 
-• Print Orders: 10% flat on the sale value 
+  • Digital Download Sales: 90% of the sale value 
+  • Print Orders: 10% flat on the sale value 
 Key Points to Note: 
-• You are currently on the Basic Membership plan. To increase your royalty percentage, 
-you can upgrade your membership from your profile page at any time. 
-• Taxes such as TDS and other applicable government levies will be deducted as per 
-norms. 
-• You can track your sales, earnings, and payouts through your dashboard on 
-ClickedArt.com. 
+  • You are currently on the Basic Membership plan. To increase your royalty percentage, 
+  you can upgrade your membership from your profile page at any time. 
+  • Taxes such as TDS and other applicable government levies will be deducted as per 
+  norms. 
+  • You can track your sales, earnings, and payouts through your dashboard on 
+  ClickedArt.com. 
+
 We are excited to help you showcase your creativity and turn your passion into a source of 
 income. If you have any questions or need assistance, feel free to reach out to us 
 at support@clickedart.com  
@@ -299,25 +305,28 @@ const sendMonetizationDisApprovalMail = asyncHandler(async (photographerName, em
   ? reasons.map((reason) => `• ${reason}`).join("\n")
   : "No specific reasons provided.";
 
-  const info = await transporter.sendMail({
+const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Monetization Request Update",
       text: `
 Dear ${photographerName},
+
 Thank you for submitting your request for monetization on ClickedArt.com. After reviewing 
 your application, we regret to inform you that your monetization request has not been 
-approved at this time. 
+  approved at this time. 
 Reason(s) for Disapproval: 
-${formattedReasons}
+  ${formattedReasons}
 You are welcome to re-apply for monetization after 24 hours, ensuring that the concerns 
 mentioned above are addressed. We highly encourage you to review your portfolio and 
 account details to strengthen your next application. 
+
 If you need further assistance or clarification regarding this decision, please don’t hesitate to 
 reach out to us at support@clickedart.com  
 We appreciate your effort and dedication and look forward to assisting you in your journey as 
 a creative photographer with ClickedArt.com  
 Warm regards, 
+
 Team ClickedArt.com 
 www.clickedart.com
 support@clickedart.com
@@ -330,35 +339,35 @@ P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, fea
 });
 
 const setApprovedImageOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) =>{
-  const info = await transporter.sendMail({
+const info = await transporter.sendMail({
     from: `Clicked Art ${process.env.USER_EMAIL}`,
     to: email,
     subject: "Your Photo Has Been Approved and is Ready for Sale! ",
     text: `
-Dear ${photographerName},
+ Dear ${photographerName},
 
-We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
-It is now live on your ClickedArt.com profile and available for purchase by buyers. 
+  We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
+  It is now live on your ClickedArt.com profile and available for purchase by buyers. 
 
 WHAT HAPPENS NEXT? 
 
-• Digital Sales: Earn up to [50%/70%/90%] on digital downloads, depending on your membership 
-tier. 
-• Print Sales: Receive a flat 10% royalty on every printed copy sold. 
-• You can monitor your sales, earnings, and buyer interactions on your [Dashboard Link]. 
+  • Digital Sales: Earn up to [50%/70%/90%] on digital downloads, depending on your membership 
+  tier. 
+  • Print Sales: Receive a flat 10% royalty on every printed copy sold. 
+  • You can monitor your sales, earnings, and buyer interactions on your [Dashboard Link]. 
 
 BOOST YOUR VISIBILITY 
 
-• Share your ClickedArt profile link on social media to attract potential buyers. 
-• Regularly upload high-quality photos to expand your portfolio and increase your chances of 
-sales. 
-Thank you for being part of ClickedArt.com! Your creativity inspires us all. 
+  • Share your ClickedArt profile link on social media to attract potential buyers. 
+  • Regularly upload high-quality photos to expand your portfolio and increase your chances of 
+  sales. 
+  Thank you for being part of ClickedArt.com! Your creativity inspires us all. 
 
-Warm regards, 
-Team ClickedArt.com 
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere
+  Warm regards, 
+  Team ClickedArt.com 
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
@@ -367,47 +376,47 @@ return true;
 })
 
 const setApprovedImageOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) => {
-  const info = await transporter.sendMail({
+const info = await transporter.sendMail({
     from: `Clicked Art ${process.env.USER_EMAIL}`,
     to: email,
     subject: " Your Photo Has Been Approved By ClickedArt! ",
     text: `
 Dear ${photographerName},
 
-We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
+  We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
 
-What’s Next? 
+  What’s Next? 
 
-• Your approved photo is now visible in your catalog on ClickedArt.com. 
-• Currently, it is available for browsing by buyers, but since your monetization is pending 
-approval, it is not yet available for sale. 
+  • Your approved photo is now visible in your catalog on ClickedArt.com. 
+  • Currently, it is available for browsing by buyers, but since your monetization is pending 
+  approval, it is not yet available for sale. 
 
 Apply for Monetization 
 
-To enable sales and start earning royalties, please apply for monetization from your profile 
-page. Here’s how: 
+  To enable sales and start earning royalties, please apply for monetization from your profile 
+  page. Here’s how: 
 
-1. Log in to your account on ClickedArt.com. 
-2. Navigate to your profile page. 
-3. Click the “Apply for Monetization” button and follow the instructions. 
+  1. Log in to your account on ClickedArt.com. 
+  2. Navigate to your profile page. 
+  3. Click the “Apply for Monetization” button and follow the instructions. 
 
 Once monetization is approved, your approved photos will be listed for sale, and you’ll earn 
 royalties based on your user tier: 
 
-• Basic User: 50% on digital downloads, 10% on print orders 
-• Intermediate User: 70% on digital downloads, 10% on print orders 
-• Premium User: 90% on digital downloads, 10% on print orders 
+  • Basic User: 50% on digital downloads, 10% on print orders 
+  • Intermediate User: 70% on digital downloads, 10% on print orders 
+  • Premium User: 90% on digital downloads, 10% on print orders 
 
-For any assistance, feel free to contact us at support@clickedart.com. 
+  For any assistance, feel free to contact us at support@clickedart.com. 
 
-Thank you for being a valued part of the ClickedArt community. We can’t wait to see you 
-thrive! 
+  Thank you for being a valued part of the ClickedArt community. We can’t wait to see you 
+  thrive! 
 
-Warm regards, 
-Team ClickedArt.com 
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere 
+  Warm regards, 
+  Team ClickedArt.com 
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere 
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
@@ -419,11 +428,11 @@ return true;
 const sendUnapprovedImageMailOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit.",]) => {
 
 
-  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
+const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
       ? reasons.map((reason) => `• ${reason}`).join("\n")
       : "No specific reasons provided.";
 
-  const info = await transporter.sendMail({
+const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Your Photo Upload Requires Revisions ",
@@ -443,9 +452,9 @@ NEXT STEPS:
 You can revise your photo and re-upload it for review. To avoid future rejections, please adhere to the 
 following guidelines: 
 
-  • Ensure the resolution is at least 250 DPI and the minimum size is 2000 x 2500 pixels. 
-  • Avoid watermarks, logos, or text overlays. 
-  • Provide accurate metadata (title, description, keywords). 
+    • Ensure the resolution is at least 250 DPI and the minimum size is 2000 x 2500 pixels. 
+    • Avoid watermarks, logos, or text overlays. 
+    • Provide accurate metadata (title, description, keywords). 
 
 NEED ASSISTANCE? 
 
@@ -481,77 +490,77 @@ const sendUnapprovedImageMailOfNonMonetizedProfile = asyncHandler(async (photogr
       text: `
 Dear ${photographerName},
 
-Thank you for sharing your work with ClickedArt.com. .
+  Thank you for sharing your work with ClickedArt.com. .
 
-After careful review, we regret to 
-inform you that your uploaded photo, ${imageTitle}, could not be approved due to the 
-following reason(s): 
-${formattedReasons}
+  After careful review, we regret to 
+  inform you that your uploaded photo, ${imageTitle}, could not be approved due to the 
+  following reason(s): 
+  ${formattedReasons}
 
 Next Steps 
 
-Please address the issues mentioned above and re-upload the photo after 24 hours for review. 
-To ensure approval, make sure your photo meets the following guidelines: 
+  Please address the issues mentioned above and re-upload the photo after 24 hours for review. 
+  To ensure approval, make sure your photo meets the following guidelines: 
 
 Technical Requirements 
 
-• Upload photos in JPEG or PNG format. 
-• Ensure the resolution is at least 300 DPI for print-quality images. 
-• Minimum dimensions: 2000 x 2500 pixels (or equivalent aspect ratio). 
-• File size should be between 5 MB to 50 MB. 
+  • Upload photos in JPEG or PNG format. 
+  • Ensure the resolution is at least 300 DPI for print-quality images. 
+  • Minimum dimensions: 2000 x 2500 pixels (or equivalent aspect ratio). 
+  • File size should be between 5 MB to 50 MB. 
 
 Content Standards 
 
-• Only upload original work; plagiarism or copyright infringement is strictly prohibited. 
-• Avoid images with watermarks, logos, or text overlays. 
-• Ensure the photo does not contain offensive, explicit, or illegal content. 
-• Photos should not depict or promote violence, hatred, or discrimination. 
-• Wildlife and nature photos must adhere to ethical practices (e.g., no baiting or staged 
-wildlife shots). 
+  • Only upload original work; plagiarism or copyright infringement is strictly prohibited. 
+  • Avoid images with watermarks, logos, or text overlays. 
+  • Ensure the photo does not contain offensive, explicit, or illegal content. 
+  • Photos should not depict or promote violence, hatred, or discrimination. 
+  • Wildlife and nature photos must adhere to ethical practices (e.g., no baiting or staged 
+  wildlife shots). 
 Aesthetic and Quality Requirements 
-• Images should be sharp and free from excessive noise, blurriness, or over-processing. 
-• Avoid over-saturation or unnatural color corrections. 
-• Composition should be visually appealing and follow basic photography rules (e.g., 
-rule of thirds, leading lines). 
-• No visible branding or distracting elements in the frame unless it's part of the subject 
-(e.g., product photography). 
+  • Images should be sharp and free from excessive noise, blurriness, or over-processing. 
+  • Avoid over-saturation or unnatural color corrections. 
+  • Composition should be visually appealing and follow basic photography rules (e.g., 
+  rule of thirds, leading lines). 
+  • No visible branding or distracting elements in the frame unless it's part of the subject 
+  (e.g., product photography). 
 
 Metadata and Descriptions 
 
-• Provide accurate titles, descriptions, and keywords for each photo. 
-• Avoid misleading tags or keywords to ensure proper categorization. 
-• Ensure the title and description are free of grammatical errors and typos. 
-Legal and Ethical Compliance 
-• Obtain necessary model or property releases for photos featuring identifiable people 
-or private property. 
-• Respect privacy rights—do not upload images taken without consent in private 
-settings. 
-• Do not upload photos that violate local laws or community standards. 
-Additional Tips 
-• Photos with unique perspectives or storytelling elements are more likely to attract 
-buyers. 
-• Experiment with lighting, angles, and post-processing to make your work stand out. 
-• Upload high-quality series or collections to increase your chances of bulk sales 
+  • Provide accurate titles, descriptions, and keywords for each photo. 
+  • Avoid misleading tags or keywords to ensure proper categorization. 
+  • Ensure the title and description are free of grammatical errors and typos. 
+  Legal and Ethical Compliance 
+  • Obtain necessary model or property releases for photos featuring identifiable people 
+  or private property. 
+  • Respect privacy rights—do not upload images taken without consent in private 
+  settings. 
+  • Do not upload photos that violate local laws or community standards. 
+  Additional Tips 
+  • Photos with unique perspectives or storytelling elements are more likely to attract 
+  buyers. 
+  • Experiment with lighting, angles, and post-processing to make your work stand out. 
+  • Upload high-quality series or collections to increase your chances of bulk sales 
 
 Monetization Reminder 
 
-Once your photos are approved, you can apply for monetization to start earning royalties for 
-your work. To apply: 
+  Once your photos are approved, you can apply for monetization to start earning royalties for 
+  your work. To apply: 
 
-1. Log in to your account. 
-2. Navigate to your profile page. 
-3. Click “Apply for Monetization” and complete the process. 
+  1. Log in to your account. 
+  2. Navigate to your profile page. 
+  3. Click “Apply for Monetization” and complete the process. 
 
-If you have questions or need help, feel free to reach out at support@clickedart.com. 
-We appreciate your efforts and look forward to seeing more of your creative work! 
+  If you have questions or need help, feel free to reach out at support@clickedart.com. 
+  We appreciate your efforts and look forward to seeing more of your creative work! 
 
-Warm regards, 
-Team ClickedArt.com 
-www.clickedart.com
-support@clickedart.com
-Empowering Photographers Everywhere
+  Warm regards, 
+  Team ClickedArt.com 
+  www.clickedart.com
+  support@clickedart.com
+  Empowering Photographers Everywhere
 
-P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
   return true;
@@ -573,17 +582,17 @@ ________________________________________
 Here’s What Your Upgrade Brings You:
 
 1. Higher Earnings:
-  • Intermediate Membership: Earn 70% royalty on digital downloads and 10% flat royalty on print orders.
-  • Premium Membership: Earn 90% royalty on digital downloads and 10% flat royalty on print orders.
+    • Intermediate Membership: Earn 70% royalty on digital downloads and 10% flat royalty on print orders.
+    • Premium Membership: Earn 90% royalty on digital downloads and 10% flat royalty on print orders.
 
 2. Enhanced Tools and Features:
-  • Unlimited Catalog Creation: Showcase your creativity without any restrictions.
-  • Social Media Auto-Posting: Seamlessly share your uploaded photos on your social media profiles to gain visibility.
-  • Watermarking Tool: Protect your images with a professional watermark while promoting your brand.
-  • Priority Support: Enjoy faster assistance and dedicated customer support.
+    • Unlimited Catalog Creation: Showcase your creativity without any restrictions.
+    • Social Media Auto-Posting: Seamlessly share your uploaded photos on your social media profiles to gain visibility.
+    • Watermarking Tool: Protect your images with a professional watermark while promoting your brand.
+    • Priority Support: Enjoy faster assistance and dedicated customer support.
 
 3. Exclusive Marketing Support:
-  • Marketing Campaigns: Intermediate and Premium members receive targeted exposure in our promotional efforts, giving your photos greater reach and visibility.
+    • Marketing Campaigns: Intermediate and Premium members receive targeted exposure in our promotional efforts, giving your photos greater reach and visibility.
 
 4. Advanced Insights:
   • Analytics Dashboard: Access in-depth analytics to track your performance, downloads, and customer preferences to fine-tune your offerings.
@@ -592,11 +601,11 @@ ________________________________________
 What’s Next?
 
 Start exploring these benefits today:
-1. Maximize Your Exposure: Update your catalog with your best works.
-2. Engage with the Tools: Use watermarking, analytics, and social media auto-posting to strengthen your brand.
-3. Grow Your Earnings: Reach out to your audience and let them know about your upgraded profile.
+    1. Maximize Your Exposure: Update your catalog with your best works.
+    2. Engage with the Tools: Use watermarking, analytics, and social media auto-posting to strengthen your brand.
+    3. Grow Your Earnings: Reach out to your audience and let them know about your upgraded profile.
 
-________________________________________
+  ________________________________________
 Thank you for choosing ClickedArt.com as your partner in your photography journey. Together, let’s turn your passion into profit and showcase your creativity to the world!
 
 If you have any questions or need further assistance, feel free to contact us at support@clickedart.com.
@@ -605,7 +614,7 @@ Warm Regards,
 Team ClickedArt
 www.clickedart.com
 support@clickedart.com
-________________________________________
+  ________________________________________
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
   });
@@ -707,23 +716,23 @@ ________________________________________
 How to Renew?
 
 It’s easy to renew your membership! Simply:
-1. Visit your membership dashboard on [ClickedArt.com](https://www.clickedart.com).
-2. Select “Renew Membership” under your profile settings.
-3. Complete the renewal process and continue enjoying your benefits.
+  1. Visit your membership dashboard on [ClickedArt.com](https://www.clickedart.com).
+  2. Select “Renew Membership” under your profile settings.
+  3. Complete the renewal process and continue enjoying your benefits.
 
 ________________________________________
 Act Now to Secure Your Benefits!
 
-Renew soon to ensure uninterrupted access to everything you love about ClickedArt.com.
+  Renew soon to ensure uninterrupted access to everything you love about ClickedArt.com.
 
-If you have any questions or need assistance, please don’t hesitate to contact us at support@clickedart.com. We’re here to help!
+  If you have any questions or need assistance, please don’t hesitate to contact us at support@clickedart.com. We’re here to help!
 
-Warm Regards,  
-Team ClickedArt  
-[www.clickedart.com](https://www.clickedart.com)  
-support@clickedart.com  
+  Warm Regards,  
+  Team ClickedArt  
+  [www.clickedart.com](https://www.clickedart.com)  
+  support@clickedart.com  
 
-P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
   });
   return true;
