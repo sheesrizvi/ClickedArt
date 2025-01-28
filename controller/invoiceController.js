@@ -387,12 +387,11 @@ const generateInvoice = async (req, res) => {
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyAmount;
 
-        let printcutAmount = 0
-        if(orderItem.subTotal && order.printStatus === 'delivered') {
+          let printcutAmount = 0
           printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
           totalPrintcutAmount += printcutAmount;
           totalAmountPayable += printcutAmount;
-        }
+        
 
         orderDetails.push({
           order: order._id,
