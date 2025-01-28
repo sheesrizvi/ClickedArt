@@ -284,10 +284,14 @@ const generateInvoice = async (req, res) => {
       return res.status(400).send({ message: 'invoice already existed for this range' })
     }
 
+    const startGenDate = new Date(startDate); 
+    const endGenDate = new Date(endDate);
+    endGenDate.setHours(23, 59, 59, 999); 
+
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
       orderStatus: 'completed',
-      createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+      createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
     })
       .populate('orderItems.imageInfo.image')
       .populate('orderItems.paperInfo.paper')
