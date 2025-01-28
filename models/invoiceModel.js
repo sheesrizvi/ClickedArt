@@ -13,33 +13,15 @@ const invoiceSchema = new mongoose.Schema(
           order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
           image: { type: mongoose.Schema.Types.ObjectId, ref: 'ImageVault'},
           printPrice: { type: Number },
-          paperInfo: {
-                paper: {
-                  type: mongoose.Schema.Types.ObjectId,
-                  ref: 'Paper'
-                },
-                price: {
-                  type: Number,
-                },
-                size: {
-                  width: { type: Number },
-                  height: { type: Number }
-                 }
-          },
-          frameInfo: {
-                frame: {
-                 type: mongoose.Schema.Types.ObjectId,
-                 ref: 'Frame',
-                },
-                price: {
-                 type: Number,
-                },
-                size: {
-                 width: { type: Number },
-                 height: { type: Number }
-                }
-          },
-          resolution: { type: String },
+    paperInfo: {
+      type: Object, 
+      default: {}, 
+    },
+    frameInfo: {
+      type: Object, 
+      default: {}, 
+    },      
+    resolution: { type: String },
           originalPrice: { type: Number },
           royaltyAmount: { type: Number },
           printcutAmount: { type: Number }
@@ -51,30 +33,12 @@ const invoiceSchema = new mongoose.Schema(
         image: { type: mongoose.Schema.Types.ObjectId, ref: 'ImageVault'},
         printPrice: { type: Number },
         paperInfo: {
-              paper: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'Paper'
-              },
-              price: {
-                type: Number,
-              },
-              size: {
-                width: { type: Number },
-                height: { type: Number }
-               }
+          type: Object, 
+          default: {}, 
         },
         frameInfo: {
-              frame: {
-               type: mongoose.Schema.Types.ObjectId,
-               ref: 'Frame',
-              },
-              price: {
-               type: Number,
-              },
-              size: {
-               width: { type: Number },
-               height: { type: Number }
-              }
+          type: Object,
+          default: {}, 
         },
         resolution: { type: String },
         originalPrice: { type: Number },
@@ -86,6 +50,7 @@ const invoiceSchema = new mongoose.Schema(
     totalAmountPayable: {type: Number },
     totalPrintcutAmount: { type: Number },
     totalReferralAmount: { type: Number  },
+    prevPendingPrintCutAmount: { type: Number },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid'],
