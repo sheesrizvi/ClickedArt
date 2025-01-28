@@ -188,18 +188,6 @@ const generateInvoice = async (req, res) => {
             prevPendingPrintCutAmount += parseFloat(pending.printcutAmount) || 0;
           }
         }
-        
-        orderDetails.push({
-          order: order._id,
-          image: image._id,
-          resolution,
-          printPrice,
-          frameInfo: orderItem.frameInfo || {},
-          paperInfo: orderItem.paperInfo || {},
-          originalPrice: price,
-          royaltyAmount,
-          printcutAmount: printcutAmount?.toFixed(2),
-        });
 
         if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
          
@@ -214,9 +202,21 @@ const generateInvoice = async (req, res) => {
             royaltyAmount,
             printcutAmount: printcutAmount.toFixed(2),
           });
+        } else {
+          orderDetails.push({
+            order: order._id,
+            image: image._id,
+            resolution,
+            printPrice,
+            frameInfo: orderItem.frameInfo || {},
+            paperInfo: orderItem.paperInfo || {},
+            originalPrice: price,
+            royaltyAmount,
+            printcutAmount: printcutAmount?.toFixed(2),
+          });
         }
 
-      }
+      } 
     }
 
     totalAmountPayable += totalReferralAmount;
