@@ -9,6 +9,7 @@ const { createOrder ,
     payment,
     getPendingOrders,
     calculateCartPrice,
+    deleteOrder,
     updatePrintStatus
  } = require('../controller/orderController')
 const router = express.Router()
@@ -25,5 +26,6 @@ router.post('/payment', payment)
 router.get('/get-pending-orders', getPendingOrders)
 router.post('/calculate-price', calculateCartPrice)
 router.post('/update-print-status', updatePrintStatus)
+router.delete('/delete-order', deleteOrder)
 
 module.exports = router
