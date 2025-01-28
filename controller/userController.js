@@ -353,6 +353,33 @@ const changePassword = asyncHandler(async (req, res) => {
 })
 
 
+const getUserAnalytics = asyncHandler(async (req, res) => {
+    const { user } = req.query
+
+    const digitalOrderCount = await Order.countDocuments({ 'userInfo.user': user, orderStatus: 'completed', printStatus: { $in: ['no-print'] } })
+
+    const printOrderCount = await Order.countDocuments({
+        'userInfo.user': user, printStatus: { $ne: ['no-print'] }
+    })
+
+    const deliveredPrintCount = await Order.countDocuments({
+        'userInfo.user': user, printStatus: { $in: ['delivered'] }
+    })
+
+    const pendingPrintCount = await Order.countDocuments({
+        'userInfo.user': user, printStatus: { $in: ['processing', 'printing', 'packed', 'shipped'] }
+    })
+
+    
+
+    res.status(200).send({
+        digitalOrderCount,
+        printOrderCount,
+        deliveredPrintCount,
+        pendingPrintCount
+    })
+})
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -367,7 +394,8 @@ module.exports = {
     getUserByUserName,
     updateCoverImage,
     checkUserNameExist,
-    changePassword
+    changePassword,
+    getUserAnalytics
 }
 
 

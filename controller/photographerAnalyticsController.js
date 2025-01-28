@@ -17,7 +17,6 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       isPaid: true,
       orderStatus: 'completed',
       'orderItems.imageInfo.photographer': new mongoose.Types.ObjectId(photographer),
-      printStatus: { $in: ['no-print', 'delivered']},
   });
   
   if (!orders || orders.length === 0) {
