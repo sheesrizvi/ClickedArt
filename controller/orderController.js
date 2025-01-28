@@ -10,17 +10,18 @@ const ReferralBalance = require("../models/referralBalanceModel");
 const User = require("../models/userModel.js");
 const Referral = require("../models/referralModel.js");
 const Paper = require("../models/imagebase/paperModel");
-const Frame = require('../models/imagebase/frameModel.js')
+const Frame = require("../models/imagebase/frameModel.js");
 const Razorpay = require("razorpay");
-const Monetization = require('../models/monetizationModel.js')
-const ImageAnalytics = require('../models/imagebase/imageAnalyticsModel.js')
-const { sendOrderThankYouMail } = require('../middleware/handleEmail.js')
-const BuyerCounter = require('../models/buyerCounterModel.js')
-const moment = require('moment');
-
+const Monetization = require("../models/monetizationModel.js");
+const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
+const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
+const BuyerCounter = require("../models/buyerCounterModel.js");
+const moment = require("moment");
 
 const getCounter = async (financialYear) => {
-  const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({ createdAt: -1 });
+  const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
+    createdAt: -1,
+  });
   if (!counterDoc) {
     await BuyerCounter.create({ financialYear, counter: 0 });
     return 1;
@@ -34,11 +35,22 @@ const incrementCounter = async (financialYear) => {
     { $inc: { counter: 1 } },
     { new: true }
   );
-  return
+  return;
 };
 
+const deleteOrder = asyncHandler(async (req, res) => {
+  const { orderId } = req.query;
+
+  if (!orderId) {
+    res.status(400);
+    throw new Error("Order Id is required to delete");
+  }
+
+  await Order.findByIdAndDelete(orderId);
+  res.status(200).send({ message: "Order deleted" });
+});
+
 const createOrder = asyncHandler(async (req, res) => {
- 
   const {
     userId,
     orderItems,
@@ -52,33 +64,29 @@ const createOrder = asyncHandler(async (req, res) => {
     isPaid,
     gst,
     printStatus,
-    link
+    link,
   } = req.body;
 
-  
- 
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
-
   const orderExist = await Order.findOne({ "userInfo.user": userId });
- 
 
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
-  const financialYear = currentMonth < 3
-    ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
-    : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-  
+  const financialYear =
+    currentMonth < 3
+      ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+      : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
 
   const nextCounter = await getCounter(financialYear);
-  let invoiceNumber = nextCounter.toString().padStart(4, '0');
+  let invoiceNumber = nextCounter.toString().padStart(4, "0");
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
   // const groupedOrders = orderItems.reduce((acc, item) => {
 
-  //   const photographerId = item.imageInfo?.photographer || 'print'; 
+  //   const photographerId = item.imageInfo?.photographer || 'print';
   //   if (!acc[photographerId]) {
   //     acc[photographerId] = [];
   //   }
@@ -88,47 +96,46 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
-
-      const photographerId = item.imageInfo.photographer || 'unknown';
+      const photographerId = item.imageInfo.photographer || "unknown";
       if (!acc[photographerId]) {
         acc[photographerId] = [];
       }
       acc[photographerId].push(item);
     } else if (item.subTotal > 0) {
-     
-      const printKey = `print-${acc.nextPrintId || 1}`; 
+      const printKey = `print-${acc.nextPrintId || 1}`;
       acc[printKey] = [item];
-      acc.nextPrintId = (acc.nextPrintId || 1) + 1; 
+      acc.nextPrintId = (acc.nextPrintId || 1) + 1;
     }
     return acc;
   }, {});
-  
 
   delete groupedOrders.nextPrintId;
 
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
-    const totalAmount = items.reduce((sum, item) => sum + (item.finalPrice || 0), 0); 
+    const totalAmount = items.reduce(
+      (sum, item) => sum + (item.finalPrice || 0),
+      0
+    );
 
-    const updatedItems = items.map(item => {
+    const updatedItems = items.map((item) => {
       const finalPrice = item.finalPrice || 0;
-      const sgst = finalPrice * 0.09; 
-      const cgst = finalPrice * 0.09; 
-      const totalGST = (sgst + cgst) || 0;
+      const sgst = finalPrice * 0.09;
+      const cgst = finalPrice * 0.09;
+      const totalGST = sgst + cgst || 0;
 
       return {
-          ...item,
-          sgst,   
-          cgst,
-          totalGST   
+        ...item,
+        sgst,
+        cgst,
+        totalGST,
       };
     });
-
 
     const order = new Order({
       userInfo: {
         user: userId,
-        userType: type
+        userType: type,
       },
       orderItems: updatedItems,
       paymentMethod,
@@ -140,13 +147,12 @@ const createOrder = asyncHandler(async (req, res) => {
       finalAmount,
       isPaid,
       gst,
-      printStatus: updatedItems.every(item => item.subTotal > 0) 
-      ? 'processing' 
-      : 'no-print', 
-    invoiceNumber,
-      invoiceNumber
+      printStatus: updatedItems.every((item) => item.subTotal > 0)
+        ? "processing"
+        : "no-print",
+      invoiceNumber,
+      invoiceNumber,
     });
-
 
     const savedOrder = await order.save();
     orders.push(savedOrder);
@@ -181,77 +187,83 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
   }
-  
-  const customerName = `${user.firstName} ${user.lastName}`
-  const customerEmail = user.email
-  const orderDate = moment().format('dddd, MMMM Do YYYY');
+
+  const customerName = `${user.firstName} ${user.lastName}`;
+  const customerEmail = user.email;
+  const orderDate = moment().format("dddd, MMMM Do YYYY");
   let itemNames = [];
 
   for (let item of orderItems) {
     if (item.imageInfo && item.imageInfo.image) {
-      const image = await ImageVault.findById(item.imageInfo.image)
+      const image = await ImageVault.findById(item.imageInfo.image);
       if (image && image.title) {
         itemNames.push(image.title);
       }
-     
-      if(image && image._id) {
-        const downloads = await Order.countDocuments({ 'orderItems.imageInfo.image': image._id })
-       
-        await ImageAnalytics.findOneAndUpdate({ image: image._id }, {
-          downloads
-        })
+
+      if (image && image._id) {
+        const downloads = await Order.countDocuments({
+          "orderItems.imageInfo.image": image._id,
+        });
+
+        await ImageAnalytics.findOneAndUpdate(
+          { image: image._id },
+          {
+            downloads,
+          }
+        );
       }
     }
 
     if (item.frameInfo && item.frameInfo.frame) {
-      const frame = await Frame.findById(item.frameInfo.frame).select('name');
+      const frame = await Frame.findById(item.frameInfo.frame).select("name");
       if (frame && frame.name) {
         itemNames.push(frame.name);
       }
     }
 
     if (item.paperInfo && item.paperInfo.paper) {
-      const paper = await Paper.findById(item.paperInfo.paper).select('name');
+      const paper = await Paper.findById(item.paperInfo.paper).select("name");
       if (paper && paper.name) {
         itemNames.push(paper.name);
       }
     }
   }
-  const items = itemNames
-  const s3Link = link || ''
-  await sendOrderThankYouMail(customerName, orderDate, items, customerEmail, s3Link)
+  const items = itemNames;
+  const s3Link = link || "";
+  await sendOrderThankYouMail(
+    customerName,
+    orderDate,
+    items,
+    customerEmail,
+    s3Link
+  );
 
-  
   res.status(201).send(orders);
-
 });
-
-
-
 
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
   const orders = await Order.find({})
     .populate({
-      path: 'orderItems',
+      path: "orderItems",
       populate: [
         {
-          path: 'imageInfo.image',
+          path: "imageInfo.image",
           populate: {
-            path: 'photographer'
-          }
+            path: "photographer",
+          },
         },
         {
-          path: 'frameInfo.frame'
+          path: "frameInfo.frame",
         },
         {
-          path: 'paperInfo.paper'
+          path: "paperInfo.paper",
         },
         {
-          path: 'imageInfo.photographer'
-        }
-      ]
+          path: "imageInfo.photographer",
+        },
+      ],
     })
     .populate("userInfo.user")
     .sort({ createdAt: -1 })
@@ -270,28 +282,28 @@ const getAllOrders = asyncHandler(async (req, res) => {
 const getMyOrders = asyncHandler(async (req, res) => {
   const { userId, pageNumber = 1, pageSize = 20 } = req.query;
   const orders = await Order.find({ "userInfo.user": userId })
-  .populate({
-    path: 'orderItems',
-    populate: [
-      {
-        path: 'imageInfo.image',
-        populate: {
-          path: 'photographer'
-        }
-      },
-      {
-        path: 'frameInfo.frame'
-      },
-      {
-        path: 'paperInfo.paper'
-      },
-      {
-        path: 'imageInfo.photographer'
-      }
-    ]
-  })
-  .populate("userInfo.user")
-  .sort({ createdAt: -1 })
+    .populate({
+      path: "orderItems",
+      populate: [
+        {
+          path: "imageInfo.image",
+          populate: {
+            path: "photographer",
+          },
+        },
+        {
+          path: "frameInfo.frame",
+        },
+        {
+          path: "paperInfo.paper",
+        },
+        {
+          path: "imageInfo.photographer",
+        },
+      ],
+    })
+    .populate("userInfo.user")
+    .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
 
@@ -311,31 +323,34 @@ const getMyOrders = asyncHandler(async (req, res) => {
 const getOrdersByPhotographer = asyncHandler(async (req, res) => {
   const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ "orderItems.imageInfo.photographer": photographer, orderStatus: 'completed' })
+  const orders = await Order.find({
+    "orderItems.imageInfo.photographer": photographer,
+    orderStatus: "completed",
+  })
     .populate({
-      path: 'orderItems',
+      path: "orderItems",
       populate: [
         {
-          path: 'imageInfo.image',
+          path: "imageInfo.image",
           populate: {
-            path: 'photographer'
-          }
+            path: "photographer",
+          },
         },
         {
-          path: 'frameInfo.frame'
+          path: "frameInfo.frame",
         },
         {
-          path: 'paperInfo.paper'
+          path: "paperInfo.paper",
         },
         {
-          path: 'imageInfo.photographer'
-        }
-      ]
+          path: "imageInfo.photographer",
+        },
+      ],
     })
     .populate("userInfo.user")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize);
- 
+
   if (!orders || orders.length === 0) {
     res.status(404);
     throw new Error("No Orders Found");
@@ -383,27 +398,27 @@ const getOrderById = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Order Id is required" });
 
   const order = await Order.findById(orderId)
-  .populate({
-    path: 'orderItems',
-    populate: [
-      {
-        path: 'imageInfo.image',
-        populate: {
-          path: 'photographer'
-        }
-      },
-      {
-        path: 'frameInfo.frame'
-      },
-      {
-        path: 'paperInfo.paper'
-      },
-      {
-        path: 'imageInfo.photographer'
-      }
-    ]
-  })
-  .populate("userInfo.user")
+    .populate({
+      path: "orderItems",
+      populate: [
+        {
+          path: "imageInfo.image",
+          populate: {
+            path: "photographer",
+          },
+        },
+        {
+          path: "frameInfo.frame",
+        },
+        {
+          path: "paperInfo.paper",
+        },
+        {
+          path: "imageInfo.photographer",
+        },
+      ],
+    })
+    .populate("userInfo.user");
 
   res.status(200).send({ order });
 });
@@ -418,28 +433,28 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
   }
 
   const orders = await Order.find({ orderStatus: status })
-  .populate({
-    path: 'orderItems',
-    populate: [
-      {
-        path: 'imageInfo.image',
-        populate: {
-          path: 'photographer'
-        }
-      },
-      {
-        path: 'frameInfo.frame'
-      },
-      {
-        path: 'paperInfo.paper'
-      },
-      {
-        path: 'imageInfo.photographer'
-      }
-    ]
-  })
-  .populate("userInfo.user")
-  .sort({ createdAt: -1 })
+    .populate({
+      path: "orderItems",
+      populate: [
+        {
+          path: "imageInfo.image",
+          populate: {
+            path: "photographer",
+          },
+        },
+        {
+          path: "frameInfo.frame",
+        },
+        {
+          path: "paperInfo.paper",
+        },
+        {
+          path: "imageInfo.photographer",
+        },
+      ],
+    })
+    .populate("userInfo.user")
+    .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageNumber);
 
@@ -487,42 +502,42 @@ const payment = asyncHandler(async (req, res) => {
 });
 
 const getPendingOrders = asyncHandler(async (req, res) => {
-  const { pageNumber = 1, pageSize = 20 } = req.query
+  const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ orderStatus: 'pending' })
-  .populate({
-    path: 'orderItems',
-    populate: [
-      {
-        path: 'imageInfo.image',
-        populate: {
-          path: 'photographer'
-        }
-      },
-      {
-        path: 'frameInfo.frame'
-      },
-      {
-        path: 'paperInfo.paper'
-      },
-      {
-        path: 'imageInfo.photographer'
-      }
-    ]
-  })
-  .populate("userInfo.user")
-  .sort({ createdAt: -1 })
-  .skip((pageNumber - 1) * pageSize)
-  .limit(pageSize);
+  const orders = await Order.find({ orderStatus: "pending" })
+    .populate({
+      path: "orderItems",
+      populate: [
+        {
+          path: "imageInfo.image",
+          populate: {
+            path: "photographer",
+          },
+        },
+        {
+          path: "frameInfo.frame",
+        },
+        {
+          path: "paperInfo.paper",
+        },
+        {
+          path: "imageInfo.photographer",
+        },
+      ],
+    })
+    .populate("userInfo.user")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
 
-if (!orders || orders.length === 0)
-  return res.status(400).send({ message: "Order not found" });
+  if (!orders || orders.length === 0)
+    return res.status(400).send({ message: "Order not found" });
 
-const totalDocuments = await Order.countDocuments({ orderStatus: 'pending' });
-const pageCount = Math.ceil(totalDocuments / pageSize);
+  const totalDocuments = await Order.countDocuments({ orderStatus: "pending" });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
 
-res.status(200).send({ orders, pageCount })
-})
+  res.status(200).send({ orders, pageCount });
+});
 
 const calculateCartPrice = async (req, res) => {
   try {
@@ -533,11 +548,15 @@ const calculateCartPrice = async (req, res) => {
     let totalFramePrice = 0;
     let totalFinalPrice = 0;
 
-    const frameIds = items?.filter(item => item.frameId).map(item => item.frameId);
-    const paperIds = items?.filter(item => item.paperId).map(item => item.paperId);
+    const frameIds = items
+      ?.filter((item) => item.frameId)
+      .map((item) => item.frameId);
+    const paperIds = items
+      ?.filter((item) => item.paperId)
+      .map((item) => item.paperId);
 
-    const frames = await Frame.find({ '_id': { $in: frameIds } });
-    const papers = await Paper.find({ '_id': { $in: paperIds } });
+    const frames = await Frame.find({ _id: { $in: frameIds } });
+    const papers = await Paper.find({ _id: { $in: paperIds } });
 
     for (let item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
@@ -545,13 +564,18 @@ const calculateCartPrice = async (req, res) => {
       const image = await ImageVault.findById(imageId);
       if (!image) continue;
 
-      const imagePrice = resolution === "small" ? image.price.small : (resolution === "medium" ? image.price.medium : image.price.original);
+      const imagePrice =
+        resolution === "small"
+          ? image.price.small
+          : resolution === "medium"
+          ? image.price.medium
+          : image.price.original;
 
       let paperPrice = 0;
       let framePrice = 0;
 
       if (paperId) {
-        const paper = papers.find(p => p._id.toString() === paperId);
+        const paper = papers.find((p) => p._id.toString() === paperId);
         if (paper) {
           const customDimension = paper.customDimensions.find(
             (dim) => dim.width === width && dim.height === height
@@ -567,7 +591,7 @@ const calculateCartPrice = async (req, res) => {
       }
 
       if (frameId) {
-        const frame = frames.find(f => f._id.toString() === frameId);
+        const frame = frames.find((f) => f._id.toString() === frameId);
         if (frame) {
           const frameArea = width * height;
           framePrice = frameArea * frame.basePricePerLinearInch;
@@ -577,16 +601,17 @@ const calculateCartPrice = async (req, res) => {
       totalImagePrice += imagePrice;
       totalPaperPrice += paperPrice;
       totalFramePrice += framePrice;
-      totalFinalPrice += paperPrice ? paperPrice + framePrice : imagePrice + paperPrice + framePrice;
+      totalFinalPrice += paperPrice
+        ? paperPrice + framePrice
+        : imagePrice + paperPrice + framePrice;
     }
 
     res.json({
       totalImagePrice,
       totalPaperPrice,
       totalFramePrice,
-      totalFinalPrice
+      totalFinalPrice,
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error." });
@@ -594,17 +619,16 @@ const calculateCartPrice = async (req, res) => {
 };
 
 const updatePrintStatus = asyncHandler(async (req, res) => {
-  const { orderId } = req.body
+  const { orderId } = req.body;
 
-  const order = await Order.findOne({ _id: orderId })
+  const order = await Order.findOne({ _id: orderId });
 
-  order.printStatus = printStatus
+  order.printStatus = printStatus;
 
-  await order.save()
+  await order.save();
 
-  res.status(200).send({ message: 'Print Status updated successfully' })
-})
-
+  res.status(200).send({ message: "Print Status updated successfully" });
+});
 
 module.exports = {
   createOrder,
@@ -617,5 +641,6 @@ module.exports = {
   payment,
   getPendingOrders,
   calculateCartPrice,
-  updatePrintStatus
+  updatePrintStatus,
+  deleteOrder,
 };

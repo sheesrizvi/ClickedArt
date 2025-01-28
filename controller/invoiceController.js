@@ -62,7 +62,7 @@ const generateInvoice = async (req, res) => {
     const orders = await Order.find({
       'orderItems.imageInfo.photographer': photographerId,
       orderStatus: 'completed',
-      printStatus: { $in: ['no-print', 'delivered']},
+      // printStatus: { $in: ['no-print', 'delivered']},
       createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
     })
       .populate('orderItems.imageInfo.image')
@@ -188,6 +188,8 @@ const generateInvoice = async (req, res) => {
             prevPendingPrintCutAmount += parseFloat(pending.printcutAmount) || 0;
           }
         }
+
+        console.log(order.printStatus)
 
         if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
          
