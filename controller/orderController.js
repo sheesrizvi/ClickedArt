@@ -619,7 +619,7 @@ const calculateCartPrice = async (req, res) => {
 };
 
 const updatePrintStatus = asyncHandler(async (req, res) => {
-  const { orderId } = req.body;
+  const { orderId, printStatus } = req.body;
 
   const order = await Order.findOne({ _id: orderId });
 
