@@ -29,231 +29,6 @@ const incrementCounter = async (financialYear) => {
 };
 
 
-const generateInvoice = async (req, res) => {
-  try {
-    const { photographerId, startDate, endDate } = req.body;
-
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    const financialYear = currentMonth < 3
-      ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
-      : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-    
-
-    const nextCounter = await getCounter(financialYear);
-    const invoiceNumber = nextCounter.toString().padStart(4, '0');
-    const invoiceId = `CAP/${financialYear}/${invoiceNumber}`;
-   
-    const existingInvoice = await Invoice.findOne({
-      photographer: photographerId,
-      $or: [
-        {
-          startDate: { $lte: new Date(endDate) },
-          endDate: { $gte: new Date(startDate) },
-        },
-      ],
-    });
-
-    if(existingInvoice) {
-      return res.status(400).send({ message: 'invoice already existed for this range' })
-    }
-
-    const startGenDate = new Date(startDate); 
-    const endGenDate = new Date(endDate);
-    endGenDate.setHours(23, 59, 59, 999); 
-    
-    const orders = await Order.find({
-      'orderItems.imageInfo.photographer': photographerId,
-      orderStatus: 'completed',
-      // printStatus: { $in: ['no-print', 'delivered']},
-      createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
-    })
-      .populate('orderItems.imageInfo.image')
-      .populate('orderItems.paperInfo.paper')
-      .populate('orderItems.frameInfo.frame');
-
-   
-    const referralBalance = await ReferralBalance.aggregate([
-      {
-        $match: {
-          photographer: new mongoose.Types.ObjectId(photographerId),
-          createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          price: { $sum: '$amount' },
-        },
-      },
-    ]);
-    
-    const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
-
-    if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
-      const invoice = new Invoice({
-        photographer: photographerId,
-        totalAmountPayable: totalReferralAmount,
-        totalReferralAmount,
-        paymentStatus: 'pending',
-      });
-      return res.status(400).send({ invoice });
-    }
-
-    if (!orders || orders.length === 0) {
-      return res.status(404).json({
-        message: 'No completed orders found for the photographer within the given period.',
-      });
-    }
-
-   const monetization = await Monetization.findOne({ photographer: photographerId  });
-  
-   let gstRecord 
-    if(monetization) {
-      gstRecord =  monetization.businessAccount?.gstNumber 
-    } else {
-      gstRecord = null
-    } 
-
-    const subscription = await Subscription.findOne({
-      'userInfo.user': photographerId,
-      'userInfo.userType': 'Photographer',
-      isActive: true,
-    }).populate('planId');
-    
-    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    
-
-    let royaltyShare;
-    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
-   
-
-    if (!subscription || subscription?.planId?.name === 'Basic') {
-      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
-    } else if (subscription?.planId?.name === 'Intermediate') {
-      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
-    } else if (subscription?.planId?.name === 'Premium') {
-      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
-    } else {
-      royaltyShare = 50;
-    }
-
-    let totalRoyaltyAmount = 0;
-    let totalPrintcutAmount = 0;
-    let totalAmountPayable = 0;
-    let prevPendingPrintCutAmount = 0
-    const orderDetails = [];
-    const pendingPrintDetails = []
-
-    for (const order of orders) {
-    
-      for (const orderItem of order.orderItems) {
-        const { image, resolution, price } = orderItem.imageInfo;
-        const printPrice = orderItem.subTotal
-        // let paperInfo 
-        // let frameInfo
-        // if(orderItem.subTotal) {
-        //  paperInfo = orderItem.paperInfo || { }
-        //  frameInfo = orderItem.frameInfo || { }
-        // }
-
-        let paperInfo = {};
-        let frameInfo = orderItem.frameInfo || null; 
-      
-        if (orderItem.subTotal) {
-          paperInfo = orderItem.paperInfo || {}; 
-        }
-
-        if (!image || !resolution || typeof price !== 'number') {
-          throw new Error('Image, resolution, or price missing in order item.');
-        }
-        const royaltyAmount = (price * royaltyShare) / 100;
-        totalRoyaltyAmount += royaltyAmount;
-        totalAmountPayable += royaltyAmount;
-
-        let printcutAmount = 0
-
-       
-        printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
-       
-        if(orderItem.subTotal && order.printStatus === 'delivered') {
-          totalPrintcutAmount += printcutAmount;
-          totalAmountPayable += printcutAmount;
-        }
-
-        const previousInvoice = await Invoice.findOne({
-          photographer: photographerId,
-          endDate: { $lt: new Date(startDate) },
-        }).sort({ endDate: -1 });
-        
-        if (previousInvoice && previousInvoice.pendingPrintDetails) {
-          for (const pending of previousInvoice.pendingPrintDetails) {
-            prevPendingPrintCutAmount += parseFloat(pending.printcutAmount) || 0;
-          }
-        }
-
-        console.log(order.printStatus)
-
-        if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
-         
-          pendingPrintDetails.push({
-            order: order._id,
-            image: image._id,
-            resolution,
-            printPrice,
-            frameInfo: orderItem.frameInfo || {},
-            paperInfo:  orderItem.paperInfo || {},
-            originalPrice: price,
-            royaltyAmount,
-            printcutAmount: printcutAmount.toFixed(2),
-          });
-        } else {
-          orderDetails.push({
-            order: order._id,
-            image: image._id,
-            resolution,
-            printPrice,
-            frameInfo: orderItem.frameInfo || {},
-            paperInfo: orderItem.paperInfo || {},
-            originalPrice: price,
-            royaltyAmount,
-            printcutAmount: printcutAmount?.toFixed(2),
-          });
-        }
-
-      } 
-    }
-
-    totalAmountPayable += totalReferralAmount;
-  
-    const invoice = new Invoice({
-      invoiceId,
-      startDate,
-      endDate,
-      photographer: photographerId,
-      orderDetails,
-      totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
-      totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
-      totalReferralAmount: totalReferralAmount,
-      totalAmountPayable: totalAmountPayable.toFixed(1),
-      paymentStatus: 'pending',
-      pendingPrintDetails,
-      prevPendingPrintCutAmount
-    });
-
-    await invoice.save();
-    await incrementCounter(financialYear);
-
-    res.status(201).json({
-      message: 'Invoice generated successfully.',
-      invoice,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
-  }
-};
-
 // const generateInvoice = async (req, res) => {
 //   try {
 //     const { photographerId, startDate, endDate } = req.body;
@@ -284,11 +59,15 @@ const generateInvoice = async (req, res) => {
 //       return res.status(400).send({ message: 'invoice already existed for this range' })
 //     }
 
+//     const startGenDate = new Date(startDate); 
+//     const endGenDate = new Date(endDate);
+//     endGenDate.setHours(23, 59, 59, 999); 
+
 //     const orders = await Order.find({
 //       'orderItems.imageInfo.photographer': photographerId,
 //       orderStatus: 'completed',
-//       printStatus: { $in: ['no-print', 'delivered']},
-//       createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+//       // printStatus: { $in: ['no-print', 'delivered']},
+//       createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
 //     })
 //       .populate('orderItems.imageInfo.image')
 //       .populate('orderItems.paperInfo.paper')
@@ -363,6 +142,7 @@ const generateInvoice = async (req, res) => {
 //     let totalRoyaltyAmount = 0;
 //     let totalPrintcutAmount = 0;
 //     let totalAmountPayable = 0;
+//     let prevPendingPrintCutAmount = 0
 //     const orderDetails = [];
 //     const pendingPrintDetails = []
 
@@ -371,12 +151,20 @@ const generateInvoice = async (req, res) => {
 //       for (const orderItem of order.orderItems) {
 //         const { image, resolution, price } = orderItem.imageInfo;
 //         const printPrice = orderItem.subTotal
-//         let paperInfo
-//         let frameInfo
-//         if(orderItem.subTotal) {
-//          paperInfo = orderItem.paperInfo
-//          frameInfo = orderItem.frameInfo
+//         // let paperInfo 
+//         // let frameInfo
+//         // if(orderItem.subTotal) {
+//         //  paperInfo = orderItem.paperInfo || { }
+//         //  frameInfo = orderItem.frameInfo || { }
+//         // }
+
+//         let paperInfo = {};
+//         let frameInfo = orderItem.frameInfo || null; 
+      
+//         if (orderItem.subTotal) {
+//           paperInfo = orderItem.paperInfo || {}; 
 //         }
+
 //         if (!image || !resolution || typeof price !== 'number') {
 //           throw new Error('Image, resolution, or price missing in order item.');
 //         }
@@ -385,23 +173,27 @@ const generateInvoice = async (req, res) => {
 //         totalAmountPayable += royaltyAmount;
 
 //         let printcutAmount = 0
+
+       
+//         printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+       
 //         if(orderItem.subTotal && order.printStatus === 'delivered') {
-//           printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
 //           totalPrintcutAmount += printcutAmount;
 //           totalAmountPayable += printcutAmount;
 //         }
 
-//         orderDetails.push({
-//           order: order._id,
-//           image: image._id,
-//           resolution,
-//           printPrice,
-//           frameInfo,
-//           paperInfo,
-//           originalPrice: price,
-//           royaltyAmount,
-//           printcutAmount: printcutAmount?.toFixed(2),
-//         });
+//         const previousInvoice = await Invoice.findOne({
+//           photographer: photographerId,
+//           endDate: { $lt: new Date(startDate) },
+//         }).sort({ endDate: -1 });
+        
+//         if (previousInvoice && previousInvoice.pendingPrintDetails) {
+//           for (const pending of previousInvoice.pendingPrintDetails) {
+//             prevPendingPrintCutAmount += parseFloat(pending.printcutAmount) || 0;
+//           }
+//         }
+
+//         console.log(order.printStatus)
 
 //         if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
          
@@ -410,15 +202,27 @@ const generateInvoice = async (req, res) => {
 //             image: image._id,
 //             resolution,
 //             printPrice,
-//             frameInfo,
-//             paperInfo,
+//             frameInfo: orderItem.frameInfo || {},
+//             paperInfo:  orderItem.paperInfo || {},
 //             originalPrice: price,
 //             royaltyAmount,
 //             printcutAmount: printcutAmount.toFixed(2),
 //           });
+//         } else {
+//           orderDetails.push({
+//             order: order._id,
+//             image: image._id,
+//             resolution,
+//             printPrice,
+//             frameInfo: orderItem.frameInfo || {},
+//             paperInfo: orderItem.paperInfo || {},
+//             originalPrice: price,
+//             royaltyAmount,
+//             printcutAmount: printcutAmount?.toFixed(2),
+//           });
 //         }
 
-//       }
+//       } 
 //     }
 
 //     totalAmountPayable += totalReferralAmount;
@@ -434,7 +238,8 @@ const generateInvoice = async (req, res) => {
 //       totalReferralAmount: totalReferralAmount,
 //       totalAmountPayable: totalAmountPayable.toFixed(1),
 //       paymentStatus: 'pending',
-//       pendingPrintDetails
+//       pendingPrintDetails,
+//       prevPendingPrintCutAmount
 //     });
 
 //     await invoice.save();
@@ -448,6 +253,200 @@ const generateInvoice = async (req, res) => {
 //     res.status(500).json({ message: 'Internal Server Error', error: error.message });
 //   }
 // };
+
+const generateInvoice = async (req, res) => {
+  try {
+    const { photographerId, startDate, endDate } = req.body;
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const financialYear = currentMonth < 3
+      ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+      : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
+    
+
+    const nextCounter = await getCounter(financialYear);
+    const invoiceNumber = nextCounter.toString().padStart(4, '0');
+    const invoiceId = `CAP/${financialYear}/${invoiceNumber}`;
+   
+    const existingInvoice = await Invoice.findOne({
+      photographer: photographerId,
+      $or: [
+        {
+          startDate: { $lte: new Date(endDate) },
+          endDate: { $gte: new Date(startDate) },
+        },
+      ],
+    });
+
+    if(existingInvoice) {
+      return res.status(400).send({ message: 'invoice already existed for this range' })
+    }
+
+    const orders = await Order.find({
+      'orderItems.imageInfo.photographer': photographerId,
+      orderStatus: 'completed',
+      createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+    })
+      .populate('orderItems.imageInfo.image')
+      .populate('orderItems.paperInfo.paper')
+      .populate('orderItems.frameInfo.frame');
+
+   
+    const referralBalance = await ReferralBalance.aggregate([
+      {
+        $match: {
+          photographer: new mongoose.Types.ObjectId(photographerId),
+          createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          price: { $sum: '$amount' },
+        },
+      },
+    ]);
+    
+    const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
+    if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
+      const invoice = new Invoice({
+        photographer: photographerId,
+        totalAmountPayable: totalReferralAmount,
+        totalReferralAmount,
+        paymentStatus: 'pending',
+      });
+      return res.status(400).send({ invoice });
+    }
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({
+        message: 'No completed orders found for the photographer within the given period.',
+      });
+    }
+
+   const monetization = await Monetization.findOne({ photographer: photographerId  });
+  
+   let gstRecord 
+    if(monetization) {
+      gstRecord =  monetization.businessAccount?.gstNumber 
+    } else {
+      gstRecord = null
+    } 
+
+    const subscription = await Subscription.findOne({
+      'userInfo.user': photographerId,
+      'userInfo.userType': 'Photographer',
+      isActive: true,
+    }).populate('planId');
+    
+    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
+    
+
+    let royaltyShare;
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
+   
+
+    if (!subscription || subscription?.planId?.name === 'Basic') {
+      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
+    } else if (subscription?.planId?.name === 'Intermediate') {
+      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
+    } else if (subscription?.planId?.name === 'Premium') {
+      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
+    } else {
+      royaltyShare = 50;
+    }
+
+    let totalRoyaltyAmount = 0;
+    let totalPrintcutAmount = 0;
+    let totalAmountPayable = 0;
+    const orderDetails = [];
+    const pendingPrintDetails = []
+
+    for (const order of orders) {
+    
+      for (const orderItem of order.orderItems) {
+        const { image, resolution, price } = orderItem.imageInfo;
+        const printPrice = orderItem.subTotal
+        let paperInfo
+        let frameInfo
+        if(orderItem.subTotal) {
+         paperInfo = orderItem.paperInfo
+         frameInfo = orderItem.frameInfo
+        }
+        if (!image || !resolution || typeof price !== 'number') {
+          throw new Error('Image, resolution, or price missing in order item.');
+        }
+        const royaltyAmount = (price * royaltyShare) / 100;
+        totalRoyaltyAmount += royaltyAmount;
+        totalAmountPayable += royaltyAmount;
+
+        let printcutAmount = 0
+        if(orderItem.subTotal && order.printStatus === 'delivered') {
+          printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+          totalPrintcutAmount += printcutAmount;
+          totalAmountPayable += printcutAmount;
+        }
+
+        orderDetails.push({
+          order: order._id,
+          image: image._id,
+          resolution,
+          printPrice,
+          frameInfo,
+          paperInfo,
+          originalPrice: price,
+          royaltyAmount,
+          printcutAmount: printcutAmount?.toFixed(2),
+        });
+
+        if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
+         
+          pendingPrintDetails.push({
+            order: order._id,
+            image: image._id,
+            resolution,
+            printPrice,
+            frameInfo,
+            paperInfo,
+            originalPrice: price,
+            royaltyAmount,
+            printcutAmount: printcutAmount.toFixed(2),
+          });
+        }
+
+      }
+    }
+
+    totalAmountPayable += totalReferralAmount;
+  
+    const invoice = new Invoice({
+      invoiceId,
+      startDate,
+      endDate,
+      photographer: photographerId,
+      orderDetails,
+      totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
+      totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
+      totalReferralAmount: totalReferralAmount,
+      totalAmountPayable: totalAmountPayable.toFixed(1),
+      paymentStatus: 'pending',
+      pendingPrintDetails
+    });
+
+    await invoice.save();
+    await incrementCounter(financialYear);
+
+    res.status(201).json({
+      message: 'Invoice generated successfully.',
+      invoice,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
+};
 
 
 const generateSingleOrderInvoice = async (req, res) => {
