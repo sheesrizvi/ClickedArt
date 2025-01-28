@@ -172,6 +172,7 @@ const generateInvoice = async (req, res) => {
 
        
         printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+       
         if(orderItem.subTotal && order.printStatus === 'delivered') {
           totalPrintcutAmount += printcutAmount;
           totalAmountPayable += printcutAmount;
@@ -563,9 +564,9 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
 
   const invoices = await Invoice.find({ photographer })
-    .populate('photographer')
-    .populate('orderDetails.order')
-    .populate('orderDetails.image')
+    // .populate('photographer')
+    // .populate('orderDetails.order')
+    // .populate('orderDetails.image')
     // .populate({
     //   path: 'orderDetails.order',
     //   populate: [
