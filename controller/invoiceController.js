@@ -316,6 +316,16 @@ const generateInvoice = async (req, res) => {
     
     const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
 
+    if ((!orders || orders.length === 0) && totalReferralAmount < 0) {
+      const invoice = new Invoice({
+        photographer: photographerId,
+        totalAmountPayable: totalReferralAmount,
+        totalReferralAmount,
+        paymentStatus: 'pending',
+      });
+      return res.status(400).send({ invoice });
+    } 
+
     if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
       const invoice = new Invoice({
         photographer: photographerId,
@@ -324,13 +334,7 @@ const generateInvoice = async (req, res) => {
         paymentStatus: 'pending',
       });
       return res.status(400).send({ invoice });
-    }
-
-    if (!orders || orders.length === 0) {
-      return res.status(404).json({
-        message: 'No completed orders found for the photographer within the given period.',
-      });
-    }
+    } 
 
    const monetization = await Monetization.findOne({ photographer: photographerId  });
   
