@@ -431,7 +431,7 @@ const generateInvoice = async (req, res) => {
 
     const photographerDetails = await Photographer.findOne({ _id: photographerId })
     const photographerName = `${photographerDetails.firstName} ${photographerDetails.lastName}`
-    const email = 'harshify7@gmail.com'
+    const email = photographerDetails.email
     const s3Links = link || []
     
     await sendPaymentInvoiceMail(photographerName, email, s3Links)
