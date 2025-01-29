@@ -6,6 +6,7 @@ const mongoose = require('mongoose')
 const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const Invoice = require('../models/invoiceModel.js')
 const Subscription = require('../models/subscriptionModel.js')
+const ReferralBalance = require('../models/referralBalanceModel.js')
 
 const photographerDashboardData = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
@@ -201,6 +202,23 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
     ]);
 
  
+  const referralBalance = await ReferralBalance.aggregate([
+        {
+          $match: {
+            photographer: new mongoose.Types.ObjectId(photographer),
+            createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            price: { $sum: '$amount' },
+          },
+        },
+      ]);
+      
+  const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
   res.status(200).send({
       totalUploadingImgCount,
       pendingImagesCount,
@@ -215,7 +233,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       payoutHistory,
       totalPrintDownloads,
       totalDigitalDownloads,
-      activeBuyers: activeBuyers[0]?.activeBuyers || 0
+      activeBuyers: activeBuyers[0]?.activeBuyers || 0,
+      totalReferralAmount
   });
 
 });
