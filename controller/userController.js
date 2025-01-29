@@ -359,15 +359,15 @@ const getUserAnalytics = asyncHandler(async (req, res) => {
     const digitalOrderCount = await Order.countDocuments({ 'userInfo.user': user, orderStatus: 'completed', printStatus: { $in: ['no-print'] } })
 
     const printOrderCount = await Order.countDocuments({
-        'userInfo.user': user, printStatus: { $in: ['processing', 'printing', 'packed', 'shipped', 'delivered'] }
+        'userInfo.user': user, orderStatus: 'completed', printStatus: { $in: ['processing', 'printing', 'packed', 'shipped', 'delivered'] }
     })
 
     const deliveredPrintCount = await Order.countDocuments({
-        'userInfo.user': user, printStatus: { $in: ['delivered'] }
+        'userInfo.user': user, orderStatus: 'completed', printStatus: { $in: ['delivered'] }
     })
 
     const pendingPrintCount = await Order.countDocuments({
-        'userInfo.user': user, printStatus: { $in: ['processing', 'printing', 'packed', 'shipped'] }
+        'userInfo.user': user, orderStatus: 'completed', printStatus: { $in: ['processing', 'printing', 'packed', 'shipped'] }
     })
 
     

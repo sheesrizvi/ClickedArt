@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const Subscription = require('../models/subscriptionModel.js');
 const Monetization = require('../models/monetizationModel.js')
 const Counter = require('../models/counterModel.js')
+const { sendPaymentInvoiceMail } = require('../middleware/handleEmail.js')
 
 const getCounter = async (financialYear) => {
   const counterDoc = await Counter.findOne({ financialYear }).sort({ createdAt: -1 });
@@ -256,7 +257,7 @@ const incrementCounter = async (financialYear) => {
 
 const generateInvoice = async (req, res) => {
   try {
-    const { photographerId, startDate, endDate } = req.body;
+    const { photographerId, startDate, endDate, link } = req.body;
 
     const today = new Date();
     const currentYear = today.getFullYear();
@@ -405,20 +406,6 @@ const generateInvoice = async (req, res) => {
           printcutAmount: printcutAmount?.toFixed(2),
         });
 
-        if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
-         
-          pendingPrintDetails.push({
-            order: order._id,
-            image: image._id,
-            resolution,
-            printPrice,
-            frameInfo,
-            paperInfo,
-            originalPrice: price,
-            royaltyAmount,
-            printcutAmount: printcutAmount.toFixed(2),
-          });
-        }
 
       }
     }
@@ -441,6 +428,13 @@ const generateInvoice = async (req, res) => {
 
     await invoice.save();
     await incrementCounter(financialYear);
+
+    const photographerDetails = await Photographer.findOne({ _id: photographerId })
+    const photographerName = `${photographerDetails.firstName} ${photographerDetails.lastName}`
+    const email = 'harshify7@gmail.com'
+    const s3Links = link || []
+    
+    await sendPaymentInvoiceMail(photographerName, email, s3Links)
 
     res.status(201).json({
       message: 'Invoice generated successfully.',
@@ -555,6 +549,7 @@ const generateSingleOrderInvoice = async (req, res) => {
     });
 
     await invoice.save();
+
 
     res.status(201).json({
       message: 'Invoice generated successfully.',

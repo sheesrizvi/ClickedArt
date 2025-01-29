@@ -142,7 +142,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const totalFrame = await Frame.countDocuments({})
   const totalPapers = await Paper.countDocuments({})
   const totalOrders = await Order.countDocuments({})
-  const pendingOrders = await Order.countDocuments({ printStatus: { $in: ['processing', 'printing', 'packed', 'shipped',  ] } })
+  const pendingOrders = await Order.countDocuments({ printStatus: { $in: ['processing', 'printing', 'packed', 'shipped' ] } })
   const pendingMonetizations = await Monetization.countDocuments({ status: 'pending' })
 
   res.status(200).send({
