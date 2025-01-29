@@ -333,7 +333,7 @@ const generateInvoice = async (req, res) => {
         totalReferralAmount,
         paymentStatus: 'pending',
       });
-      return res.status(400).send({ invoice });
+      return res.status(200).send({ invoice });
     } 
 
    const monetization = await Monetization.findOne({ photographer: photographerId  });
