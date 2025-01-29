@@ -69,7 +69,7 @@ const createSubscription = asyncHandler(async (req, res) => {
       const Model = type === "User" ? User : Photographer;
       const user = await Model.findOne({ _id: userId });
     
-      if (user && user.referralcode && !orderExist) {
+      if (user && user.referralcode && !subsExist) {
         const referral = await Referral.findOne({ code: user.referralcode });
         if (referral && referral.applicableTo === 'photographer') {
           const commissionRate = referral.commissionRate;

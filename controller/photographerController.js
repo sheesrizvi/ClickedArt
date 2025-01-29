@@ -83,6 +83,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
     await sendVerificationEmail(otp, email)
 
     photographer.otp = otp.toString()
+    console.log(otp)
     await photographer.save()
 
    
