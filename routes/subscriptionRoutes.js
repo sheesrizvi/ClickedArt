@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createSubscription, getUserSubscriptions, cancelSubscriptions, payment, getUserActiveSubscription,          upgradeSubscriptionByAdminWithRank,
     upgradeSubscriptionByAdmin,
-    upgradeUserSubscription } = require('../controller/subscriptionController');
+    upgradeUserSubscription, addFreeSubscriptions } = require('../controller/subscriptionController');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { isAdmin } = require('../middleware/authMiddleware')
 
@@ -16,5 +16,5 @@ router.get('/get-user-active-subscription', getUserActiveSubscription)
 router.post('/upgrade-photographer-subs-by-admin-with-rank', isAdmin, upgradeSubscriptionByAdminWithRank)
 router.post('/upgrade-photographer-subs-by-admin', isAdmin, upgradeSubscriptionByAdmin)
 router.post('/upgrade-user-subscription', verifyToken, upgradeUserSubscription)
-router.post('/update-to-free-subscriptions', )
+router.post('/update-to-free-subscriptions', addFreeSubscriptions)
 module.exports = router;
