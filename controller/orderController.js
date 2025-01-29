@@ -176,9 +176,9 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (user && user.referralcode && !orderExist) {
     const referral = await Referral.findOne({ code: user.referralcode });
-    if (referral) {
+    if (referral && referral.applicableTo === 'user') {
       const commissionRate = referral.commissionRate;
-      const price = orders[0].totalAmount;
+      const price = (orders[0].finalAmount * 100)/(100+18)
       const balance = Math.round(price * (commissionRate / 100));
 
       await ReferralBalance.create({

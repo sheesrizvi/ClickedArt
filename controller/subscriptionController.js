@@ -7,6 +7,7 @@ const UserType = require('../models/typeModel')
 const cron = require('node-cron');
 const Razorpay = require('razorpay');
 const { sendMembershipUpgradeMail,  sendMembershipRenewalReminderMail} = require('../middleware/handleEmail.js')
+const Referral = require('../models/referralModel.js')
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price, duration } = req.body
@@ -23,6 +24,8 @@ const createSubscription = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: 'Plan not found' });
     }
 
+    const subsExist = await Subscription.findOne({ 'userInfo.user': userId,  price : { $gt: 0 } })
+  
     const selectedCost = plan.cost.find(cost => cost.duration === duration && cost.price === price);
 
     if (!selectedCost) {
@@ -61,6 +64,26 @@ const createSubscription = asyncHandler(async (req, res) => {
         price
       });
     await newSubscription.save()
+
+    if(!subsExist) {
+      const Model = type === "User" ? User : Photographer;
+      const user = await Model.findOne({ _id: userId });
+    
+      if (user && user.referralcode && !orderExist) {
+        const referral = await Referral.findOne({ code: user.referralcode });
+        if (referral && referral.applicableTo === 'photographer') {
+          const commissionRate = referral.commissionRate;
+          const basePrice = (price * 100)/(100+18)
+          const balance = Math.round(basePrice * (commissionRate / 100));
+    
+          await ReferralBalance.create({
+            photographer: referral.photographer,
+            amount: balance,
+          });
+        }
+      }
+    
+    }
 
     await Subscription.updateMany({
       _id: { $ne: newSubscription._id },
