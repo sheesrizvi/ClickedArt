@@ -8,6 +8,7 @@ const cron = require('node-cron');
 const Razorpay = require('razorpay');
 const { sendMembershipUpgradeMail,  sendMembershipRenewalReminderMail} = require('../middleware/handleEmail.js')
 const Referral = require('../models/referralModel.js')
+const ReferralBalance = require('../models/referralBalanceModel.js')
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price, duration } = req.body
