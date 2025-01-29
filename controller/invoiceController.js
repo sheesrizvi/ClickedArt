@@ -326,15 +326,15 @@ const generateInvoice = async (req, res) => {
       return res.status(400).send({ invoice });
     } 
 
-    if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
-      const invoice = new Invoice({
-        photographer: photographerId,
-        totalAmountPayable: totalReferralAmount,
-        totalReferralAmount,
-        paymentStatus: 'pending',
-      });
-      return res.status(200).send({ invoice });
-    } 
+    // if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
+    //   const invoice = new Invoice({
+    //     photographer: photographerId,
+    //     totalAmountPayable: totalReferralAmount,
+    //     totalReferralAmount,
+    //     paymentStatus: 'pending',
+    //   });
+    //   return res.status(200).send({ invoice });
+    // } 
 
    const monetization = await Monetization.findOne({ photographer: photographerId  });
   
