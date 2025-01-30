@@ -205,8 +205,7 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   const referralBalance = await ReferralBalance.aggregate([
         {
           $match: {
-            photographer: new mongoose.Types.ObjectId(photographer),
-            createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+            photographer: new mongoose.Types.ObjectId(photographer)
           },
         },
         {
