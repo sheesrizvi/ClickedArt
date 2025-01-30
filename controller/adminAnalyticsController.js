@@ -106,16 +106,16 @@ const getRevenueOverview = asyncHandler(async (req, res) => {
     let advancedPlanRevenue = 0
 
     const subscriptions = await Subscription.find({ }).populate('planId')
-
+    const GST_RATE = 18;
     for(let subs of subscriptions) {
         if(subs.planId.name === 'Basic') {
-          const baseAmount = (subs?.price * 100)/118
+          const baseAmount = (subs?.price * 100) / (100 + GST_RATE)
           basicPlanRevenue += baseAmount
         } else if(subs.planId.name === 'Intermediate') {
-          const baseAmount = (subs?.price * 100)/118
+          const baseAmount = (subs?.price * 100) / (100 + GST_RATE)
           intermediatePlanRevenue += baseAmount
         } else if (subs.planId.name === 'Premium') {
-          const baseAmount = (subs?.price * 100)/118
+          const baseAmount = (subs?.price * 100) / (100 + GST_RATE)
           advancedPlanRevenue += baseAmount
         }
     }
