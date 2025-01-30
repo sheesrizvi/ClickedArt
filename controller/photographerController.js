@@ -565,7 +565,7 @@ const deletePhotographer = asyncHandler(async (req, res) => {
 })
 
 const getPendingImagesByPhotographer = asyncHandler(async (req, res) => {
-    const { photographer } = req.query
+    const { photographer, pageNumber = 1, pageSize = 20 } = req.query
 
     const [pendingImages, totalDocuments] = await Promise.all([
        ImageVault.find({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] }, isActive: false }).populate('photographer category license'),
