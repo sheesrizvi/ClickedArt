@@ -44,6 +44,7 @@ const { checkAndUpdateRejectedPhotographers } = require('./controller/photograph
 
 
 const app = express();
+
 app.use(
   cors({
     origin: "*",
