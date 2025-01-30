@@ -131,9 +131,11 @@ const masterDataController = asyncHandler(async (req, res) => {
 })
 
 const documentCountsForAdmin = asyncHandler(async (req, res) => {
-  const totalUsers = await User.countDocuments({})
-  const totalPhotos = await ImageVault.countDocuments({})
-  const totalPhotographers = await Photographer.countDocuments({})
+
+  const totalUsers = await User.countDocuments({ isActive: true })
+  const totalPhotos = await ImageVault.countDocuments({ isActive: true })
+  const totalPhotographers = await Photographer.countDocuments({ active: true })
+
   const pendingPhotosIn = await ImageVault.find({
     exclusiveLicenseStatus: { $in: [ 'pending' ] }, isActive: false 
   })
@@ -145,7 +147,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
 
   const totalCategories = await Category.countDocuments({})
   const pendingPhotographers = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
-  const totalblogs = await Blog.countDocuments({})
+  const totalblogs = await Blog.countDocuments({ isActive: true })
   const totalStories = await Story.countDocuments({})
   const totalFrame = await Frame.countDocuments({})
   const totalPapers = await Paper.countDocuments({})

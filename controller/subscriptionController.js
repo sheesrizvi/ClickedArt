@@ -219,15 +219,8 @@ const upgradeSubscriptionByAdminWithRank = asyncHandler(async (req, res) => {
   if(!photographer){
       return res.status(400).send({ message: 'Photographer not found' })
     }
-  
-  const selectedCost = plan.cost.find(cost => cost.duration === duration);
 
-  if (!selectedCost || !selectedCost.price) {
-    return res.status(400).json({ message: 'Invalid price or duration selected' });
-  }
-
-  const price = (selectedCost.price) * durationNumber
-
+  const price = 0
   const startDate = new Date()
   const endDate = new Date()
 
@@ -322,13 +315,7 @@ const upgradeSubscriptionByAdmin = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Photographer not found' })
   }
   
-  const selectedCost = plan.cost.find(cost => cost.duration === duration);
-
-  if (!selectedCost || !selectedCost.price) {
-    return res.status(400).json({ message: 'Invalid price or duration selected' });
-  }
- 
-  const price = (selectedCost.price) * durationNumber
+  const price = 0
   
   const startDate = new Date()
   const endDate = new Date()
