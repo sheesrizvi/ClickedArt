@@ -78,7 +78,7 @@ const deleteCustomRequest = asyncHandler(async (req, res) => {
 });
 
 const changeCustomRequestFormStatus = asyncHandler(async (req, res) => {
-    const { status, requestId } = req.query
+    const { status, requestId } = req.body;
 
     const validStatusTypes = ['pending', 'review', 'approved', 'rejected']
 
