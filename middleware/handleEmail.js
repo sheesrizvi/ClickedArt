@@ -354,7 +354,7 @@ WHAT HAPPENS NEXT?
   • Digital Sales: Earn up to [50%/70%/90%] on digital downloads, depending on your membership 
   tier. 
   • Print Sales: Receive a flat 10% royalty on every printed copy sold. 
-  • You can monitor your sales, earnings, and buyer interactions on your [Dashboard Link]. 
+  • You can monitor your sales, earnings, and buyer interactions on your https://www.clickedart.com/dashboard. 
 
 BOOST YOUR VISIBILITY 
 

@@ -14,6 +14,7 @@ const axios = require('axios')
 const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const CustomWatermark = require('../models/imagebase/customWatermarkModel.js')
 const { S3 } = require("@aws-sdk/client-s3");
+const sizeOf = require('image-size');
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -1948,6 +1949,28 @@ const convertToTargetSizeAndResolution = async (buffer, targetResolution, format
 //   }
 // );
 
+
+
+router.post('/share-size-of-original-image', upload1.single('image'), async (req, res) => {
+  const imageUrl = req.body.imageUrl;
+  const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+  const imageBuffer = Buffer.from(response.data);
+  //
+  const metadata1 = await sharp(imageBuffer).metadata();
+  const dimensions = sizeOf(imageBuffer);
+  const width1 = metadata1.width;
+  const height1 = metadata1.height;
+  const width2 = dimensions.width
+  const height2 = dimensions.height
+
+  //
+  res.status(200).send({
+    width1,
+    height1,
+    dimensions
+  })
+
+})
 
 router.post(
   "/handle-photos-with-watermark-and-resolutions-options",

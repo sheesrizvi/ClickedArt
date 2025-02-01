@@ -28,6 +28,7 @@
     "generate-password": "^1.7.1",
     "gm": "^1.25.0",
     "html-pdf": "^3.0.1",
+    "image-size": "^1.2.0",
     "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "latest": "^0.2.0",
@@ -38,6 +39,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.15",
     "razorpay": "^2.9.5",
+    "react-image-size": "^2.4.0",
     "sharp": "^0.33.5",
     "unique-username-generator": "^1.3.0",
     "validator": "^13.12.0"

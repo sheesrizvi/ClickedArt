@@ -401,7 +401,6 @@ const upgradeUserSubscription = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Photographer not found' })
   }
 
-
   const selectedCost = plan.cost.find(cost => cost.duration === duration && cost.price === price);
  
   if (!selectedCost) {

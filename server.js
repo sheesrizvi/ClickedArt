@@ -36,7 +36,6 @@ const referralRoutes = require('./routes/referralRoutes.js')
 const monetizationRoutes = require('./routes/monetizationRoutes.js')
 const layoutContentRoutes = require('./routes/layoutContentRoutes.js')
 const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes.js')
-
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
 const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails } = require('./controller/subscriptionController.js')
@@ -90,7 +89,6 @@ app.use('/api/adminanalytics', adminAnalyticsRoutes)
 
 dbConnect()
 
-
 cron.schedule('0 0 * * *', () => {
   console.log('Running the subscription expiry check .');
   checkAndUpdateSubscriptions().catch(err => console.error('Error in subscription check:', err));
@@ -116,9 +114,6 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 5000;
 
-
-
 app.listen(PORT, () => {
     console.log(`Successfully served on port: ${PORT}.`);
-});
-  
+})  
