@@ -43,27 +43,13 @@ const verifyTransporter = asyncHandler(async (req, res, next) => {
 });
 
 
-
 const sendResetEmail = asyncHandler(async(email) => {
-  const password = Math.floor(100000 + Math.random() * 900000);
+  const otp = Math.floor(100000 + Math.random() * 900000);
   
     const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
       subject: `Your OTP - PASSWORD`, 
-      text: `Your OTP/Temporary Password for Login is ${password}`, 
-      html: `<h4>OTP/Password is ${password}</h4>`, 
-    });
-    
-    return password
-    
-  })
-
-
-const sendVerificationEmail = asyncHandler(async (otp, email) => {
-    const info = await transporter.sendMail({
-      from: `Clicked Art ${process.env.USER_EMAIL}`,
-      to: email,
       subject: `Your One-Time Password (OTP) for Login`,
       text: `
   Hello,
@@ -89,8 +75,45 @@ const sendVerificationEmail = asyncHandler(async (otp, email) => {
   P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
     });
+    
+    return otp
+    
+  })
+
+
+const sendVerificationEmail = asyncHandler(async (otp, email) => {
+    const info = await transporter.sendMail({
+        from: `Clicked Art ${process.env.USER_EMAIL}`,
+        to: email,
+        subject: `Verify Your Email Address - Clicked Art`, 
+        text: `
+Hello,
+
+Thank you for signing up with Clicked Art! To complete the verification of your email address, please use the One-Time Password (OTP) provided below.
+
+Your OTP/Verification Code is: ${otp}
+
+Please note:
+  • This OTP is valid only for one-time use.
+  • Keep it confidential and do not share it with anyone.
+  • Once verified, you’ll gain full access to your account.
+
+If you didn’t sign up for Clicked Art, please disregard this email or contact us immediately.
+
+We’re here to assist if you have any questions or need help.
+
+Warm Regards,  
+Team ClickedArt.com  
+www.clickedart.com  
+support@clickedart.com  
+Empowering Photographers Everywhere  
+
+P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
+        `,
+    });
     return true;
-  });
+});
+
   
 
 const sendApprovedMail = asyncHandler(async (photographerName, email) => {

@@ -346,7 +346,6 @@ const approveImage = asyncHandler(async (req, res) => {
       } else if (status === 'approved') {
         const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
         const isMonetized = image.photographer.isMonetized
-
         const email = image.photographer.email
         const imageTitle = image.title
         image.rejectionReason = null; 
