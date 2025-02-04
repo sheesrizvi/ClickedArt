@@ -91,7 +91,7 @@ const masterDataController = asyncHandler(async (req, res) => {
             const photographerGST = monetization?.businessAccount?.gstNumber || " "
             
             const invoice = await Invoice.findOne({
-              paymentStatus: 'paid',
+               paymentStatus: 'paid',
               'orderDetails.order': order._id, 
             });
 

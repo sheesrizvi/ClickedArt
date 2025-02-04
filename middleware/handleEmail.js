@@ -820,6 +820,47 @@ Instagram: https://www.instagram.com/clickedartofficial/
   return true;
 });
 
+const sendStoryPublishedMail = asyncHandler(async (photographerName, email, storyTitle) => {
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Your Story Has Been Published on ClickedArt.com!",
+    text: `
+  Dear ${photographerName},
+
+  Great news!
+
+  Your story, titled "${storyTitle}", has been successfully published on ClickedArt.com. We are delighted to feature your work and share your creativity with the world. Your story is now live and accessible to our global audience of art lovers and photography enthusiasts.
+
+  Here’s what you can do next:
+
+  1. Share Your Story:
+     - Spread the word! Share your published story with your friends, family, and followers on social media.
+     - Use the link to your story and inspire others with your journey and creativity.
+
+  2. Engage with the Community:
+     - Stay active and respond to comments or feedback on your story.
+     - Interact with other photographers and art enthusiasts on ClickedArt.com.
+
+  3. Keep Creating:
+     - Don’t stop at one story. Continue submitting new work to grow your presence on ClickedArt.com.
+     - Inspire, educate, and showcase your unique perspective to our vibrant community.
+
+  Thank you for sharing your story with us and allowing us to highlight your talent. If you have any questions, need assistance, or wish to submit more stories, don’t hesitate to reach out to us at support@clickedart.com.
+
+  Congratulations once again, and we can’t wait to see what you’ll create next!
+
+  Warm Regards,  
+  Team ClickedArt.com  
+  www.clickedart.com  
+  support@clickedart.com  
+  Empowering Photographers Everywhere  
+
+  P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured stories, and more inspiring work from our talented photographers!
+    `,
+  });
+  return true;
+});
 
   module.exports = {
     sendResetEmail,
@@ -838,5 +879,6 @@ Instagram: https://www.instagram.com/clickedartofficial/
     sendMembershipUpgradeMail,
     sendOrderThankYouMail,
     sendMembershipRenewalReminderMail,
-    sendPaymentInvoiceMail
+    sendPaymentInvoiceMail,
+    sendStoryPublishedMail
   }
