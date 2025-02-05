@@ -108,6 +108,7 @@ const verifySalesUserProfile = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Photographer email verified successfully. We will let u know once admin will approve you as a Photographer', user: user })
   })
 
+  
 module.exports = {
     registerSalesUser,
     updateSalesUser,

@@ -26,6 +26,10 @@ const ReferralSchema = new mongoose.Schema({
         pan: {
             type: String,
             required: false
+        },
+        bankAccount: {
+            type: String,
+            required: false
         }
     },
     commissionRate: {

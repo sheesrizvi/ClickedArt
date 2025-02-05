@@ -14,6 +14,7 @@ const Paper = require('../models/imagebase/paperModel.js')
 const Story = require('../models/storyModel.js')
 const Plan = require('../models/planModel.js')
 const { sub } = require('date-fns')
+const { format } = require('date-fns');
 
 const masterDataController = asyncHandler(async (req, res) => {
 
@@ -23,9 +24,11 @@ const masterDataController = asyncHandler(async (req, res) => {
           return res.status(400).json({ message: "Start date and end date are required." });
         }
 
-        const start = new Date(startDate);
-        const end = new Date(endDate);
     
+        const start = new Date(startDate); 
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); 
+
         const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
     
         let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
@@ -98,7 +101,7 @@ const masterDataController = asyncHandler(async (req, res) => {
             const balance = invoice ? 0 : totalPaid
 
             result.push({
-              orderDate: order.createdAt,
+              orderDate: format(new Date(order.createdAt), 'do MMM, yyyy'),
               orderType: price > 0 ? "Digital" : printPrice > 0 ? "Print" : "Unknown",
               orderNumber: order._id,
               invoiceNumber: order.invoiceId,
@@ -116,9 +119,9 @@ const masterDataController = asyncHandler(async (req, res) => {
               photographerEmail,
               TotalRoyalty: royaltyAmount,
               AmountToBePaid: amountPaid,
-              TDSToBePaid: tds,
+              TDSToBePaid: parseFloat(tds.toFixed(2)),
               TotalToBePaid: totalPaid,
-              totalBalance: balance
+              pendingBalance: balance
             });
     
           }
