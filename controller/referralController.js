@@ -49,7 +49,7 @@ const getReferral = asyncHandler(async (req, res) => {
 
 const updateReferral = asyncHandler(async (req, res) => {
     
-    const {code, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, status, applicableTo } = req.body
+    const { code, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, status, applicableTo, salesuser } = req.body
 
     const referral = await Referral.findOne({ code })
     if (!referral) {
@@ -63,7 +63,8 @@ const updateReferral = asyncHandler(async (req, res) => {
     if (maxDiscountAmount) referral.maxDiscountAmount = maxDiscountAmount
     if (status) referral.status = status
     if (applicableTo) referral.applicableTo = applicableTo
-    
+    if (salesuser) referral.salesuser = salesuser
+
     const updatedReferral = await referral.save()
 
     res.status(200).send({updatedReferral});

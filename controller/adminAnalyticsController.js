@@ -440,7 +440,7 @@ const getReferralDetailsBySalesUser = asyncHandler(async (req, res) => {
     const { referralCode, startDate, endDate } = req.query
 
     const referralcode = await Referral.findOne({ code: referralCode }).populate('salesuser')
-    console.log(referralcode)
+   
     if(!referralcode) {
         return res.status(400).send({ message: 'No Referrals Found' })
     }
