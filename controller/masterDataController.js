@@ -119,7 +119,7 @@ const masterDataController = asyncHandler(async (req, res) => {
               photographerEmail,
               TotalRoyalty: royaltyAmount,
               AmountToBePaid: amountPaid,
-              TDSToBePaid: parseFloat(tds.toFixed(2)),
+              TDSToBePaid: parseFloat(tds?.toFixed(2)),
               TotalToBePaid: totalPaid,
               pendingBalance: balance
             });

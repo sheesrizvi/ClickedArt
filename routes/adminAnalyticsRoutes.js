@@ -23,6 +23,6 @@ router.get('/get-master-data', masterDataController)
 router.get('/get-features-count', documentCountsForAdmin)
 router.get('/get-subs-analytics', getSubsAnalytics)
 router.get('/get-referral-details-by-sales-user', getReferralDetailsBySalesUser)
-router.get('/get-complete-referral-details-by-date', getReferralDetailsByDate)
+
 
 module.exports = router
