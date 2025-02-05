@@ -11,8 +11,8 @@ const ReferralSchema = new mongoose.Schema({
         ref: 'Photographer'
     },
     salesuser: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'SalesUser'
+        type: mongoose.Schema.Types.String,
+        required: false
     },
     commissionRate: {
         type: Number,

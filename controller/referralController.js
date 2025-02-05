@@ -4,15 +4,17 @@ const Photographer = require('../models/photographerModel.js');
 const mongoose = require('mongoose')
 
 const createReferral = asyncHandler(async (req, res) => {
-    const { code, photographer, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, applicableTo } = req.body;
+    const { code, photographer, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, applicableTo, salesuser, isSalesUser } = req.body;
 
-    if (!photographer || !commissionRate || !discountPercentage || !applicableTo) {
+    
+    if (!commissionRate || !discountPercentage || !applicableTo) {
         return res.status(400).send({ message: 'Missing required fields' });
     }
-    const photographerData = await Photographer.findOne({ _id: photographer })
-    if(!photographerData) return res.status(400).send({ message: 'Photographer not exist' })
-
-
+    if(photographer) {
+        const photographerData = await Photographer.findOne({ _id: photographer })
+        if(!photographerData) return res.status(400).send({ message: 'Photographer not exist' })
+    }
+   
     const referralExists = await Referral.findOne({ code });
     if (referralExists) {
         return res.status(400).json({ message: 'Referral code already exists' });
@@ -26,7 +28,9 @@ const createReferral = asyncHandler(async (req, res) => {
         maxUses,
         expirationDate,
         maxDiscountAmount,
-        applicableTo
+        applicableTo,
+        salesuser, 
+        isSalesUser
     });
 
     res.status(201).send({ referral });
@@ -59,7 +63,7 @@ const updateReferral = asyncHandler(async (req, res) => {
     if (maxDiscountAmount) referral.maxDiscountAmount = maxDiscountAmount
     if (status) referral.status = status
     if (applicableTo) referral.applicableTo = applicableTo
-
+    
     const updatedReferral = await referral.save()
 
     res.status(200).send({updatedReferral});

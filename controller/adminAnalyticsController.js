@@ -437,10 +437,10 @@ const getSubsAnalytics = asyncHandler(async (req, res) => {
 })
 
 const getReferralDetailsBySalesUser = asyncHandler(async (req, res) => {
-    const { salesuser, startDate, endDate } = req.query
+    const { referralCode, startDate, endDate } = req.query
 
-    const referralcode = await Referral.findOne({ salesuser }).populate('salesuser')
-
+    const referralcode = await Referral.findOne({ code: referralCode }).populate('salesuser')
+    console.log(referralcode)
     if(!referralcode) {
         return res.status(400).send({ message: 'No Referrals Found' })
     }
@@ -449,8 +449,7 @@ const getReferralDetailsBySalesUser = asyncHandler(async (req, res) => {
     const endGenDate = new Date(endDate);
     endGenDate.setHours(23, 59, 59, 999); 
 
-
-    const photographers = await Photographer.find({ referralcode,  createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) } })
+    const photographers = await Photographer.find({ referralcode: referralcode.code , active: true,  createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) } })
 
     res.status(200).send({ photographers })
 

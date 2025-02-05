@@ -55,11 +55,13 @@ const registerPhotographer = asyncHandler(async (req, res) => {
 
     if(referralcode) {
             const now = Date.now()
+           
             const referral = await Referral.findOne({ code: referralcode, status: 'active', expirationDate: { $gt: now } }).populate('photographer')
             if(!referral) {
                 return res.status(400).send({ message: 'Referral Code is not valid' })
             }
     }
+
 
     const photographer = new Photographer({
         firstName, lastName,  email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,
