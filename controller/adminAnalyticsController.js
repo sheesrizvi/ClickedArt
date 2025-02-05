@@ -4,6 +4,7 @@ const Order = require('../models/orderModel.js')
 const User = require('../models/userModel.js')
 const Photographer = require('../models/photographerModel.js')
 const Subscription = require('../models/subscriptionModel.js')
+const Referral = require('../models/referralModel.js')
 
 const getRevenueOverview = asyncHandler(async (req, res) => {
     const { categoryType = 'Prints' } = req.query;
@@ -435,7 +436,41 @@ const getSubsAnalytics = asyncHandler(async (req, res) => {
      })
 })
 
+const getReferralDetailsBySalesUser = asyncHandler(async (req, res) => {
+    const { salesuser, startDate, endDate } = req.query
 
+    const referralcode = await Referral.findOne({ salesuser }).populate('salesuser')
+
+    if(!referralcode) {
+        return res.status(400).send({ message: 'No Referrals Found' })
+    }
+
+    const startGenDate = new Date(startDate); 
+    const endGenDate = new Date(endDate);
+    endGenDate.setHours(23, 59, 59, 999); 
+
+
+    const photographers = await Photographer.find({ referralcode,  createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) } })
+
+    res.status(200).send({ photographers })
+
+})
+
+const getReferralDetailsByDate = asyncHandler(async (req, res) => {
+    const { startDate, endDate } = req.query 
+
+    const referrals = await Referral.findOne({ isSalesUser: true }).populate('salesuser')
+
+    const referralCodes = referrals.map((referral) => referral.code)
+
+    const startGenDate = new Date(startDate); 
+    const endGenDate = new Date(endDate);
+    endGenDate.setHours(23, 59, 59, 999); 
+
+    const photographers = await Photographer.find({ referralcode: { $in: referralCodes },  createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) }})
+
+    res.status(200).send({ photographers })
+})
 
 module.exports = {
     getRevenueOverview,
@@ -443,5 +478,7 @@ module.exports = {
     getPhotographerEarnings,
     revenueByCategory,
     getSalesDataMetrics,
-    getSubsAnalytics
+    getSubsAnalytics,
+    getReferralDetailsBySalesUser,
+    getReferralDetailsByDate
 }

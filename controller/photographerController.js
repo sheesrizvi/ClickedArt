@@ -59,7 +59,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
             if(!referral) {
                 return res.status(400).send({ message: 'Referral Code is not valid' })
             }
-        }
+    }
 
     const photographer = new Photographer({
         firstName, lastName,  email, username, password, shippingAddress, bio, dob, age, profileImage, portfolioLink,

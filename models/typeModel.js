@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const typeSchema = mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true },
   username: { type: String },
-  type: { type: String, enum: ['Photographer', 'User'], required: true }
+  type: { type: String, enum: ['Photographer', 'User', 'SalesUser'], required: true }
 }, {
     timestamps: true
 })

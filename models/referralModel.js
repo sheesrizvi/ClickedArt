@@ -8,8 +8,11 @@ const ReferralSchema = new mongoose.Schema({
     },
     photographer: { 
         type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Photographer', 
-        required: true 
+        ref: 'Photographer'
+    },
+    salesuser: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SalesUser'
     },
     commissionRate: {
         type: Number,
@@ -54,7 +57,11 @@ const ReferralSchema = new mongoose.Schema({
     users: [{
         user: { type: mongoose.Schema.Types.ObjectId, refPath: 'users.userType' },
         userType: { type: String, enum: ['User', 'Photographer'] }
-    }]
+    }],
+    isSalesUser: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true })
 
 module.exports = mongoose.model('Referral', ReferralSchema);

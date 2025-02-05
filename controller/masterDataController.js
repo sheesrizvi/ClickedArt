@@ -115,10 +115,10 @@ const masterDataController = asyncHandler(async (req, res) => {
               photographerName,
               photographerEmail,
               TotalRoyalty: royaltyAmount,
-              AmountPaid: amountPaid,
-              TDSPaid: tds,
-              TotalPaid: totalPaid,
-              balance
+              AmountToBePaid: amountPaid,
+              TDSToBePaid: tds,
+              TotalToBePaid: totalPaid,
+              totalBalance: balance
             });
     
           }

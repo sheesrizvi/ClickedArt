@@ -303,7 +303,7 @@ const generateInvoice = async (req, res) => {
       {
         $match: {
           photographer: new mongoose.Types.ObjectId(photographerId),
-          createdAt: { $gte: new Date(startDate), $lte: new Date(endDate) },
+          createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
         },
       },
       {
