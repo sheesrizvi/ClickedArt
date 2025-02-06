@@ -279,6 +279,45 @@ const getAllOrders = asyncHandler(async (req, res) => {
   res.status(200).send({ orders, pageCount });
 });
 
+
+const getFailedOrders = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const orders = await Order.find({ orderStatus: 'failed' })
+    .populate({
+      path: "orderItems",
+      populate: [
+        {
+          path: "imageInfo.image",
+          populate: {
+            path: "photographer",
+          },
+        },
+        {
+          path: "frameInfo.frame",
+        },
+        {
+          path: "paperInfo.paper",
+        },
+        {
+          path: "imageInfo.photographer",
+        },
+      ],
+    })
+    .populate("userInfo.user")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  if (!orders || orders.length === 0)
+    return res.status(400).send({ message: "Order not found" });
+
+  const totalDocuments = await Order.countDocuments({ orderStatus: 'failed'  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.status(200).send({ orders, pageCount });
+});
+
 const getMyOrders = asyncHandler(async (req, res) => {
   const { userId, pageNumber = 1, pageSize = 20 } = req.query;
   const orders = await Order.find({ "userInfo.user": userId })
@@ -643,4 +682,5 @@ module.exports = {
   calculateCartPrice,
   updatePrintStatus,
   deleteOrder,
+  getFailedOrders
 };

@@ -10,7 +10,8 @@ const { createOrder ,
     getPendingOrders,
     calculateCartPrice,
     deleteOrder,
-    updatePrintStatus
+    updatePrintStatus,
+    getFailedOrders
  } = require('../controller/orderController')
 const router = express.Router()
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware.js')
@@ -27,5 +28,6 @@ router.get('/get-pending-orders', getPendingOrders)
 router.post('/calculate-price', calculateCartPrice)
 router.post('/update-print-status', updatePrintStatus)
 router.delete('/delete-order', deleteOrder)
+router.get('/get-failed-orders', getFailedOrders)
 
 module.exports = router
