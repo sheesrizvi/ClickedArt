@@ -76,9 +76,9 @@ const masterDataController = asyncHandler(async (req, res) => {
                 royaltyAmount =  (printPrice * printRoyaltyShare) / 100 || 0;
             }
            
-            const amountPaid = royaltyAmount * 0.9;
-            const tds = royaltyAmount * 0.1;
-            const totalPaid = amountPaid + tds;
+            let amountPaid = royaltyAmount * 0.9;
+            let tds = royaltyAmount * 0.1;
+            let totalPaid = amountPaid + tds;
             const baseAmount =  price > 0 ? price : printPrice > 0 ? printPrice : 0
             const TotalGST = ( orderItem?.sgst + orderItem?.cgst) || 0
             const TotalAmount = baseAmount + TotalGST
@@ -99,6 +99,9 @@ const masterDataController = asyncHandler(async (req, res) => {
             });
 
             const balance = invoice ? 0 : totalPaid
+            amountPaid = invoice ? amountPaid : 0
+            totalPaid = invoice ? totalPaid : 0
+            tds = invoice ? tds : 0
 
             result.push({
               orderDate: format(new Date(order.createdAt), 'do MMM, yyyy'),
@@ -118,9 +121,9 @@ const masterDataController = asyncHandler(async (req, res) => {
               photographerName,
               photographerEmail,
               TotalRoyalty: royaltyAmount,
-              AmountToBePaid: amountPaid,
-              TDSToBePaid: parseFloat(tds?.toFixed(2)),
-              TotalToBePaid: totalPaid,
+              AmountPaid: amountPaid,
+              TDSPaid: parseFloat(tds?.toFixed(2)),
+              TotalPaid: totalPaid,
               pendingBalance: balance
             });
     
