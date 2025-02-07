@@ -7,7 +7,7 @@ const createReferral = asyncHandler(async (req, res) => {
     const { code, photographer, commissionRate, discountPercentage, maxUses, expirationDate, maxDiscountAmount, applicableTo, salesuser, isSalesUser } = req.body;
 
     
-    if (!applicableTo) {
+    if (!discountPercentage || !applicableTo) {
         return res.status(400).send({ message: 'Missing required fields' });
     }
     if(photographer) {
