@@ -434,11 +434,12 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 })
 
 const searchImages = asyncHandler(async (req, res) => {
-  const { Query, pageNumber = 1, pageSize = 20 } = req.query;
+  let { Query, pageNumber = 1, pageSize = 20 } = req.query;
   if(!Query) {
     return res.status(400).send({ message: 'Query is required' })
   }
-
+  pageSize = parseInt(pageNumber, 10)
+  pageNumber = parseInt(pageSize, 20)
   // const pipeline = [
   //   {
   //     $search: {
