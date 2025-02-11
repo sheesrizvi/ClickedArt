@@ -596,7 +596,7 @@ const searchImages = asyncHandler(async (req, res) => {
    count = totalCategoryDocuments + count
 
    const uniqueResults = Array.from(
-    new Map(results.map(item => [item._id, item])).values()
+    new Map(results.map(item => [item._id.toString(), item])).values()
   );
 
    const pageCount = Math.ceil(count / pageSize);
