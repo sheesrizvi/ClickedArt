@@ -433,176 +433,241 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   res.status(200).send({  featuredArtwork, pageCount })
 })
 
+// const searchImages = asyncHandler(async (req, res) => {
+//   let { Query, pageNumber = 1, pageSize = 20 } = req.query;
+//   if(!Query) {
+//     return res.status(400).send({ message: 'Query is required' })
+//   }
+//   pageSize = parseInt(pageNumber, 10)
+//   pageNumber = parseInt(pageSize, 20)
+//   // const pipeline = [
+//   //   {
+//   //     $search: {
+//   //       index: 'default',
+//   //       text: {
+//   //         query: searchQuery,
+//   //         path: ['title', 'description', 'story', 'keywords'],
+//   //         fuzzy: { maxEdits: 2, prefixLength: 2 }
+//   //       }
+//   //     }
+//   //   },
+//   // ]
+  
+//   const pipeline = [
+//     {
+//       $search: {
+//         index: "imagesearchindex",
+//         compound: {
+//           should: [
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "title",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "description",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "story",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "keywords",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     },
+//     { $match: { isActive: true } },
+   
+//     // {$addFields: {score: {$meta: "searchScore"}}},
+//     // {$setWindowFields: {output: {maxScore: {$max: "$score"}}}},
+//     // {$addFields: {normalizedScore: {$divide: ["$score", "$maxScore"]}}},
+//     // {$match: {normalizedScore: {$gte: 0.9}}},
+//     // {$sort: {normalizedScore: -1}},
+//     {
+//       $addFields: {
+//         relevanceScore: { $meta: "searchScore" },
+//       },
+//     },
+//     {
+//       $match: {
+//         relevanceScore: { $gte: 0.6 }, 
+//       },
+//     },
+//     { $skip: (pageNumber - 1) * pageSize },
+//     { $limit: pageSize },
+//   ];
+
+//   const totalPipeline = [
+//     {
+//       $search: {
+//         index: "imagesearchindex",
+//         compound: {
+//           should: [
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "title",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "description",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "story",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "keywords",
+//                 fuzzy: { maxEdits: 2 }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     },
+//     {
+//       $addFields: {
+//         relevanceScore: { $meta: "searchScore" },
+//       },
+//     },
+//     {
+//       $match: {
+//         relevanceScore: { $gte: 0.6 }, 
+//       },
+//     },
+//     { $match: { isActive: true } },
+//     { $count: "total" }
+//   ];
+
+//   let results = await ImageVault.aggregate(pipeline);
+//   const totalDocuments = await ImageVault.aggregate(totalPipeline);
+  
+//   let count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
+//   // const pageCount = Math.ceil(count / pageSize);
+
+//   const imageIds = results.map((result) => result._id)
+  
+//   results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license')
+
+
+//   const categories = await Category.find({ $or: [
+//     { name: { $regex: Query, $options: 'i' } },
+//     { description: { $regex: Query, $options: 'i' } }
+//   ] })
+  
+//   const categoriesIds = categories.map((category) => category._id)
+  
+//   const categoryImageResults = await ImageVault.find({ 
+//       category: { $in: categoriesIds },
+//       isActive: true
+//    }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+//    const totalCategoryDocuments = await ImageVault.countDocuments({
+//       category: { $in: categoriesIds },
+//       isActive: true
+//    })
+//    console.log(totalCategoryDocuments, count)
+//    results = [...results, ...categoryImageResults]
+ 
+//    console.log(results.length)
+//    const uniqueResults = Array.from(
+//     new Map(results.map(item => [item._id.toString(), item])).values()
+//   );
+//    count = uniqueResults.length
+//    const pageCount = Math.ceil(count / pageSize);
+
+
+//   res.status(200).send({ results: uniqueResults, pageCount });
+// });
+
 const searchImages = asyncHandler(async (req, res) => {
   let { Query, pageNumber = 1, pageSize = 20 } = req.query;
-  if(!Query) {
-    return res.status(400).send({ message: 'Query is required' })
+  if (!Query) {
+    return res.status(400).send({ message: 'Query is required' });
   }
-  pageSize = parseInt(pageNumber, 10)
-  pageNumber = parseInt(pageSize, 20)
-  // const pipeline = [
-  //   {
-  //     $search: {
-  //       index: 'default',
-  //       text: {
-  //         query: searchQuery,
-  //         path: ['title', 'description', 'story', 'keywords'],
-  //         fuzzy: { maxEdits: 2, prefixLength: 2 }
-  //       }
-  //     }
-  //   },
-  // ]
-  
-  const pipeline = [
+
+  pageNumber = parseInt(pageNumber, 10);
+  pageSize = parseInt(pageSize, 10);
+
+  const searchPipeline = [
     {
       $search: {
-        index: "imagesearchindex",
+        index: 'imagesearchindex',
         compound: {
-          should: [
-            {
-              text: {
-                query: Query,
-                path: "title",
-                fuzzy: { maxEdits: 2, prefixLength: 2  }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "description",
-                fuzzy: { maxEdits: 2, prefixLength: 2  }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "story",
-                fuzzy: { maxEdits: 2, prefixLength: 2  }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "keywords",
-                fuzzy: { maxEdits: 2, prefixLength: 2  }
-              }
+          should: ['title', 'description', 'story', 'keywords'].map((field) => ({
+            text: {
+              query: Query,
+              path: field,
+              fuzzy: { maxEdits: 2, prefixLength: 2 }
             }
-          ]
+          }))
         }
       }
     },
     { $match: { isActive: true } },
-   
-    // {$addFields: {score: {$meta: "searchScore"}}},
-    // {$setWindowFields: {output: {maxScore: {$max: "$score"}}}},
-    // {$addFields: {normalizedScore: {$divide: ["$score", "$maxScore"]}}},
-    // {$match: {normalizedScore: {$gte: 0.9}}},
-    // {$sort: {normalizedScore: -1}},
-    {
-      $addFields: {
-        relevanceScore: { $meta: "searchScore" },
-      },
-    },
-    {
-      $match: {
-        relevanceScore: { $gte: 0.6 }, 
-      },
-    },
+    { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
+    { $match: { relevanceScore: { $gte: 0.6 } } },
+    { $sort: { relevanceScore: -1 } },
     { $skip: (pageNumber - 1) * pageSize },
-    { $limit: pageSize },
+    { $limit: pageSize }
   ];
 
-  const totalPipeline = [
-    {
-      $search: {
-        index: "imagesearchindex",
-        compound: {
-          should: [
-            {
-              text: {
-                query: Query,
-                path: "title",
-                fuzzy: { maxEdits: 2, prefixLength: 2 }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "description",
-                fuzzy: { maxEdits: 2, prefixLength: 2 }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "story",
-                fuzzy: { maxEdits: 2, prefixLength: 2 }
-              }
-            },
-            {
-              text: {
-                query: Query,
-                path: "keywords",
-                fuzzy: { maxEdits: 2 }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      $addFields: {
-        relevanceScore: { $meta: "searchScore" },
-      },
-    },
-    {
-      $match: {
-        relevanceScore: { $gte: 0.6 }, 
-      },
-    },
-    { $match: { isActive: true } },
-    { $count: "total" }
+  const countPipeline = [
+    ...searchPipeline.slice(0, -2),
+    { $count: 'total' }
   ];
 
-  let results = await ImageVault.aggregate(pipeline);
-  const totalDocuments = await ImageVault.aggregate(totalPipeline);
-  
-  let count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
-  // const pageCount = Math.ceil(count / pageSize);
+  let results = await ImageVault.aggregate(searchPipeline);
+  const totalDocs = await ImageVault.aggregate(countPipeline);
+  let count = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
-  const imageIds = results.map((result) => result._id)
-  
-  results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license')
+  const imageIds = results.map((result) => result._id);
+  results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license');
 
+  const categories = await Category.find({
+    $or: [
+      { name: { $regex: Query, $options: 'i' } },
+      { description: { $regex: Query, $options: 'i' } }
+    ]
+  });
 
-  const categories = await Category.find({ $or: [
-    { name: { $regex: Query, $options: 'i' } },
-    { description: { $regex: Query, $options: 'i' } }
-  ] })
-  
-  const categoriesIds = categories.map((category) => category._id)
-  
-  const categoryImageResults = await ImageVault.find({ 
-      category: { $in: categoriesIds },
-      isActive: true
-   }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
+  const categoryImageResults = await ImageVault.find({
+    category: { $in: categories.map((c) => c._id) },
+    isActive: true
+  }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize);
 
-   const totalCategoryDocuments = await ImageVault.countDocuments({
-      category: { $in: categoriesIds },
-      isActive: true
-   })
+  results = [...results, ...categoryImageResults];
+  results = Array.from(new Map(results.map(item => [item._id.toString(), item])).values());
 
-   results = [...results, ...categoryImageResults]
-   count = totalCategoryDocuments + count
+  count = results.length;
+  const pageCount = Math.ceil(count / pageSize);
 
-   const uniqueResults = Array.from(
-    new Map(results.map(item => [item._id.toString(), item])).values()
-  );
-
-   const pageCount = Math.ceil(count / pageSize);
-
-
-  res.status(200).send({ results: uniqueResults, pageCount });
+  res.status(200).send({ results, pageCount });
 });
 
 
