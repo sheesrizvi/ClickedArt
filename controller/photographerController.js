@@ -289,7 +289,7 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
 const getAllPhotographers = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const photographers = await Photographer.find({ active: true }).sort({ createdAt: -1 })
+    const photographers = await Photographer.find({ active: true }).sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
 
@@ -446,6 +446,9 @@ const searchPhotographers = async (req, res) => {
             $match: {
                 active: true
             }
+        },
+        {
+            $sort: { firstName: 1 }
         },
         {
             $skip: (pageNumber - 1) * pageSize

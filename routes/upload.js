@@ -2163,18 +2163,39 @@ router.post(
 
       const uploadPromises = ["thumbnail", "original", ...conversionTargets].map(
         async (key) => {
+          // const fileName = `${Date.now()}_${Math.round(
+          //   Math.random() * 1e9
+          // )}_${key}_${req.body.imageUrl.split("/").pop()}`;
+          // const fileKey = `images/${fileName}`;
+          const extension = key === "thumbnail" ? "webp" : req.body.imageUrl.split(".").pop();
           const fileName = `${Date.now()}_${Math.round(
-            Math.random() * 1e9
-          )}_${key}_${req.body.imageUrl.split("/").pop()}`;
+              Math.random() * 1e9
+          )}_${key}.${extension}`;
           const fileKey = `images/${fileName}`;
-
+          console.log(fileKey)
           let processedBuffer;
           if (key === "thumbnail") {
+
             processedBuffer = await addWatermark(
               correctedImageBuffer,
               metadata,
               plan === "premium" && !isCustomText
             );
+
+            processedBuffer = await sharp(processedBuffer)
+            .webp({ quality: 90 }) 
+            .toBuffer();
+    
+            if (processedBuffer.length > 3 * 1024 * 1024) { 
+              console.log("Thumbnail exceeds 3MB, reducing quality...");
+              processedBuffer = await sharp(processedBuffer)
+                .webp({ quality: 65 }) 
+                .toBuffer();
+            }
+
+            const metadataAfterWebP = await sharp(processedBuffer).metadata();
+            console.log("Thumbnail format after conversion:", metadataAfterWebP.format);
+
           } else if (key === "original") {
             processedBuffer = correctedImageBuffer;
           } else {
