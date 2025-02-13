@@ -44,7 +44,14 @@ const layoutContentSchema = new mongoose.Schema({
             stars: { type: Number, min: 1, max: 5 }
         }
     ],
-    
+    support: [
+        {
+            title: { type: String },
+            url: { type: String },
+            thumbnail: { type: String },
+            tags: [{ type: String }]
+        }
+    ]
 })
 
 const LayoutContent = mongoose.model('LayoutContent', layoutContentSchema)
