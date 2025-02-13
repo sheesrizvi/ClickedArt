@@ -448,7 +448,7 @@ const searchPhotographers = async (req, res) => {
             }
         },
         {
-            $sort: { firstName: 1 }
+          $sort: { firstName: 1 }
         },
         {
             $skip: (pageNumber - 1) * pageSize
