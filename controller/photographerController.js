@@ -374,7 +374,7 @@ const getFeaturedPhotographer = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
     const [ featuredPhotographer, totalDocuments ] = await Promise.all([
-        Photographer.find({ featuredArtist: true }).sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
+        Photographer.find({ featuredArtist: true }).sort({ firstName: 1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
         Photographer.countDocuments({ featuredArtist: true })
     ])
 
