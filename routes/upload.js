@@ -1950,6 +1950,38 @@ const convertToTargetSizeAndResolution = async (buffer, targetResolution, format
 // );
 
 
+// async function compressTo200KB(buffer) {
+//   let quality = 50; // Start at moderate quality
+//   const maxAttempts = 20;
+
+//   for (let i = 0; i < maxAttempts; i++) {
+//     const compressedBuffer = await sharp(buffer)
+//       .webp({
+//         quality,
+//         effort: 6,            // Highest compression effort
+//         alphaQuality: 10,     // Lower alpha channel quality
+//         smartSubsample: true, // Better compression for low-quality images
+//         nearLossless: false   // Allow lossy compression
+//       })
+//       .withMetadata(false)    // Strip metadata
+//       .toBuffer();
+
+//     console.log(`Attempt ${i + 1}: ${compressedBuffer.length / 1024} KB`);
+
+//     if (compressedBuffer.length <= 200 * 1024) {
+//       console.log(`✅ Success: Compressed to ${compressedBuffer.length / 1024} KB`);
+//       return compressedBuffer;
+//     }
+
+//     // Lower quality if size is too large
+//     quality -= 5;
+
+//     if (quality < 5) {
+//       console.warn("⚠️ Could not reach 200KB without resizing.");
+//       return compressedBuffer;
+//     }
+//   }
+// }
 
 router.post('/share-size-of-original-image', upload1.single('image'), async (req, res) => {
   const imageUrl = req.body.imageUrl;
@@ -2163,10 +2195,12 @@ router.post(
 
       const uploadPromises = ["thumbnail", "original", ...conversionTargets].map(
         async (key) => {
+          
           // const fileName = `${Date.now()}_${Math.round(
           //   Math.random() * 1e9
           // )}_${key}_${req.body.imageUrl.split("/").pop()}`;
           // const fileKey = `images/${fileName}`;
+
           const extension = key === "thumbnail" ? "webp" : req.body.imageUrl.split(".").pop();
           const fileName = `${Date.now()}_${Math.round(
               Math.random() * 1e9
@@ -2174,8 +2208,8 @@ router.post(
           const fileKey = `images/${fileName}`;
           console.log(fileKey)
           let processedBuffer;
+          
           if (key === "thumbnail") {
-
             processedBuffer = await addWatermark(
               correctedImageBuffer,
               metadata,
@@ -2183,13 +2217,13 @@ router.post(
             );
 
             processedBuffer = await sharp(processedBuffer)
-            .webp({ quality: 90 }) 
+            .webp({ quality: 80 }) 
             .toBuffer();
-    
-            if (processedBuffer.length > 3 * 1024 * 1024) { 
-              console.log("Thumbnail exceeds 3MB, reducing quality...");
+
+            if (processedBuffer.length >  500 * 1024) { 
+              console.log("Thumbnail exceeds 500KB, reducing quality...");
               processedBuffer = await sharp(processedBuffer)
-                .webp({ quality: 65 }) 
+                .webp({ quality: 5 }) 
                 .toBuffer();
             }
 
