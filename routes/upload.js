@@ -15,6 +15,9 @@ const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const CustomWatermark = require('../models/imagebase/customWatermarkModel.js')
 const { S3 } = require("@aws-sdk/client-s3");
 const sizeOf = require('image-size');
+// const imagemin = require('imagemin');
+// const imageminWebp = require('imagemin-webp');
+
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -1949,39 +1952,29 @@ const convertToTargetSizeAndResolution = async (buffer, targetResolution, format
 //   }
 // );
 
-
-// async function compressTo200KB(buffer) {
-//   let quality = 50; // Start at moderate quality
-//   const maxAttempts = 20;
-
-//   for (let i = 0; i < maxAttempts; i++) {
-//     const compressedBuffer = await sharp(buffer)
-//       .webp({
-//         quality,
-//         effort: 6,            // Highest compression effort
-//         alphaQuality: 10,     // Lower alpha channel quality
-//         smartSubsample: true, // Better compression for low-quality images
-//         nearLossless: false   // Allow lossy compression
-//       })
-//       .withMetadata(false)    // Strip metadata
+// async function compressImage(buffer) {
+//   try {
+//     let quality = 90;
+//     let outputBuffer = await sharp(buffer)
+//       .webp({ quality })
 //       .toBuffer();
-
-//     console.log(`Attempt ${i + 1}: ${compressedBuffer.length / 1024} KB`);
-
-//     if (compressedBuffer.length <= 200 * 1024) {
-//       console.log(`✅ Success: Compressed to ${compressedBuffer.length / 1024} KB`);
-//       return compressedBuffer;
+//       console.log(outputBuffer)
+//     // Reduce quality iteratively until size <= 500KB
+//     while (outputBuffer.length > 500 * 1024 && quality > 10) {
+//       quality -= 5;
+//       outputBuffer = await sharp(buffer)
+//         .webp({ quality })
+//         .toBuffer();
 //     }
-
-//     // Lower quality if size is too large
-//     quality -= 5;
-
-//     if (quality < 5) {
-//       console.warn("⚠️ Could not reach 200KB without resizing.");
-//       return compressedBuffer;
-//     }
+//     console.log(outputBuffer)
+//     return outputBuffer;
+//   } catch (error) {
+//     console.error('Error compressing image:', error);
+//     throw error;
 //   }
 // }
+
+
 
 router.post('/share-size-of-original-image', upload1.single('image'), async (req, res) => {
   const imageUrl = req.body.imageUrl;
@@ -2003,6 +1996,51 @@ router.post('/share-size-of-original-image', upload1.single('image'), async (req
   })
 
 })
+
+
+// async function compressImage(inputBuffer, quality = 4) {
+//   const imagemin = (await import('imagemin')).default;
+//   const imageminWebp = (await import('imagemin-webp')).default;
+
+//   const outputBuffer = await imagemin.buffer(inputBuffer, {
+//     plugins: [
+//       imageminWebp({
+//         quality: 4,       
+//         method: 6,
+//         alphaQuality: 10,
+//         nearLossless: 1, // Use 0 (off) or 1 (on), not 'true'
+//         smartSubsample: true,
+//       }),
+//     ],
+//   });
+  
+//   return outputBuffer;
+// }
+
+async function resizeThumbnailTo500KB(buffer) {
+  let quality = 90;
+  let width = (await sharp(buffer).metadata()).width;
+  let resizedBuffer = buffer;
+
+  while (resizedBuffer.length > 500 * 1024 && quality > 5) {
+    resizedBuffer = await sharp(buffer)
+      .resize({ width, fit: 'inside' })
+      .webp({ quality })
+      .toBuffer();
+
+    if (resizedBuffer.length > 500 * 1024) {
+      quality -= 5;
+      width = Math.floor(width * 0.9); // Reduce width by 10% if still over size
+    }
+  }
+
+  if (resizedBuffer.length > 500 * 1024) {
+    console.warn('Could not reach under 500KB at minimum settings.');
+  }
+
+  return resizedBuffer;
+}
+
 
 router.post(
   "/handle-photos-with-watermark-and-resolutions-options",
@@ -2217,16 +2255,22 @@ router.post(
               plan === "premium" && !isCustomText
             );
 
-         processedBuffer = await sharp(processedBuffer)
-                                .toFormat('webp') 
-                                .webp({ quality: 80 })
-                                .toBuffer();
+            processedBuffer = await sharp(processedBuffer)
+                                    // .toFormat('webp') 
+                                    .webp({ quality: 80 })
+                                    .toBuffer();
 
             if (processedBuffer.length >  500 * 1024) { 
-              console.log("Thumbnail exceeds 500KB, reducing quality...");
-              processedBuffer = await sharp(processedBuffer)
-                .webp({ quality: 5 }) 
-                .toBuffer();
+
+              // console.log("Thumbnail exceeds 500KB, reducing quality...");
+              // processedBuffer = await sharp(processedBuffer)
+              //   .webp({ quality: 5 }) 
+              //   .toBuffer();
+                     
+            // processedBuffer = await compressImage(processedBuffer)
+
+            console.log('Thumbnail exceeds 500KB, adjusting size and quality...');
+            processedBuffer = await resizeThumbnailTo500KB(processedBuffer);
             }
 
             const metadataAfterWebP = await sharp(processedBuffer).metadata();
