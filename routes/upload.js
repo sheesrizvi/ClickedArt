@@ -2207,6 +2207,7 @@ router.post(
           )}_${key}.${extension}`;
           const fileKey = `images/${fileName}`;
           console.log(fileKey)
+
           let processedBuffer;
           
           if (key === "thumbnail") {
@@ -2216,9 +2217,10 @@ router.post(
               plan === "premium" && !isCustomText
             );
 
-            processedBuffer = await sharp(processedBuffer)
-            .webp({ quality: 80 }) 
-            .toBuffer();
+         processedBuffer = await sharp(processedBuffer)
+                                .toFormat('webp') 
+                                .webp({ quality: 80 })
+                                .toBuffer();
 
             if (processedBuffer.length >  500 * 1024) { 
               console.log("Thumbnail exceeds 500KB, reducing quality...");
@@ -2240,6 +2242,7 @@ router.post(
               metadata
             );
           }
+         
 
           const upload = new Upload({
             client: s3,
@@ -2247,7 +2250,7 @@ router.post(
               Bucket: process.env.AWS_BUCKET,
               Key: fileKey,
               Body: processedBuffer,
-              ContentType: response.headers["content-type"],
+              ContentType: key === "thumbnail" ? "image/webp" : response.headers["content-type"],
             },
           });
 
