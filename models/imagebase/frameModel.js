@@ -6,9 +6,9 @@ const frameSchema = new mongoose.Schema(
         type: String,
         required: true,
       },
-      image: {
+      image: [{
         type: String,
-      },
+      }],
       material: {
         type: String,
         required: true,
