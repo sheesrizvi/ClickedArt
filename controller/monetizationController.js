@@ -4,10 +4,11 @@ const asyncHandler = require('express-async-handler');
 const { sendMonetizationMail, sendMonetizationDisApprovalMail } = require('../middleware/handleEmail.js')
 
 const createMonetization = asyncHandler(async (req, res) => {
-    const { photographerId, panPhoto, panNumber, governmentIdProof, address, country,  bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, isBusinessAccount, businessAccount } = req.body;
+    const { photographerId, photographerPhoto, panPhoto, panNumber, governmentIdProof, address, country,  bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, isBusinessAccount, businessAccount } = req.body;
    
     const monetization = new Monetization({
         photographer: photographerId,
+        photographerPhoto,
         panPhoto,
         panNumber,
         country,
@@ -80,7 +81,7 @@ const deleteMonetizationRequest = asyncHandler(async (req, res) => {
 
 
 const updateMonetization = asyncHandler(async (req, res) => {
-    const { id, panPhoto, panNumber, country , bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount, status, address, governmentIdProof } = req.body;
+    const { id, photographerPhoto, panPhoto, panNumber, country , bankName, bankAccountName, bankAccNumber, ifsc, branch, passbookOrCancelledCheque, businessAccount, status, address, governmentIdProof } = req.body;
 
     const monetization = await Monetization.findById(id);
     if (!monetization) {
@@ -98,6 +99,7 @@ const updateMonetization = asyncHandler(async (req, res) => {
     if(address) monetization.address = address
     if(bankName) monetization.bankName = bankName
     if(governmentIdProof) monetization.governmentIdProof = governmentIdProof
+    if(photographerPhoto) monetization.photographerPhoto = photographerPhoto
 
     if (businessAccount) {
         if (businessAccount.gstCopy) monetization.businessAccount.gstCopy = businessAccount.gstCopy;

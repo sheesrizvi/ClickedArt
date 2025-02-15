@@ -10,10 +10,10 @@ const checkPincodeAvailablity = asyncHandler(async (req, res) => {
         return res.status(500).send({ error: 'Authorization token is missing' });
       }
   
-      const result = await axios.get('https://staging-express.delhivery.com/c/api/pin-codes/json/?filter_codes=226010', {
-        // params: {
-        //   filter_codes: pincode
-        // },
+      const result = await axios.get('https://track.delhivery.com/c/api/pin-codes/json/', {
+        params: {
+          filter_codes: pincode
+        },
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Token ${token}`

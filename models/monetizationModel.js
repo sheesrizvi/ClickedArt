@@ -6,6 +6,10 @@ const monetizationSchema = new mongoose.Schema({
         ref: 'Photographer',
         required: true,
     },
+    photographerPhoto: {
+        type: String,
+        required: false
+    },
     address:{
         residentialAddress: { type: String },
         state: { type: String }
