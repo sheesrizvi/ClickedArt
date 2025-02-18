@@ -15,7 +15,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const createPaper = asyncHandler(async (req, res) => {
-  const { name, image, material, thickness, basePricePerSquareInch, customDimensions } = req.body;
+  const { name, image, material, thickness, basePricePerSquareInch, customDimensions, photographerDiscount } = req.body;
 
   const existingPaper = await Paper.findOne({ name });
   if (existingPaper) {
@@ -29,7 +29,8 @@ const createPaper = asyncHandler(async (req, res) => {
     material,
     thickness,
     basePricePerSquareInch,
-    customDimensions
+    customDimensions,
+    photographerDiscount
   });
 
   res.status(201).send({ paper });
@@ -56,7 +57,7 @@ const getPaperById = asyncHandler(async (req, res) => {
 });
 
 const updatePaper = asyncHandler(async (req, res) => {
-  const { paperId, name, image, material, thickness, basePricePerSquareInch, customDimensions } = req.body;
+  const { paperId, name, image, material, thickness, basePricePerSquareInch, customDimensions, photographerDiscount } = req.body;
 
   const paper = await Paper.findById(paperId);
   if (!paper) {
@@ -68,6 +69,7 @@ const updatePaper = asyncHandler(async (req, res) => {
   paper.material = material || paper.material;
   paper.thickness = thickness || paper.thickness;
   paper.basePricePerSquareInch = basePricePerSquareInch || paper.basePricePerSquareInch;
+  paper.photographerDiscount = photographerDiscount || paper.photographerDiscount
   if (customDimensions) {
     paper.customDimensions = customDimensions;
   }
