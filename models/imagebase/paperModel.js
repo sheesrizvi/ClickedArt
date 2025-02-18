@@ -22,6 +22,10 @@ const paperSchema = new mongoose.Schema(
         type: Number, 
         required: true,
       },
+      photographerDiscount:{
+          type: Number,
+          required: false
+      },
       customDimensions: [
         {
           width: { type: Number, required: true }, 
