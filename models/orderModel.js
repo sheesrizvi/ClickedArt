@@ -117,6 +117,10 @@ const orderSchema = new mongoose.Schema(
         pincode: { type: String, },
         state: { type: String },
       },
+      waybill: {
+        type: String,
+        required: false
+      }
   },
   {
     timestamps: true,
