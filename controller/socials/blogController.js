@@ -45,7 +45,6 @@ const addBlog = asyncHandler(async (req, res) => {
 
 const updateBlog = asyncHandler(async (req, res) => {
     const {blogId, slug, content, coverImage, tags, photographer, achievements, isActive  } = req.body
-    console.log(req.body)
     const blog = await Blog.findOne({ _id: blogId })
     if(!blog) return res.status(400).send({ message: 'Blog not found' })
 
