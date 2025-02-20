@@ -176,9 +176,9 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (user && user.referralcode && !orderExist) {
     const referral = await Referral.findOne({ code: user.referralcode });
-    if (referral && referral.applicableTo === 'user') {
+    if (referral && referral.applicableTo === "user") {
       const commissionRate = referral.commissionRate;
-      const price = (orders[0].finalAmount * 100)/(100+18)
+      const price = (orders[0].finalAmount * 100) / (100 + 18);
       const balance = Math.round(price * (commissionRate / 100));
 
       await ReferralBalance.create({
@@ -237,7 +237,7 @@ const createOrder = asyncHandler(async (req, res) => {
     customerEmail,
     s3Link
   );
-  
+
   res.status(201).send(orders);
 });
 
@@ -279,11 +279,10 @@ const getAllOrders = asyncHandler(async (req, res) => {
   res.status(200).send({ orders, pageCount });
 });
 
-
 const getFailedOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ orderStatus: 'failed' })
+  const orders = await Order.find({ orderStatus: "failed" })
     .populate({
       path: "orderItems",
       populate: [
@@ -312,7 +311,7 @@ const getFailedOrders = asyncHandler(async (req, res) => {
   if (!orders || orders.length === 0)
     return res.status(400).send({ message: "Order not found" });
 
-  const totalDocuments = await Order.countDocuments({ orderStatus: 'failed'  });
+  const totalDocuments = await Order.countDocuments({ orderStatus: "failed" });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ orders, pageCount });
@@ -516,7 +515,8 @@ const payment = asyncHandler(async (req, res) => {
     return;
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findById(userId) || await Photographer.findById(userId);
+
   if (!user) {
     res.status(404).json({ message: "User not found." });
     return;
@@ -687,5 +687,5 @@ module.exports = {
   calculateCartPrice,
   updatePrintStatus,
   deleteOrder,
-  getFailedOrders
+  getFailedOrders,
 };
