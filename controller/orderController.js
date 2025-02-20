@@ -580,7 +580,7 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 
 const calculateCartPrice = async (req, res) => {
   try {
-    const { items } = req.body;
+    const { items, photographerId } = req.body;
 
     let totalImagePrice = 0;
     let totalPaperPrice = 0;
@@ -603,6 +603,8 @@ const calculateCartPrice = async (req, res) => {
       const image = await ImageVault.findById(imageId);
       if (!image) continue;
 
+      const ownImage = image.photographer.toString() === photographerId;
+
       const imagePrice =
         resolution === "small"
           ? image.price.small
@@ -612,6 +614,7 @@ const calculateCartPrice = async (req, res) => {
 
       let paperPrice = 0;
       let framePrice = 0;
+      let discount = 0;
 
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
@@ -619,6 +622,8 @@ const calculateCartPrice = async (req, res) => {
           const customDimension = paper.customDimensions.find(
             (dim) => dim.width === width && dim.height === height
           );
+          const photographerDiscount = paper?.photographerDiscount || 0;
+          discount = ownImage ? photographerDiscount : 0;
 
           if (customDimension) {
             paperPrice = customDimension.price;
@@ -641,7 +646,7 @@ const calculateCartPrice = async (req, res) => {
       totalPaperPrice += paperPrice;
       totalFramePrice += framePrice;
       totalFinalPrice += paperPrice
-        ? paperPrice + framePrice
+        ? (paperPrice + framePrice) * (1 - discount / 100)
         : imagePrice + paperPrice + framePrice;
     }
 
@@ -649,7 +654,7 @@ const calculateCartPrice = async (req, res) => {
       totalImagePrice,
       totalPaperPrice,
       totalFramePrice,
-      totalFinalPrice,
+      totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
     });
   } catch (error) {
     console.error(error);
