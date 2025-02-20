@@ -64,12 +64,12 @@ const updatePaper = asyncHandler(async (req, res) => {
     return res.status(404).send({ message: 'Paper not found' });
   }
 
-  paper.name = name || paper.name;
-  paper.image = image || paper.image;
-  paper.material = material || paper.material;
-  paper.thickness = thickness || paper.thickness;
-  paper.basePricePerSquareInch = basePricePerSquareInch || paper.basePricePerSquareInch;
-  paper.photographerDiscount = photographerDiscount || paper.photographerDiscount
+  paper.name = name ?? paper.name;
+  paper.image = image ?? paper.image;
+  paper.material = material ?? paper.material;
+  paper.thickness = thickness ?? paper.thickness;
+  paper.basePricePerSquareInch = basePricePerSquareInch ?? paper.basePricePerSquareInch;
+  paper.photographerDiscount = photographerDiscount ?? paper.photographerDiscount
   if (customDimensions) {
     paper.customDimensions = customDimensions;
   }
