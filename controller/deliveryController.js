@@ -36,7 +36,7 @@ const checkPincodeAvailablity = asyncHandler(async (req, res) => {
       return res.status(500).send({ error: 'Authorization token is missing' });
     }
 
-    const result = await axios.get('https://track.delhivery.com/c/api/pin-codes/json/', {
+    const result = await axios.get('https://staging-express.delhivery.com/c/api/pin-codes/json', {
       params: { filter_codes: pincode },
       headers: {
         'Content-Type': 'application/json',
@@ -154,18 +154,6 @@ const registerDelivery = asyncHandler(async (req, res) => {
   data.append('data', JSON.stringify({
     shipments: [
       {
-        // name: 'Johnny2 Doe',
-        // add: 'Kaushal Puri Colony, Gomti Nagar, Lucknow',
-        // pin: '226010',
-        // city: 'Lucknow',
-        // state: 'Uttar Pradesh',
-        // country: 'India',
-        // phone: '647636352322',
-        // order: 'ORDERdf343202328',
-        // payment_mode: 'Prepaid',
-        // shipment_width: '20',
-        // shipment_height: '10',
-        // shipping_mode: 'Surface'
         name: 'Johnny Doe',
         add: 'Kaushal Puri Colony, Gomti Nagar, Lucknow',
         pin: '226010',
@@ -173,7 +161,7 @@ const registerDelivery = asyncHandler(async (req, res) => {
         state: 'Uttar Pradesh',
         country: 'India',
         phone: '647631335322',
-        order: 'ORDER1285',
+        order: 'ORDER12485',
         payment_mode: 'Prepaid',
         return_pin: '',
         return_city: '',
@@ -196,26 +184,26 @@ const registerDelivery = asyncHandler(async (req, res) => {
         weight: '',  
         seller_gst_tin: '',
         shipping_mode: 'Surface',
-        address_type: ''
+        address_type: '',
       }
     ],
     pickup_location: {
-      name: 'ClickedArt Test',
-      add: 'Gomti Nagar, Lucknow',
+      name: 'FORTENETSKILLS SURFACE',
+      add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
       city: 'Lucknow',
       pin_code: 226010,
       country: 'India',
-      phone: '986754321'
+      phone: '7054001058'
     }
   }));
   
   
   const config = {
     method: 'post',
-    url: 'https://track.delhivery.com/api/cmu/create.json', 
+    url: 'https://staging-express.delhivery.com/api/cmu/create.json', 
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Token ${token}`, 
+       Authorization: `Token ${token}`, 
     },
     data: data,
   };
