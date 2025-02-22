@@ -245,9 +245,9 @@ const getFeaturedBlogs = asyncHandler(async (req, res) => {
     const page = req.query.pageNumber || 1
     const pageSize = req.query.pageSize || 20
 
-    const totalDocuments = await Blog.countDocuments({ featured: true })
+    const totalDocuments = await Blog.countDocuments({ featured: true, isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
-    const blogs = await Blog.find({ featured: true}).populate({
+    const blogs = await Blog.find({ featured: true, isActive: true}).populate({
         path: 'authorInfo.author'
     }).populate('photographer').sort({
         createdAt: -1

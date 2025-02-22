@@ -154,6 +154,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const totalCategories = await Category.countDocuments({})
   const pendingPhotographers = await Photographer.countDocuments({ photographerStatus: 'pending', active: false })
   const totalblogs = await Blog.countDocuments({ isActive: true })
+  const pendingBlogs = await Blog.countDocuments({ isActive: false })
   const totalStories = await Story.countDocuments({})
   const totalFrame = await Frame.countDocuments({})
   const totalPapers = await Paper.countDocuments({})
@@ -174,7 +175,8 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     totalPapers,
     totalOrders,
     pendingOrders,
-    pendingMonetizations
+    pendingMonetizations,
+    pendingBlogs
   })
 })
 
