@@ -38,7 +38,7 @@ const getGoogleReviews = asyncHandler(async (req, res) => {
             key: process.env.GOOGLE_MAPS_API_KEY,
           },
         });
-        console.log(process.env.GOOGLE_MAPS_API_KEY, process.env.GOOGLE_PLACE_ID)
+       
         return res.status(200).send({ data: response.data })
       } catch (error) {
         console.log(error)
