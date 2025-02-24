@@ -234,7 +234,8 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         },
     ]);
 
- const matchStageForPrint = { orderStatus: 'completed', isPaid: true  };
+ const matchStageForPrint = { orderStatus: 'completed', isPaid: true, printStatus: { $in: ['processing', 'printing', 'packed', 'shipped', 'delivered'] }  };
+ 
     const totalPrints = await Order.aggregate([
         { $match: matchStageForPrint },
         { $unwind: "$orderItems" }, 
