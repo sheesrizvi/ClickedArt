@@ -1,6 +1,6 @@
 const asyncHandler = require('express-async-handler')
 const WishList = require('../models/wishlistModel.js')
-
+const UserType = require("../models/typeModel");
 
 const addItemsInWishList = asyncHandler(async (req, res) => {
     const { userId, imageIds } = req.body
@@ -9,7 +9,17 @@ const addItemsInWishList = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'User and Images are required'})
     }
 
-   const wishlist = await WishList.findOneAndUpdate({ user: userId }, { $addToSet: { images: { $each: imageIds } }}, { upsert: true, new: true })
+    const userType = await UserType.findOne({ user: userId }).select("type -_id");
+    const type = userType?.type || null;
+
+    if(!type) {
+        return res.status(400).send({ message: 'User Type not found' })
+    }
+    
+   const wishlist = await WishList.findOneAndUpdate({ 'userInfo.user': userId }, {
+     $addToSet: { images: { $each: imageIds } },
+     $setOnInsert: { 'userInfo.userType': type }
+    }, { upsert: true, new: true })
 
    res.status(200).send({ wishlist })
 })
@@ -17,7 +27,7 @@ const addItemsInWishList = asyncHandler(async (req, res) => {
 const removeItemsFromWishList = asyncHandler(async (req, res) => {
     const { userId, imageIds } = req.body
 
-    const wishlist = await WishList.findOneAndUpdate({ user: userId },   { $pull: { images: { $in: imageIds } } }, { new: true })
+    const wishlist = await WishList.findOneAndUpdate({ 'userInfo.user': userId },   { $pull: { images: { $in: imageIds } } }, { new: true })
 
     if(!wishlist) {
         return res.status(400).send({ wishlist })
@@ -28,7 +38,7 @@ const removeItemsFromWishList = asyncHandler(async (req, res) => {
 const getMyWishList = asyncHandler(async (req, res) => {
     const { userId } = req.query
 
-    const wishlist = await WishList.findOne({ user: userId }).populate({
+    const wishlist = await WishList.findOne({ 'userInfo.user': userId }).populate({
         path: 'images',
         populate: {
             path: 'photographer',
@@ -46,7 +56,7 @@ const getMyWishList = asyncHandler(async (req, res) => {
 const deleteWishList = asyncHandler(async (req, res) => {
     const { userId } = req.query
 
-    const wishlist =  await WishList.findOneAndDelete({ user: userId })
+    const wishlist =  await WishList.findOneAndDelete({ 'userInfo.user': userId })
 
     if(!wishlist) {
         return res.status(400).send({ message: 'WishList not found' })
@@ -59,7 +69,7 @@ const deleteWishList = asyncHandler(async (req, res) => {
 const getAllWishLists = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const wishlists = await WishList.find({}).populate('user').populate('images').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const wishlists = await WishList.find({}).populate('userInfo.user').populate('images').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!wishlists || wishlists.length === 0) {
         return res.status(400).send({ message: 'No WishList exists' })

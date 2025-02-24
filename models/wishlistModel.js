@@ -1,11 +1,10 @@
 const mongoose = require('mongoose')
  
 const wishlistSchema = mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "User",
-      },
+     userInfo: { 
+            user: { type: mongoose.Schema.Types.ObjectId, refPath: 'userInfo.userType', required: true }, 
+            userType: { type: String, enum: ['User', 'Photographer'], required: true },
+    },
     images: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ImageVault'

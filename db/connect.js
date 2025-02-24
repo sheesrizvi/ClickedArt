@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Wishlist = require('../models/wishlistModel.js')
 
 const dbConnect = async () => {
     try {
@@ -6,6 +7,7 @@ const dbConnect = async () => {
         dbName : 'ClickedArt'
        }
         const connectionInstance =  await mongoose.connect(process.env.MONGO_URI, dbOptions)
+       
         console.log(`MongoDB Connected ${connectionInstance.connection.host} <-> ${connectionInstance.connection.name}`)
     } catch(e) {
         console.log('MongoDB Connection Error', e.message)
