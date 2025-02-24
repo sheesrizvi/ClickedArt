@@ -209,7 +209,7 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
     const startOfDay = startDate ? new Date(new Date(startDate).setHours(0, 0, 0, 0)) : undefined;
     const endOfDay = endDate ? new Date(new Date(endDate).setHours(23, 59, 59, 999)) : undefined;
 
-    const matchStage = { orderStatus: 'completed', isPaid: true };
+    const matchStage = { orderStatus: 'completed', isPaid: true, printStatus: 'no-print' };
 
     if (startOfDay) matchStage.createdAt = { $gte: startOfDay };
     if (endOfDay) {
@@ -235,7 +235,7 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
     ]);
 
  const matchStageForPrint = { orderStatus: 'completed', isPaid: true, printStatus: { $in: ['processing', 'printing', 'packed', 'shipped', 'delivered'] }  };
- 
+
     const totalPrints = await Order.aggregate([
         { $match: matchStageForPrint },
         { $unwind: "$orderItems" }, 
