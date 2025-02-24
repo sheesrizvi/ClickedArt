@@ -282,9 +282,10 @@ const getSalesDataMetrics = asyncHandler(async (req, res) => {
         result[item._id] = item.count; 
       });
   
-
+    const averageOrderStage = { orderStatus: 'completed', isPaid: true };
+    
     const averageOrderValue = await Order.aggregate([
-        { $match: matchStage },
+        { $match: averageOrderStage },
         {
             $group: {
                 _id: null,
