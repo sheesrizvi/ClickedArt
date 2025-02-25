@@ -1,6 +1,6 @@
 const express  = require("express");
 const { userRegistration, userLogin, resetPassword, getAllUsers, getUserById, userProfileUpdate, deleteUserProfile, verifyUserProfile, resendOTP, getUserByUserName, checkUserNameExist, changePassword, getUserAnalytics } = require("../controller/userController.js");
-const { verifyToken } = require("../middleware/authMiddleware.js");
+const { verifyToken, getUserProfileByToken } = require("../middleware/authMiddleware.js");
 const { updateCoverImage } = require("../controller/photographerController.js");
 
 const router = express.Router()
@@ -9,6 +9,7 @@ const router = express.Router()
 // Public Routes
 router.post('/register', userRegistration)
 router.post('/login', userLogin)
+router.get('/get-user-profile-by-token', getUserProfileByToken)
 router.post('/update-profile', verifyToken, userProfileUpdate)
 router.post('/verify-user-profile', verifyUserProfile)
 router.post('/reset-password', resetPassword)
