@@ -113,7 +113,7 @@ const getUserSubscriptions = asyncHandler(async (req, res) => {
 })
 
 const cancelSubscriptions = asyncHandler(async(req, res) => {
-    const { id } = req.query
+    const { id } = req.body
 
     const subscription = await Subscription.findById(id)
 
