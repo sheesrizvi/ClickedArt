@@ -200,8 +200,9 @@ const getUserActiveSubscription = asyncHandler(async (req, res) => {
 
 
 const upgradeSubscriptionByAdminWithRank = asyncHandler(async (req, res) => {
-  const { rank, planId, durationNumber , duration , userId } = req.body
-  console.log(req.body)
+  let { rank, planId, durationNumber , duration , userId } = req.body
+  durationNumber = parseInt(durationNumber)
+  console.log(req.body, durationNumber)
   const userType = await UserType.findOne({ user: userId }).select('type -_id')
   const type = userType?.type || null;
 
