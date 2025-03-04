@@ -112,7 +112,7 @@ const resetPassword = asyncHandler(async(req, res) => {
     if(!email) {
         return res.status(400).send({status:true, message: 'Email not Found'})
     }
-    const existedUser = await User.findOne({email})
+    const existedUser = await User.findOne({email: email.toLowerCase() })
     if(!existedUser) {
         return res.status(400).send({status: false, message: 'Email not exist'})
     }

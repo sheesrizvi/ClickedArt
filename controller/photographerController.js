@@ -207,7 +207,7 @@ const updatePhotographer = asyncHandler(async (req, res) => {
 const photographerLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
     if(email && password) {
-        let photographer = await Photographer.findOne({email})
+        let photographer = await Photographer.findOne({ email })
         if (photographer && (await photographer.isPasswordCorrect(password)) && photographer.isEmailVerified) {
             if(photographer.photographerStatus === 'pending' || photographer.photographerStatus === 'rejected') {
                 throw new Error('Sorry! You need to wait till admin approval')
@@ -280,7 +280,7 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
     if(!email) {
         return res.status(400).send({status:true, message: 'Email not Found'})
     }
-    const existedUser = await Photographer.findOne({email})
+    const existedUser = await Photographer.findOne({email: email.toLowerCase()})
     if(!existedUser) {
         return res.status(400).send({status: false, message: 'Email not exist'})
     }
