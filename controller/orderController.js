@@ -17,6 +17,7 @@ const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
 const moment = require("moment");
+const { registerDeliveryFromOrder } = require('../controller/deliveryController.js')
 
 const getCounter = async (financialYear) => {
   const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
@@ -51,6 +52,7 @@ const deleteOrder = asyncHandler(async (req, res) => {
 });
 
 const createOrder = asyncHandler(async (req, res) => {
+
   const {
     userId,
     orderItems,
@@ -238,6 +240,22 @@ const createOrder = asyncHandler(async (req, res) => {
     s3Link
   );
 
+  for (const ord of orders) {
+      const order = await Order.findOne({ _id: ord._id }).populate('userInfo.user');
+
+      if (!order) {
+        console.error(`Order not found for ID: ${ord._id}`);
+        continue; 
+      }
+
+      if(order.printStatus === 'no-print') {
+        continue;
+      }
+  
+     console.log("Fetched Order:", order);
+     await registerDeliveryFromOrder(order);
+  }
+  
   res.status(201).send(orders);
 });
 
