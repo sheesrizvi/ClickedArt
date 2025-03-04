@@ -162,6 +162,14 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const pendingOrders = await Order.countDocuments({ printStatus: { $in: ['processing', 'printing', 'packed', 'shipped' ] } })
   const pendingMonetizations = await Monetization.countDocuments({ status: 'pending' })
 
+  const plans = await Plan.find({});
+
+  const activeUsersCount = await Promise.all(plans.map(async (plan) => {
+    const count = await Subscription.countDocuments({ planId: plan._id, isActive: true });
+    return { planName: plan.name, activeUsers: count }; 
+  }));
+
+
   res.status(200).send({
     totalUsers,
     totalPhotos,
@@ -176,7 +184,8 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     totalOrders,
     pendingOrders,
     pendingMonetizations,
-    pendingBlogs
+    pendingBlogs,
+    planActiveUsersCount: activeUsersCount
   })
 })
 

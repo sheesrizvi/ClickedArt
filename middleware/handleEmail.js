@@ -862,6 +862,150 @@ const sendStoryPublishedMail = asyncHandler(async (photographerName, email, stor
   return true;
 });
 
+// const sendWeeklyMailToInactivePhotographers = asyncHandler(async (photographerName, email) => {
+//   const info = await transporter.sendMail({
+//     from: `Clicked Art ${process.env.USER_EMAIL}`,
+//     to: email,
+//     subject: "Your ClickedArt Profile Is Waiting – Start Uploading Your Photos Today!",
+//     text: `
+//   Dear ${photographerName},
+
+//   Thank you for registering on ClickedArt! Your profile is live, 
+//   but we noticed that you haven’t uploaded any photos yet.
+//   Showcase your talent, reach a wider audience,
+//   and start earning from your photography. 
+//   By uploading your images, you can:
+
+//   ✔ Build your personal photography portfolio
+//   ✔ Get discovered by buyers and art lovers
+//   ✔ Monetize your work and earn fair royalties
+
+//   Don’t wait—your journey with ClickedArt starts now!.
+//   Upload your first photo today and make your mark in the
+//   photography world.
+//   Upload Now
+//   Need help? We’re here for you! Reach out anytime.
+
+//   Happy Clicking,
+//   Team ClickedArt
+//   📸 www.clickedart.com
+
+//     `,
+//   });
+//   return true;
+// })
+
+// const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(async (photographerName, email) => {
+//   const info = await transporter.sendMail({
+//     from: `Clicked Art ${process.env.USER_EMAIL}`,
+//     to: email,
+//     subject: "Monetize Your ClickedArt Profile & Start Earning Today!",
+//     text: `
+// Dear ${photographerName},
+
+// We noticed that you’ve registered on ClickedArt, but your profile isn’t monetized yet! Don’t miss the opportunity to showcase your incredible work and start earning from your photography.
+
+// By monetizing your profile, you can:
+
+//   ✔ Sell your high-resolution images to a global audience
+//   ✔ Set your own pricing and earn fair royalties
+//   ✔ Get featured in our premium photography marketplace
+//   It only takes a few minutes to activate monetization and unlock new earning possibilities. Click below to get started:
+
+// Monetize My Profile Now
+
+// Need help? Feel free to reach out to our support team—we’re happy to assist!
+
+// Happy Clicking,
+// Team ClickedArt
+// 📸 www.clickedart.com
+
+//     `,
+//   });
+//   return true;
+// })
+
+const sendWeeklyMailToInactivePhotographers = asyncHandler(async (photographerName, email) => {
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Your ClickedArt Profile Is Waiting – Start Uploading Your Photos Today!",
+    html: `
+      <p>Dear ${photographerName},</p>
+
+      <p>Thank you for registering on ClickedArt! Your profile is live, 
+      but we noticed that you haven’t uploaded any photos yet.</p>
+
+      <p>Showcase your talent, reach a wider audience, and start earning from your photography. 
+      By uploading your images, you can:</p>
+
+      <ul>
+        <li>✔ Build your personal photography portfolio</li>
+        <li>✔ Get discovered by buyers and art lovers</li>
+        <li>✔ Monetize your work and earn fair royalties</li>
+      </ul>
+
+      <p>Don’t wait—your journey with ClickedArt starts now!</p>
+      <p>Upload your first photo today and make your mark in the photography world.</p>
+
+      <p>
+        <a href="https://www.clickedart.com/upload" target="_blank" 
+        style="display: inline-block; padding: 10px 20px; color: #007bff; 
+        text-decoration: none; border: 2px solid #007bff; border-radius: 5px; 
+        font-weight: bold;">Upload Now</a>
+      </p>
+
+      <p>Need help? We’re here for you! Reach out anytime.</p>
+
+      <p>Happy Clicking,<br>
+      <strong>Team ClickedArt</strong> 📸<br>
+      <a href="https://www.clickedart.com" target="_blank">www.clickedart.com</a></p>
+    `,
+  });
+
+  return true;
+});
+
+
+const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(async (photographerName, email) => {
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Monetize Your ClickedArt Profile & Start Earning Today!",
+    html: `
+      <p>Dear ${photographerName},</p>
+
+      <p>We noticed that you’ve registered on ClickedArt, but your profile isn’t monetized yet! Don’t miss the opportunity to showcase your incredible work and start earning from your photography.</p>
+
+      <p><strong>By monetizing your profile, you can:</strong></p>
+      <ul>
+        <li>✔ Sell your high-resolution images to a global audience</li>
+        <li>✔ Set your own pricing and earn fair royalties</li>
+        <li>✔ Get featured in our premium photography marketplace</li>
+      </ul>
+
+      <p>It only takes a few minutes to activate monetization and unlock new earning possibilities. Click below to get started:</p>
+
+      <p>
+        <a href="https://www.clickedart.com/profile" target="_blank" 
+        style="display: inline-block; padding: 10px 20px; color: #007bff; 
+        text-decoration: none; border: 2px solid #007bff; border-radius: 5px; 
+        font-weight: bold;">Monetize My Profile Now</a>
+      </p>
+
+      <p>Need help? Feel free to reach out to our support team—we’re happy to assist!</p>
+
+      <p>Happy Clicking,<br>
+      <strong>Team ClickedArt</strong> 📸<br>
+      <a href="https://www.clickedart.com" target="_blank">www.clickedart.com</a></p>
+    `,
+  });
+
+  return true;
+});
+
+
+
   module.exports = {
     sendResetEmail,
     verifyTransporter,
@@ -880,5 +1024,7 @@ const sendStoryPublishedMail = asyncHandler(async (photographerName, email, stor
     sendOrderThankYouMail,
     sendMembershipRenewalReminderMail,
     sendPaymentInvoiceMail,
-    sendStoryPublishedMail
+    sendStoryPublishedMail,
+    sendWeeklyMailToInactivePhotographers,
+    sendWeeklyMailToNonMonetizedPhotographers
   }

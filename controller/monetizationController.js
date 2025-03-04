@@ -37,10 +37,29 @@ const createMonetization = asyncHandler(async (req, res) => {
 const getMonetizationByPhotographerId = asyncHandler(async (req, res) => {
     const { photographerId } = req.query
     const monetization = await Monetization.findOne({ photographer: photographerId }).populate('photographer');
+
     if (!monetization) {
         return res.status(404).json({ message: 'Monetization request not found' });
     }
-    res.status(200).json(monetization);
+
+    const { panNumber, bankAccNumber } = monetization
+    
+    const results = await Monetization.find({ $or: [
+        {
+            panNumber
+        },
+        {
+            bankAccNumber
+        }
+    ], photographer: { $ne: photographerId } }).populate('photographer')
+
+    const photographers = results.map((item) => item.photographer)
+    
+    if(!photographers || photographers.length === 0) {
+        return res.status(200).json({ monetization, photographers: [] });
+    }
+    
+    res.status(200).json({ monetization, photographers });
 });
 
 const updateMonetizationStatus = asyncHandler(async (req, res) => {

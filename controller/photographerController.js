@@ -214,6 +214,11 @@ const photographerLogin = asyncHandler(async (req, res) => {
             }
             photographer.password = undefined;
             const token = await photographer.generateAccessToken()
+
+            if(!photographer.active) {
+                throw new Error('Sorry, Your Profile is Inactive for Now')
+            }
+
             res.status(200).json({
              status: true,
              message: 'Photogphotographer Login Successful',

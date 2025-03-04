@@ -6,9 +6,14 @@ const Photographer = require('../models/photographerModel')
 const UserType = require('../models/typeModel')
 const cron = require('node-cron');
 const Razorpay = require('razorpay');
-const { sendMembershipUpgradeMail,  sendMembershipRenewalReminderMail} = require('../middleware/handleEmail.js')
+const { sendMembershipUpgradeMail,  sendMembershipRenewalReminderMail,
+    sendWeeklyMailToInactivePhotographers,
+    sendWeeklyMailToNonMonetizedPhotographers
+ } = require('../middleware/handleEmail.js')
 const Referral = require('../models/referralModel.js')
 const ReferralBalance = require('../models/referralBalanceModel.js')
+const ImageVault = require('../models/imagebase/imageVaultModel.js')
+const Monetization = require('../models/monetizationModel.js')
 
 const createSubscription = asyncHandler(async (req, res) => {
     const { userId, planId, price, duration } = req.body
@@ -572,6 +577,43 @@ const addFreeSubscriptions = asyncHandler(async (req, res) => {
 
 })
 
+
+const weeklyMailToInactivePhotographers = asyncHandler(async (req, res) => {
+  
+  const photographersWithoutImages = await Photographer.find({
+    _id: { $nin: await ImageVault.distinct('photographer') }
+  }, 'email firstName lastName');
+  
+
+  const emailPromises = photographersWithoutImages.map(async (photographer) => {
+      console.log(photographer)
+      const photographerName = `${photographer.firstName} ${photographer.lastName}`;
+      const photographerEmail = photographer.email;
+      console.log(photographerName, photographerEmail)
+      await sendWeeklyMailToInactivePhotographers(photographerName, photographerEmail);
+  });
+  await Promise.all(emailPromises);
+  console.log(`Email Sent To Photographers`)
+
+})
+
+
+const weeklyMailToNonMonetizedPhotographers = asyncHandler(async (req, res) => {
+  const nonMonetizedPhotographers = await Photographer.find({
+      _id: { $nin: await Monetization.distinct('photographer') }
+  }, 'email firstName lastName');
+
+ 
+  const emailPromises = nonMonetizedPhotographers.map(async (photographer) => {
+      const photographerName = `${photographer.firstName} ${photographer.lastName}`;
+      const photographerEmail = photographer.email;
+      await sendWeeklyMailToNonMonetizedPhotographers(photographerName, photographerEmail);
+  });
+  await Promise.all(emailPromises);
+  console.log(`Email Sent To Photographers`)
+})
+
+
 module.exports = {
     createSubscription,
     getUserSubscriptions,
@@ -584,7 +626,9 @@ module.exports = {
     upgradeUserSubscription,
     checkAndSendSubscriptionEmails,
     checkAndSendExpirySubscriptionEmails,
-    addFreeSubscriptions
+    addFreeSubscriptions,
+    weeklyMailToInactivePhotographers,
+    weeklyMailToNonMonetizedPhotographers
 }
 
 

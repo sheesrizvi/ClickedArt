@@ -40,7 +40,10 @@ const salesUserRoutes = require('./routes/salesuserRoutes.js')
 const deliveryRoutes = require('./routes/deliveryRoutes.js')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
-const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails } = require('./controller/subscriptionController.js')
+const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails,
+  weeklyMailToInactivePhotographers,
+  weeklyMailToNonMonetizedPhotographers
+ } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
 
 
@@ -104,17 +107,31 @@ cron.schedule('0 1 * * 0', () => {
 })
 
 cron.schedule('0 2 * * *', () => {
-  console.log('Running the rejected photographer deletion check')
+  console.log('Running the subscription emails check')
   checkAndSendSubscriptionEmails()
 })
 
 cron.schedule('0 3 * * *', () => {
-  console.log('Running the rejected photographer deletion check')
+  console.log('Running the expiry subscription emails check')
   checkAndSendExpirySubscriptionEmails()
+})
+
+
+cron.schedule('0 8 * * 0', () => {
+  console.log('Running the inactive photographers emails check')
+  weeklyMailToInactivePhotographers()
+})
+
+cron.schedule('0 9 * * 0', () => {
+  console.log('Running the non monetized photographers emails check')
+  weeklyMailToNonMonetizedPhotographers()
 })
 
 app.use(notFound)
 app.use(errorHandler)
+
+
+
 
 const PORT = process.env.PORT || 5000;
 

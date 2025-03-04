@@ -137,7 +137,7 @@ const photographerSchema = new mongoose.Schema({
   },
   active: {
     type: Boolean,
-    default: false
+    default: true
   },
   type: {
     type: String,
@@ -153,7 +153,7 @@ const photographerSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'approved', 'rejected'],
         required: true,
-        default: 'pending'
+        default: 'approved'
     },
     rejectedAt: {
         type: Date,
