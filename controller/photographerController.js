@@ -294,7 +294,7 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
 const getAllPhotographers = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const photographers = await Photographer.find({ active: true }).sort({ firstName: 1 })
+    let photographers = await Photographer.find({ active: true }).sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
 
@@ -302,6 +302,18 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
 
     const totalDocuments = await Photographer.countDocuments({ active: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
+
+
+  photographers =  await Promise.all(
+        photographers.map(async (photographer) => {
+            const subscription = await Subscription.findOne({ 'userInfo.user':  photographer._id, isActive: true}).populate('planId')
+            const activeSubscription = subscription?.planId?.name || 'Basic'
+            return {
+                ...photographer.toObject(),
+                activeSubscription
+                }
+        })
+    )
 
     res.status(200).send({ photographers, pageCount  })
 })
