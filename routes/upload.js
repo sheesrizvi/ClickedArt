@@ -69,7 +69,7 @@ router.post("/uploadSingleImage", uploadMulter.single("image"), async (req, res)
   if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
-  console.log('running')
+ 
   try {
 
     // const compressedBuffer = await sharp(req.file.buffer)

@@ -32,7 +32,11 @@ const paperSchema = new mongoose.Schema(
           height: { type: Number, required: true }, 
           price: { type: Number, required: true }, 
         },
-      ]
+      ],
+      active: {
+        type: Boolean,
+        default: true
+      }
     },
     { timestamps: true }
   )

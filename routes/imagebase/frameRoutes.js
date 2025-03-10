@@ -5,7 +5,11 @@ const {
     getFrameById,
     updateFrame,
     deleteFrame, 
-    calculateFramePrices} = require('../../controller/imagebase/frameController')
+    calculateFramePrices,
+    getAllInactiveFrames,
+    updateFrameStatus,
+    getAllActiveFrames
+} = require('../../controller/imagebase/frameController')
 const { isAdmin } = require('../../middleware/authMiddleware')
 const router = express.Router()
 
@@ -17,5 +21,8 @@ router.get('/get-frames', getFrames )
 router.get('/calculate-frames-prices', calculateFramePrices)
 router.delete('/delete-frame', isAdmin, deleteFrame)
 
+router.get('/get-inactive-frames', getAllInactiveFrames)
+router.get('/get-active-frames', getAllActiveFrames)
+router.post('/update-frame-status', updateFrameStatus)
 
 module.exports = router

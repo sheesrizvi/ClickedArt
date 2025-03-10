@@ -292,6 +292,36 @@ const frame = await Frame.findById(frameId);
   });
 })
 
+const getInActivePapers = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+  const papers = await Paper.find({ active: false }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize);
+  if (!papers || papers.length === 0) return res.status(400).send({ message: 'No Paper found' });
+
+  const totalDocuments = await Paper.countDocuments({ active: false });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.status(200).json({ papers, pageCount });
+});
+
+const getActivePapers = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+  const papers = await Paper.find({ active: true }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize);
+  if (!papers || papers.length === 0) return res.status(400).send({ message: 'No Paper found' });
+
+  const totalDocuments = await Paper.countDocuments({ active: true });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.status(200).json({ papers, pageCount });
+});
+
+const updatePaperStatus = asyncHandler(async (req, res) => {
+  const { paperId, status = true } = req.body
+
+  await Paper.findOne({ _id: paperId }, { active: status })
+
+  res.status(200).send({ message: 'Paper Status updated successfully' })
+ })
+
 module.exports = {
   createPaper,
   getPapers,
@@ -299,5 +329,8 @@ module.exports = {
   updatePaper,
   deletePaper,
   calculatePaperPrices,
-  calculatePaperAndFramePrices
+  calculatePaperAndFramePrices,
+  getInActivePapers,
+  getActivePapers,
+  updatePaperStatus
 }

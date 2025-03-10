@@ -41,6 +41,10 @@ const frameSchema = new mongoose.Schema(
           price: { type: Number }, 
         },
       ],
+      active: {
+        type: Boolean,
+        default: true
+      }
     },
     { timestamps: true }
   );

@@ -185,15 +185,48 @@ const calculateFramePrices = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllInactiveFrames = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query
+  const frames = await Frame.find({ active: false }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
+  if(!frames || frames.length === 0) {
+    return res.status(400).send({ message: 'Frames not found' })
+  }
 
+  const totalDocuments = await Frame.countDocuments({ active: false })
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+  res.status(200).json({ frames, pageCount });
+})
 
+const getAllActiveFrames = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query
+  const frames = await Frame.find({ active: true }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+  if(!frames || frames.length === 0) {
+    return res.status(400).send({ message: 'Frames not found' })
+  }
+
+  const totalDocuments = await Frame.countDocuments({ active: true })
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+  res.status(200).json({ frames, pageCount });
+})
+
+const updateFrameStatus = asyncHandler(async(req, res) => {
+  const { frameId, status = true } = req.body
+
+  await Frame.findOneAndUpdate({ _id: frameId }, { active: status })
+
+  res.status(200).send({ message: 'Status Updated successfully' })
+})
 
 module.exports = {
   createFrame,
   getFrames,
+  getAllActiveFrames,
   getFrameById,
   updateFrame,
   deleteFrame,
-  calculateFramePrices
+  calculateFramePrices,
+  getAllInactiveFrames,
+  updateFrameStatus
 };

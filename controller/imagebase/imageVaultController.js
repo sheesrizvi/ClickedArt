@@ -850,6 +850,82 @@ const getRejectedImages = asyncHandler(async (req, res) => {
   res.status(200).send({ photos : newImages, pageCount })
 })
 
+const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query
+
+  const totalDocuments = await ImageVault.countDocuments({ isActive: true })
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+
+  let sortCriteria = { createdAt: -1, 'imageAnalytics.views': -1, 'imageAnalytics.downloads': -1 }
+  let sortOrder = order === 'asc' ? 1 : -1
+  
+  if(sortType === 'date') {
+    sortCriteria = { createdAt: sortOrder }
+  } else if(sortType === 'price') {
+    sortCriteria = { 'price.original': sortOrder }
+  } else if (sortType === 'views') {
+    sortCriteria = { 'imageAnalytics.views': sortOrder }
+  } else if (sortType === 'likes') {
+    sortCriteria = { 'imageAnalytics.likes': sortOrder }
+  } else if (sortType === 'downloads') {
+    sortCriteria = { 'imageAnalytics.downloads': sortOrder }
+  }
+
+  const images = await ImageVault.aggregate([
+    { $match: { isActive: true } },
+    {
+      $lookup: {
+        from: 'imageanalytics',
+        localField: '_id',
+        foreignField: 'image',
+        as: 'imageAnalytics'
+      }
+    },
+    {
+      $unwind: { path: '$imageAnalytics', preserveNullAndEmptyArrays: true }
+    },
+    {
+      $sort: sortCriteria
+    },
+    {
+      $skip: (pageNumber - 1) * pageSize
+    },
+    {
+      $limit: pageSize
+    }
+  ])
+
+
+
+ res.status(200).send({ photos: images, pageCount })
+ 
+  // const newImages = await Promise.all(
+  //     images.map(async (image) => {
+  //         // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+  //         // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+  //         const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+
+  //         return {
+  //             ...image.toObject(),
+  //             imageAnalytics,
+  //             // hasLiked: !!likeExist,
+  //             // hasCommented: !!commentExist,
+  //         };
+  //     })
+  // );
+  
+ 
+   //res.status(200).send({ photos : newImages, pageCount })
+})
+
+
+const updateNotForSaleStatus = asyncHandler(async (req, res) => {
+  const { imageId, status = false } = req.body
+  
+  await ImageVault.findOneAndUpdate({ _id: imageId }, { notForSale: status })
+
+  res.status(200).send({ message: 'Image not for sale status updated successfuly' })
+})
 
 module.exports = {
     addImageInVault,
@@ -868,5 +944,7 @@ module.exports = {
     updateImageViewCount,
     getImageAnalytics,
     bestSellerPhotos,
-    getRejectedImages
+    getRejectedImages,
+    getAllImagesFromVaultBySorting,
+    updateNotForSaleStatus
 }

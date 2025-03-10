@@ -166,7 +166,6 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
     user.isMarried = isMarried 
     user.anniversary = anniversary || user.anniversary
 
-
     if(email && email !== user.email) {
         const emailExist = await User.findOne({ email })
         if(emailExist){

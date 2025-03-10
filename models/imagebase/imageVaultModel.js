@@ -82,6 +82,10 @@ const imageVaultSchema = mongoose.Schema({
         trim: true,
         default: null
     }],
+    notForSale: {
+        type: Boolean,
+        default: false
+    }
 }, {
     timestamps: true
 })
