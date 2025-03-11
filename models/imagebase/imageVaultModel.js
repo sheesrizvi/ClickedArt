@@ -56,7 +56,7 @@ const imageVaultSchema = mongoose.Schema({
         },
       },
     price: {
-       original: { type: Number, required: true  },
+       original: { type: Number  },
        medium: { type: Number },
        small: { type: Number }
     },

@@ -122,25 +122,47 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     photo.notForSale = notForSale;
   }
 
-   const prices = {}
-   if(price) {
-    const royaltyShare = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    const sizePricingModifiers = royaltyShare.sizePricingModifiers;
+  //  const prices = {}
+  //  if(price) {
+  //   const royaltyShare = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
+  //   const sizePricingModifiers = royaltyShare.sizePricingModifiers;
 
-    prices.original = price
-    if(imageLinks.medium) {
-      prices.medium = price * (1 + sizePricingModifiers.medium / 100); 
-    }
-    prices.small = price * (1 + sizePricingModifiers.small / 100);  
+  //   prices.original = price
+  //   if(imageLinks.medium) {
+  //     prices.medium = price * (1 + sizePricingModifiers.medium / 100); 
+  //   }
+  //   prices.small = price * (1 + sizePricingModifiers.small / 100);  
   
-   }
-   photo.price = prices || photo.price
+  //  }
+  //  photo.price = prices || photo.price
 
-   await photo.save()
+  //  await photo.save()
   
-   
+  const prices = {};
 
-   await photo.save()
+  if (price !== undefined) {  
+      if (price === 0) {
+          prices.original = 0;
+          prices.medium = 0;
+          prices.small = 0;
+      } else {
+          const royaltyShare = await RoyaltySettings.findOne({ licensingType: 'exclusive' });
+          const sizePricingModifiers = royaltyShare.sizePricingModifiers;
+  
+          prices.original = price;
+          if (imageLinks.medium) {
+              prices.medium = price * (1 + sizePricingModifiers.medium / 100);
+          }
+
+          if(imageLinks.small) {
+            prices.small = price * (1 + sizePricingModifiers.small / 100);
+          }
+      }
+  }
+  
+  photo.price = prices || photo.price;
+  
+  await photo.save();
 
    res.status(201).send({ photo })
 })
