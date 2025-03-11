@@ -30,7 +30,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const addImageInVault = asyncHandler(async (req, res) => {
-  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, watermark, cameraDetails, price, license, title } = req.body
+  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, watermark, cameraDetails, price, license, title, notForSale } = req.body
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
@@ -79,7 +79,8 @@ const addImageInVault = asyncHandler(async (req, res) => {
     location, 
     story,
     license,
-    watermark, cameraDetails, price: prices
+    watermark, cameraDetails, price: prices,
+    notForSale
   })
 
   await ImageAnalytics.create({
@@ -93,7 +94,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
 
 const updateImageInVault = asyncHandler(async (req, res) => {
-    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license } = req.body
+    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license, notForSale } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
 
@@ -116,6 +117,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.cameraDetails = cameraDetails || photo.cameraDetails
    photo.story = story || photo.story
    photo.license = license || photo.license
+   photo.notForSale = notForSale || photo.notForSale
 
    const prices = {}
    if(price) {
