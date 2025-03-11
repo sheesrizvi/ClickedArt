@@ -214,6 +214,10 @@ const getAllActiveFrames = asyncHandler(async (req, res) => {
 const updateFrameStatus = asyncHandler(async(req, res) => {
   const { frameId, status = true } = req.body
 
+  if(!frameId) {
+    return res.status(400).send({ message: 'Frame Id is required' })
+  }
+  
   await Frame.findOneAndUpdate({ _id: frameId }, { active: status })
 
   res.status(200).send({ message: 'Status Updated successfully' })

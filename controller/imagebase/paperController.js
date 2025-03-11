@@ -316,6 +316,10 @@ const getActivePapers = asyncHandler(async (req, res) => {
 
 const updatePaperStatus = asyncHandler(async (req, res) => {
   const { paperId, status = true } = req.body
+  
+  if(!paperId) {
+    return res.status(400).send({ message: 'Paper Id is required' })
+  }
 
   await Paper.findOne({ _id: paperId }, { active: status })
 

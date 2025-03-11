@@ -11,7 +11,8 @@ const { createOrder ,
     calculateCartPrice,
     deleteOrder,
     updatePrintStatus,
-    getFailedOrders
+    getFailedOrders,
+    updateReadyToShipStatus
  } = require('../controller/orderController')
 const router = express.Router()
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware.js')
@@ -29,5 +30,6 @@ router.post('/calculate-price', calculateCartPrice)
 router.post('/update-print-status', updatePrintStatus)
 router.delete('/delete-order', deleteOrder)
 router.get('/get-failed-orders', getFailedOrders)
+router.post('/update-ready-to-ship-status', updateReadyToShipStatus)
 
 module.exports = router

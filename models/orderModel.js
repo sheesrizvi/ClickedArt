@@ -120,6 +120,10 @@ const orderSchema = new mongoose.Schema(
       waybill: {
         type: String,
         required: false
+      },
+      readyToShip: {
+        type: Boolean,
+        default: false
       }
   },
   {

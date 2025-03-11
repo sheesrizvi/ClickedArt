@@ -692,6 +692,18 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
   res.status(200).send({ message: "Print Status updated successfully" });
 });
 
+const updateReadyToShipStatus = asyncHandler(async (req, res) => {
+  const { orderId, status = false } = req.body
+
+  if(!orderId) {
+    return res.status(400).send({ message: 'Order Id not found' })
+  }
+  
+  await Order.findOneAndUpdate({ _id: orderId }, { readyToShip: status })
+
+  res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
+})
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -706,4 +718,5 @@ module.exports = {
   updatePrintStatus,
   deleteOrder,
   getFailedOrders,
+  updateReadyToShipStatus
 };
