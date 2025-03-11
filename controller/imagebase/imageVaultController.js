@@ -117,7 +117,10 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.cameraDetails = cameraDetails || photo.cameraDetails
    photo.story = story || photo.story
    photo.license = license || photo.license
-   photo.notForSale = notForSale || photo.notForSale
+   
+   if (notForSale !== undefined) {
+    photo.notForSale = notForSale;
+  }
 
    const prices = {}
    if(price) {
