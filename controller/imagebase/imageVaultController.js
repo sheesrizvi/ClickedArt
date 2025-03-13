@@ -982,8 +982,14 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
     sortCriteria = { 'imageAnalytics.downloads': sortOrder }
   }
 
+  const matchStage = { isActive: true };
+
+  if (sortType === 'price' && order === 'asc') {
+    matchStage.notForSale = { $ne: true };
+  }
+
   const images = await ImageVault.aggregate([
-    { $match: { isActive: true } },
+    { $match: matchStage },
     {
       $lookup: {
         from: 'imageanalytics',
