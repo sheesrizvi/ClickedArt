@@ -632,14 +632,113 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 //   res.status(200).send({ results: uniqueResults, pageCount });
 // });
 
-const searchImages = asyncHandler(async (req, res) => {
-  let { Query, pageNumber = 1, pageSize = 20 } = req.query;
-  if (!Query) {
-    return res.status(400).send({ message: 'Query is required' });
-  }
+// const searchImages = asyncHandler(async (req, res) => {
+//   let { Query, pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query;
 
-  pageNumber = parseInt(pageNumber, 10);
-  pageSize = parseInt(pageSize, 10);
+//   if (!Query) {
+//     return res.status(400).send({ message: 'Query is required' });
+//   }
+
+//   pageNumber = parseInt(pageNumber, 10);
+//   pageSize = parseInt(pageSize, 10);
+
+//   const searchPipeline = [
+//     {
+//       $search: {
+//         index: 'imagesearchindex',
+//         compound: {
+//           should: ['title', 'description', 'story', 'keywords'].map((field) => ({
+//             text: {
+//               query: Query,
+//               path: field,
+//               fuzzy: { maxEdits: 2, prefixLength: 2 }
+//             }
+//           }))
+//         }
+//       }
+//     },
+//     { $match: { isActive: true } },
+//     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
+//     { $match: { relevanceScore: { $gte: 0.6 } } },
+//     { $sort: { relevanceScore: -1 } },
+//     { $skip: (pageNumber - 1) * pageSize },
+//     { $limit: pageSize }
+//   ];
+
+//   const countPipeline = [
+//     ...searchPipeline.slice(0, -2),
+//     { $count: 'total' }
+//   ];
+
+//   let results = await ImageVault.aggregate(searchPipeline);
+//   const totalDocs = await ImageVault.aggregate(countPipeline);
+//   let count = totalDocs.length > 0 ? totalDocs[0].total : 0;
+
+//   const imageIds = results.map((result) => result._id);
+//   results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license');
+
+//   const categories = await Category.find({
+//     $or: [
+//       { name: { $regex: Query, $options: 'i' } },
+//       { description: { $regex: Query, $options: 'i' } }
+//     ]
+//   });
+
+//   const categoryImageResults = await ImageVault.find({
+//     category: { $in: categories.map((c) => c._id) },
+//     isActive: true
+//   }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize);
+
+//   results = [...results, ...categoryImageResults];
+//   results = Array.from(new Map(results.map(item => [item._id.toString(), item])).values());
+
+//   count = results.length;
+//   const pageCount = Math.ceil(count / pageSize);
+
+//   res.status(200).send({ results, pageCount });
+// });
+
+
+const searchImages = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc', Query = '' } = req.query;
+  const searchQuery = Query
+  const [{ totalDocuments = 0 } = {}] = await ImageVault.aggregate([
+    {
+      $search: {
+        index: 'imagesearchindex',
+        compound: {
+          should: ['title', 'description', 'story', 'keywords'].map((field) => ({
+            text: {
+              query: searchQuery,
+              path: field,
+              fuzzy: { maxEdits: 2, prefixLength: 2 },
+            },
+          })),
+        },
+      },
+    },
+    { $match: { isActive: true } },
+    { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
+    { $match: { relevanceScore: { $gte: 0.6 } } },
+    { $count: 'totalDocuments' },
+  ]);
+
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  let sortOrder = order === 'asc' ? 1 : -1;
+  let sortCriteria = { createdAt: -1, 'imageAnalytics.views': -1, 'imageAnalytics.downloads': -1 };
+
+  if (sortType === 'date') {
+    sortCriteria = { createdAt: sortOrder };
+  } else if (sortType === 'price') {
+    sortCriteria = { 'price.original': sortOrder };
+  } else if (sortType === 'views') {
+    sortCriteria = { 'imageAnalytics.views': sortOrder };
+  } else if (sortType === 'likes') {
+    sortCriteria = { 'imageAnalytics.likes': sortOrder };
+  } else if (sortType === 'downloads') {
+    sortCriteria = { 'imageAnalytics.downloads': sortOrder };
+  }
 
   const searchPipeline = [
     {
@@ -648,54 +747,39 @@ const searchImages = asyncHandler(async (req, res) => {
         compound: {
           should: ['title', 'description', 'story', 'keywords'].map((field) => ({
             text: {
-              query: Query,
+              query: searchQuery,
               path: field,
-              fuzzy: { maxEdits: 2, prefixLength: 2 }
-            }
-          }))
-        }
-      }
+              fuzzy: { maxEdits: 2, prefixLength: 2 },
+            },
+          })),
+        },
+      },
     },
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
     { $match: { relevanceScore: { $gte: 0.6 } } },
     { $sort: { relevanceScore: -1 } },
     { $skip: (pageNumber - 1) * pageSize },
-    { $limit: pageSize }
+    { $limit: parseInt(pageSize) },
+    {
+      $lookup: {
+        from: 'imageanalytics',
+        localField: '_id',
+        foreignField: 'image',
+        as: 'imageAnalytics',
+      },
+    },
+    {
+      $unwind: { path: '$imageAnalytics', preserveNullAndEmptyArrays: true },
+    },
+    { $sort: sortCriteria },
   ];
 
-  const countPipeline = [
-    ...searchPipeline.slice(0, -2),
-    { $count: 'total' }
-  ];
+  const images = await ImageVault.aggregate(searchPipeline);
 
-  let results = await ImageVault.aggregate(searchPipeline);
-  const totalDocs = await ImageVault.aggregate(countPipeline);
-  let count = totalDocs.length > 0 ? totalDocs[0].total : 0;
-
-  const imageIds = results.map((result) => result._id);
-  results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license');
-
-  const categories = await Category.find({
-    $or: [
-      { name: { $regex: Query, $options: 'i' } },
-      { description: { $regex: Query, $options: 'i' } }
-    ]
-  });
-
-  const categoryImageResults = await ImageVault.find({
-    category: { $in: categories.map((c) => c._id) },
-    isActive: true
-  }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize);
-
-  results = [...results, ...categoryImageResults];
-  results = Array.from(new Map(results.map(item => [item._id.toString(), item])).values());
-
-  count = results.length;
-  const pageCount = Math.ceil(count / pageSize);
-
-  res.status(200).send({ results, pageCount });
+  res.status(200).send({ photos: images, pageCount });
 });
+
 
 
 const updateImageViewCount = asyncHandler(async (req, res) => {
