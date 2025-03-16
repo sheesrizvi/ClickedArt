@@ -700,8 +700,12 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 
 
 const searchImages = asyncHandler(async (req, res) => {
-  const { pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc', Query = '' } = req.query;
+  let { pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc', Query = '' } = req.query;
   const searchQuery = Query
+  
+  pageNumber = parseInt(pageNumber)
+  pageSize = parseInt(pageSize)
+
   const [{ totalDocuments = 0 } = {}] = await ImageVault.aggregate([
     {
       $search: {
@@ -962,7 +966,10 @@ const getRejectedImages = asyncHandler(async (req, res) => {
 })
 
 const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
-  const { pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query
+  let { pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query
+
+  pageNumber = parseInt(pageNumber)
+  pageSize = parseInt(pageSize)
 
   const totalDocuments = await ImageVault.countDocuments({ isActive: true })
   const pageCount = Math.ceil(totalDocuments/pageSize)

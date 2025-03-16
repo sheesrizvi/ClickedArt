@@ -146,7 +146,10 @@ const getAllCategory = asyncHandler(async (req, res) => {
 
 
 const searchCategories = async (req, res) => {
-  const { Query, pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc' } = req.query;
+  let { Query, pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc' } = req.query;
+
+  pageNumber = parseInt(pageNumber)
+  pageSize = parseInt(pageSize)
 
   if (!Query) {
     return res.status(400).send({ message: 'Query is required' });
