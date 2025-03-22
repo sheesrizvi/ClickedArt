@@ -5,10 +5,10 @@ const layoutContentSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    heroSectionPhotos: {
-        type: [String],
-        required: true
-    },
+    heroSectionPhotos: [{
+        image: { type: mongoose.Schema.Types.ObjectId, ref: 'ImageVault' },
+        link: { type: String }
+    }],
     footerDetails: {
         address: {
             type: String,

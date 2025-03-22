@@ -26,7 +26,12 @@ const updateLayoutContent = asyncHandler(async (req, res) => {
 });
 
 const getLayoutContent = asyncHandler(async (req, res) => {
-    const content = await LayoutContent.findOne();
+    const content = await LayoutContent.findOne().populate({
+      path: 'heroSectionPhotos.image',
+      populate: {
+        path: 'photographer'
+      }
+    });
     res.status(200).send(content);
 });
 
