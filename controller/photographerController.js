@@ -310,11 +310,13 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
         
             const activeSubscription = subscription?.planId?.name || 'Basic'
             const activeUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
-
+            const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] } , isActive: false   });
+            
             return {
                 ...photographer.toObject(),
                 activeSubscription,
                 activeUploadingImgCount,
+                pendingImagesCount
                 }
         })
     )
