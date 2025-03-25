@@ -307,10 +307,14 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
   photographers =  await Promise.all(
         photographers.map(async (photographer) => {
             const subscription = await Subscription.findOne({ 'userInfo.user':  photographer._id, isActive: true}).populate('planId')
+        
             const activeSubscription = subscription?.planId?.name || 'Basic'
+            const activeUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
+
             return {
                 ...photographer.toObject(),
-                activeSubscription
+                activeSubscription,
+                activeUploadingImgCount,
                 }
         })
     )
