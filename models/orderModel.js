@@ -124,6 +124,12 @@ const orderSchema = new mongoose.Schema(
       readyToShip: {
         type: Boolean,
         default: false
+      },
+      readyToShipTimeStamp: {
+        type: Date,
+      },
+      pickupId: {
+        type: Number
       }
   },
   {

@@ -602,7 +602,68 @@ const generateShippingLabel = async (req, res) => {
 };
 
 
+const raisePickupRequestScheduler = async () => {
+  try {
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0); 
+    
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999); 
+
+    let orders = await Order.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday }   })
+
+    let orderIds = orders.map((order) => order._id)
+   
+    let expected_package_count = orders.length
+  
+    if(expected_package_count < 1) {
+      return
+    }
+
+    let currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + 1);
+    const pickup_date = currentDate.toISOString().split('T')[0];
+    const pickup_time = "11:00:00";
+    const pickup_location = 'FORTENETSKILLS SURFACE'
+
+    const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
+
+    const payload = {
+      pickup_location,
+      expected_package_count,
+      pickup_date,
+      pickup_time,
+    };
+    console.log(payload)
+    const response = await axios.post(DELHIVERY_API_URL, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Token ${token}`,
+      },
+    });
+
+    console.log('Pickup request created successfully')
+    console.log("Response Data", response.data)
+    if(response && response.data && response.data.success) {
+
+      await Order.updateMany(
+        { _id: { $in: orderIds } },
+        { $set: { pickupId: response.data.pickup_id } }
+    );
+    
+    }
+    return
+  } catch (error) {
+
+    console.log("Failed to created pickup request")
+    error = error.response ? error.response.data : error.message
+    console.log("Error", error)
+    return
+  }
+};
 
 
 module.exports = {
@@ -613,5 +674,6 @@ module.exports = {
   registerDeliveryFromOrder,
   registerDeliveryManually,
   raisePickupRequest,
-  generateShippingLabel
+  generateShippingLabel,
+  raisePickupRequestScheduler
 }

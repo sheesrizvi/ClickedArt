@@ -698,8 +698,12 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
   if(!orderId) {
     return res.status(400).send({ message: 'Order Id not found' })
   }
-  
-  await Order.findOneAndUpdate({ _id: orderId }, { readyToShip: status })
+  let readyToShipTimeStamp
+  if(status === true) {
+    readyToShipTimeStamp = new Date()
+  }
+ 
+  await Order.findOneAndUpdate({ _id: orderId }, { readyToShip: status, readyToShipTimeStamp })
 
   res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
 })

@@ -45,7 +45,7 @@ const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSen
   weeklyMailToNonMonetizedPhotographers
  } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
-
+const { raisePickupRequestScheduler } = require('./controller/deliveryController.js')
 
 const app = express();
 
@@ -126,6 +126,14 @@ cron.schedule('0 9 * * 0', () => {
   console.log('Running the non monetized photographers emails check')
   weeklyMailToNonMonetizedPhotographers()
 })
+
+
+
+cron.schedule('55 23 * * *', () => {
+  console.log('Running the raise pickup request scheduler check')
+  raisePickupRequestScheduler()
+})
+
 
 app.use(notFound)
 app.use(errorHandler)
