@@ -779,9 +779,12 @@ const searchImages = asyncHandler(async (req, res) => {
     { $sort: sortCriteria },
   ];
 
-  const images = await ImageVault.aggregate(searchPipeline);
 
-  res.status(200).send({ photos: images, pageCount });
+
+  const images = await ImageVault.aggregate(searchPipeline);
+  const sortedImages = images.sort((a, b) => b.relevanceScore - a.relevanceScore).map(image => image);
+
+  res.status(200).send({ photos: sortedImages, pageCount });
 });
 
 
