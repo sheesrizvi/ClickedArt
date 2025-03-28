@@ -723,7 +723,7 @@ const searchImages = asyncHandler(async (req, res) => {
     },
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
-    { $match: { relevanceScore: { $gte: 0.6 } } },
+    { $match: { relevanceScore: { $gte: 0.8 } } },
     { $count: 'totalDocuments' },
   ]);
 
