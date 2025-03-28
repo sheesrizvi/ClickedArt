@@ -17,6 +17,9 @@ const storySchema = mongoose.Schema({
     },
     expiration_time: {
         type: Date
+    },
+    slug: {
+        type: String
     }
 }, { timestamps: true })
 

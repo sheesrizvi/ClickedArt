@@ -11,6 +11,7 @@ const { S3Client } = require("@aws-sdk/client-s3");
 const Photographer = require('../../models/photographerModel.js')
 const RoyaltySettings = require('../../models/imagebase/royaltyModel.js')
 const Order = require('../../models/orderModel.js')
+const { generateSlug } = require('../../middleware/slugMiddleware.js')
 const {  sendApprovedImageMail,
   sendUnapprovedImageMail, setApprovedImageOfMonetizedProfile,
   setApprovedImageOfNonMonetizedProfile, 
@@ -73,6 +74,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
   }
   prices.small = price * (1 + sizePricingModifiers.small / 100);  
 
+  const slug = generateSlug(title)
 
   const newImage = await ImageVault.create({
     category, photographer, imageLinks, resolutions, title, description, keywords, 
@@ -80,7 +82,8 @@ const addImageInVault = asyncHandler(async (req, res) => {
     story,
     license,
     watermark, cameraDetails, price: prices,
-    notForSale
+    notForSale,
+    slug
   })
 
   await ImageAnalytics.create({
@@ -117,6 +120,11 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.cameraDetails = cameraDetails || photo.cameraDetails
    photo.story = story || photo.story
    photo.license = license || photo.license
+   
+   if(title) {
+           const slug = generateSlug(title)
+           photo.slug = slug
+    }
    
    if (notForSale !== undefined) {
     photo.notForSale = notForSale;

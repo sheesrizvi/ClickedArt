@@ -6,13 +6,16 @@ const asyncHandler = require('express-async-handler')
 const Admin = require('../../models/adminModel.js')
 const { DeleteObjectCommand } = require('@aws-sdk/client-s3')
 const { S3Client } = require('@aws-sdk/client-s3')
-
+const { generateSlug } = require('../../middleware/slugMiddleware.js')
 
 const addBlog = asyncHandler(async (req, res) => {
-    const { authorInfo, slug, content, coverImage, tags, photographer, achievements, blogType, createdBy, isActive  } = req.body
+    const { authorInfo, content, coverImage, tags, photographer, achievements, blogType, createdBy, isActive  } = req.body
+    
     if(!authorInfo || !content || !coverImage) return res.status(400).send({ message: 'All Fields are required'})
     
+    const slug = generateSlug(content.title)
     let blog 
+    console.log('running')
     if(blogType === 'successstory') {
         blog = new Blog({
             authorInfo,
@@ -38,6 +41,8 @@ const addBlog = asyncHandler(async (req, res) => {
         })
     }
         
+    
+ 
     await blog.save()
 
     res.status(200).send({ message: 'Blog created successfully', blog })
@@ -48,7 +53,6 @@ const updateBlog = asyncHandler(async (req, res) => {
     const blog = await Blog.findOne({ _id: blogId })
     if(!blog) return res.status(400).send({ message: 'Blog not found' })
 
-    blog.slug = slug ?? blog.slug
     blog.content = content ?? blog.content
     blog.coverImage = coverImage ?? blog.coverImage
     blog.isActive = isActive ?? blog.isActive
@@ -59,6 +63,12 @@ const updateBlog = asyncHandler(async (req, res) => {
         blog.achievements = achievements ?? blog.achievements
         blog.photographer = photographer ?? blog.photographer
     }
+
+   if(title) {
+        const slug = generateSlug(title)
+        blog.slug = slug
+    }
+
     await blog.save()
 
     res.status(200).send({ message: 'Blog update successfull', blog })

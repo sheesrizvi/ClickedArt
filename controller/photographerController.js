@@ -506,8 +506,10 @@ const searchPhotographers = async (req, res) => {
   const getPhotographerByUserName = asyncHandler(async (req, res) => {
     const { username } = req.query
 
-    const user = await Photographer.findOne({ username })
-
+    const user = await Photographer.findOne({ 
+        username: { $regex: new RegExp(`^${username}$`, 'i') } 
+      });
+      
     if(!user) return res.status(400).send({ message: 'User not found' })
 
     res.status(200).send({ user })
