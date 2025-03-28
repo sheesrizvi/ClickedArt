@@ -723,7 +723,7 @@ const searchImages = asyncHandler(async (req, res) => {
     },
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
-    { $match: { relevanceScore: { $gte: 0.8 } } },
+    { $match: { relevanceScore: { $gte: 1 } } },
     { $count: 'totalDocuments' },
   ]);
 
@@ -761,7 +761,7 @@ const searchImages = asyncHandler(async (req, res) => {
     },
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
-    { $match: { relevanceScore: { $gte: 0.6 } } },
+    { $match: { relevanceScore: { $gte: 1 } } },
     { $sort: { relevanceScore: -1 } },
     { $skip: (pageNumber - 1) * pageSize },
     { $limit: parseInt(pageSize) },
