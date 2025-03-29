@@ -129,7 +129,7 @@ const getStoryBySlug = asyncHandler(async (req, res) => {
     const { slug } = req.query
 
     if(!slug) {
-        return res.status(400).send({ slug })
+        return res.status(400).send({ message: 'Slug is required' })
     }
 
     const story = await Story.findOne({ slug }).populate({

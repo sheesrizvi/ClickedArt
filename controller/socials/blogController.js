@@ -348,7 +348,7 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
     const { slug } = req.query
 
     if(!slug) {
-        return res.status(400).send({ message: 'Blog is required' })
+        return res.status(400).send({ message: 'Slug is required' })
     }
 
     const blog = await Blog.findOne({ slug }).populate('authorInfo.author').populate('photographer')
