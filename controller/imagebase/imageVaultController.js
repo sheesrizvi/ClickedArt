@@ -108,6 +108,10 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     const photo = await ImageVault.findOne({ _id: id, photographer })
     if(!photo) return res.status(400).send({  message: 'Photo not found' })
 
+    if(photo.title !== title || !photo.slug) {
+      const slug = generateSlug(title)
+      photo.slug = slug
+    }
   
    photo.category = category || photo.category
    photo.imageLinks = imageLinks || photo.imageLinks
@@ -120,11 +124,6 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.cameraDetails = cameraDetails || photo.cameraDetails
    photo.story = story || photo.story
    photo.license = license || photo.license
-   
-   if(title) {
-           const slug = generateSlug(title)
-           photo.slug = slug
-    }
    
    if (notForSale !== undefined) {
     photo.notForSale = notForSale;

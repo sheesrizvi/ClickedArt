@@ -42,14 +42,14 @@ const updateStory = asyncHandler(async (req, res) => {
     if(!story) {
         return res.status(400).send({ message: 'Story not found' })
     }
+    if(story.title !== title || !story.slug) {
+        const slug = generateSlug(title)
+        story.slug = slug
+    }
     if(title) story.title = title
     if(description) story.description = description
     if(media_url) story.media_url = media_url
     if(inspiredBy) story.inspiredBy = inspiredBy
-    if(title) {
-        const slug = generateSlug(title)
-        story.slug = slug
-    }
     await story.save()
 
     res.status(200).send({ message: 'Story updated Successfully' })
