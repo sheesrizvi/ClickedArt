@@ -351,7 +351,7 @@ const getBlogBySlug = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'Slug is required' })
     }
 
-    const blog = await Blog.findOne({ slug }).populate('authorInfo.author').populate('photographer')
+    const blog = await Blog.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') } }).populate('authorInfo.author').populate('photographer')
 
     if(!blog) {
         return res.status(400).send({ message: 'Blog not found' })

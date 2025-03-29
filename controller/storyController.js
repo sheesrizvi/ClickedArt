@@ -132,7 +132,7 @@ const getStoryBySlug = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'Slug is required' })
     }
 
-    const story = await Story.findOne({ slug }).populate({
+    const story = await Story.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') } }).populate({
         path: 'inspiredBy',
         populate: {
             path: 'photographer'

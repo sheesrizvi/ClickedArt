@@ -1069,7 +1069,7 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Slug is required' })
   }
 
-  const image = await ImageVault.findOne({ slug }).populate('category photographer license')
+  const image = await ImageVault.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') }  }).populate('category photographer license')
 
   if(!image) {
     return res.status(400).send({ message: 'No Image found' })
