@@ -1062,6 +1062,23 @@ const updateNotForSaleStatus = asyncHandler(async (req, res) => {
   res.status(200).send({ message: 'Image not for sale status updated successfuly' })
 })
 
+
+const getImageBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.query
+
+  if(!slug) {
+    return res.status(400).send({ message: 'Slug is required' })
+  }
+
+  const image = await ImageVault.findOne({ slug }).populate('category photographer license')
+
+  if(!image) {
+    return res.status(400).send({ message: 'No Image found' })
+  }
+  
+  res.status(200).send({ image })
+})
+
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -1081,5 +1098,6 @@ module.exports = {
     bestSellerPhotos,
     getRejectedImages,
     getAllImagesFromVaultBySorting,
-    updateNotForSaleStatus
+    updateNotForSaleStatus,
+    getImageBySlug
 }

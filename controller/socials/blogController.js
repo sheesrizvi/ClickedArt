@@ -344,6 +344,22 @@ const getMyBlogs = asyncHandler(async (req, res) => {
     
 })
 
+const getBlogBySlug = asyncHandler(async (req, res) => {
+    const { slug } = req.query
+
+    if(!slug) {
+        return res.status(400).send({ message: 'Blog is required' })
+    }
+
+    const blog = await Blog.findOne({ slug }).populate('authorInfo.author').populate('photographer')
+
+    if(!blog) {
+        return res.status(400).send({ message: 'Blog not found' })
+    }
+
+    res.status(200).send({ blog })
+})
+
 module.exports =  {
     addBlog,
     updateBlog,
@@ -359,5 +375,6 @@ module.exports =  {
     searchSuccessStory,
     updateBlogStatus,
     getAllPendingBlogs,
-    getMyBlogs
+    getMyBlogs,
+    getBlogBySlug
 }

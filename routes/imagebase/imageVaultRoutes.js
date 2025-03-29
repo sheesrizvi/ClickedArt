@@ -18,7 +18,8 @@ const {
         bestSellerPhotos,
         getRejectedImages,
         getAllImagesFromVaultBySorting,
-        updateNotForSaleStatus
+        updateNotForSaleStatus,
+        getImageBySlug
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin } = require('../../middleware/authMiddleware')
 
@@ -47,5 +48,7 @@ router.get('/get-rejected-images', getRejectedImages)
 
 router.get('/get-images-by-sort-type', getAllImagesFromVaultBySorting)
 router.post('/update-not-for-sale-status', updateNotForSaleStatus)
+
+router.get('/get-image-by-slug', getImageBySlug)
 
 module.exports = router

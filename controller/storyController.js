@@ -122,6 +122,28 @@ const getStoryById = asyncHandler(async (req, res) => {
     }
 
     res.status(200).send({ story })
+
+})
+
+const getStoryBySlug = asyncHandler(async (req, res) => {
+    const { slug } = req.query
+
+    if(!slug) {
+        return res.status(400).send({ slug })
+    }
+
+    const story = await Story.findOne({ slug }).populate({
+        path: 'inspiredBy',
+        populate: {
+            path: 'photographer'
+        }
+    })
+
+    if(!story) {
+        return res.status(400).send({ message: 'No Story Found' })
+    }
+
+    res.status(200).send({ story })
 })
 
 module.exports = {
@@ -130,5 +152,6 @@ module.exports = {
     deleteStory,
     getAllStory,
     getMyStory,
-    getStoryById
+    getStoryById,
+    getStoryBySlug
 }
