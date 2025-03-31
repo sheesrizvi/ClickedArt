@@ -179,7 +179,7 @@ const searchCategories = async (req, res) => {
     sortCriteria = { 'imageAnalytics.downloads': sortOrder };
   }
 
-  const results = await ImageVault.aggregate([
+  let results = await ImageVault.aggregate([
     { $match: { category: { $in: categoriesIds }, isActive: true } },
     {
       $lookup: {
@@ -227,6 +227,16 @@ const searchCategories = async (req, res) => {
   });
 
   const pageCount = Math.ceil(totalDocuments / pageSize);
+  results = await Promise.all(
+    results.map((async (image) => {
+      const imageObject = image;
+      imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
+      return {
+        ...imageObject
+      }
+    }))
+  )
 
   res.status(200).send({ results, pageCount });
 };

@@ -184,8 +184,11 @@ const getImageFromVault = asyncHandler(async (req, res) => {
     // const likeExist = await Like.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId })
     // const commentExist = await Comment.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId  })
     const imageAnalytics = await ImageAnalytics.findOne({ image: id })
+    const imageObject = image.toObject()
+    imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
     image = {
-        ...image.toObject(),
+        ...imageObject,
         imageAnalytics,
     }
     res.status(200).send({ photo: image })
@@ -205,9 +208,11 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
-
+            const imageObject = image.toObject();
+            imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+            
             return {
-                ...image.toObject(),
+                ...imageObject,
                 imageAnalytics,
                 // hasLiked: !!likeExist,
                 // hasCommented: !!commentExist,
@@ -235,8 +240,11 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+            const imageObject = image.toObject();
+            imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
             return {
-                ...image.toObject(),
+                ...imageObject,
                 imageAnalytics,
                 // hasLiked: !!likeExist,
                 // hasCommented: !!commentExist,
@@ -263,8 +271,11 @@ const getImagesByCategory = asyncHandler(async(req, res) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+            const imageObject = image.toObject();
+            imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
             return {
-                ...image.toObject(),
+                ...imageObject,
                 imageAnalytics,
                 // hasLiked: !!likeExist,
                 // hasCommented: !!commentExist,
@@ -293,6 +304,9 @@ const getImagesByCategoryType = asyncHandler(async(req, res) => {
             // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+            // const imageObject = image.toObject();
+            // imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
             return {
                 ...image.toObject(),
                 imageAnalytics,
@@ -463,8 +477,20 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
       return res.status(400).send({  message: 'Featured Artwork not found' })
   }
   const pageCount = Math.ceil(totalDocuments/pageSize)
+  
+  const newPhotos = await Promise.all(
+    featuredArtwork.map((image) => {
+      const imageObject = image.toObject()
+      imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
 
-  res.status(200).send({  featuredArtwork, pageCount })
+      return {
+        ...imageObject
+      }
+    })
+  )
+ 
+
+  res.status(200).send({  featuredArtwork: newPhotos, pageCount })
 })
 
 // const searchImages = asyncHandler(async (req, res) => {
@@ -788,8 +814,19 @@ const searchImages = asyncHandler(async (req, res) => {
 
 
 
-  const images = await ImageVault.aggregate(searchPipeline);
+  let images = await ImageVault.aggregate(searchPipeline);
+  images = await Promise.all(
+    images.map((async (image) => {
+      const imageObject = image;
+      imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
+      return {
+        ...imageObject
+      }
+    }))
+  )
   const sortedImages = images.sort((a, b) => b.relevanceScore - a.relevanceScore).map(image => image);
+
 
   res.status(200).send({ photos: sortedImages, pageCount });
 });
@@ -836,6 +873,7 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
     downloads
   }).populate({
     path: 'image',
+    select: 'imageLinks.thumbnail title description story keywords category photographer license',
     populate: [
       {
         path: 'category'
@@ -942,10 +980,19 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
     },
   ]);
 
-
-  res.status(200).send({ bestSellers })
+  const images = await Promise.all(
+    bestSellers.map(async (image) => {
+      const imageObject = image.toObject();
+      imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+      return {
+        ...imageObject
+      }
+    })
+  )
   
-})
+  res.status(200).send({ bestSellers: images })
+  
+}) // Not Tested
 
 
 const getRejectedImages = asyncHandler(async (req, res) => {
@@ -1005,7 +1052,7 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
     matchStage.notForSale = { $ne: true };
   }
 
-  const images = await ImageVault.aggregate([
+  let images = await ImageVault.aggregate([
     { $match: matchStage },
     {
       $lookup: {
@@ -1030,6 +1077,17 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
   ])
 
 
+
+ images = await Promise.all(
+    images.map(async (image) => {
+      const imageObject = image;
+      imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+      return {
+        ...imageObject
+      }
+    })
+  )
+  
 
  res.status(200).send({ photos: images, pageCount })
  
@@ -1069,12 +1127,18 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Slug is required' })
   }
 
-  const image = await ImageVault.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') }  }).populate('category photographer license')
+  let image = await ImageVault.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') }  }).populate('category photographer license')
 
   if(!image) {
     return res.status(400).send({ message: 'No Image found' })
   }
   
+  const imageObject = image.toObject()
+  imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+  image = {
+    ...imageObject,
+  }
+
   res.status(200).send({ image })
 })
 
