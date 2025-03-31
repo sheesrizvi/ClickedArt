@@ -22,7 +22,7 @@ const {
         getImageBySlug,
         getImageForDownload
      } = require('../../controller/imagebase/imageVaultController')
-const { IsAdminOrPhotographer, isAdmin } = require('../../middleware/authMiddleware')
+const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
 const router = express.Router()
 
@@ -51,6 +51,6 @@ router.get('/get-images-by-sort-type', getAllImagesFromVaultBySorting)
 router.post('/update-not-for-sale-status', updateNotForSaleStatus)
 
 router.get('/get-image-by-slug', getImageBySlug)
-router.get('/get-image-for-download', getImageForDownload)
+router.get('/get-image-for-download', verifyToken, getImageForDownload)
 
 module.exports = router
