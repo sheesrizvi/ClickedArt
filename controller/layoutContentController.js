@@ -28,6 +28,7 @@ const updateLayoutContent = asyncHandler(async (req, res) => {
 const getLayoutContent = asyncHandler(async (req, res) => {
     const content = await LayoutContent.findOne().populate({
       path: 'heroSectionPhotos.image',
+      select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails",
       populate: {
         path: 'photographer'
       }

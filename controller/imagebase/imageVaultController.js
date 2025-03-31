@@ -1142,6 +1142,19 @@ const getImageBySlug = asyncHandler(async (req, res) => {
   res.status(200).send({ image })
 })
 
+const getImageForDownload = asyncHandler(async (req, res) => {
+    let { id, resolution } = req.query
+    
+    let image = await ImageVault.findOne({ _id: id }).select('imageLinks photographer resolutions title description story keywords category photographer license price location cameraDetails').populate('photographer category license')
+    
+    let imageUrl = image.imageLinks[resolution]; 
+
+    if (!imageUrl) return res.status(400).send({ message: 'Requested resolution not available' });
+
+    res.status(200).send({ photo: { ...image.toObject(), imageLinks: { [resolution]: imageUrl } } });
+
+})
+
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -1162,5 +1175,6 @@ module.exports = {
     getRejectedImages,
     getAllImagesFromVaultBySorting,
     updateNotForSaleStatus,
-    getImageBySlug
+    getImageBySlug,
+    getImageForDownload
 }

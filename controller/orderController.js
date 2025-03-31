@@ -712,6 +712,7 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
   res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
 })
 
+
 module.exports = {
   createOrder,
   getAllOrders,
