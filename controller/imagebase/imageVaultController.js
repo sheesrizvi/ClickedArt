@@ -862,7 +862,7 @@ const updateImageViewCount = asyncHandler(async (req, res) => {
    if(!analytics) {
     return res.status(400).send({ message: 'Not able to update' })
    }
-   res.status(200).send({ analytics })
+   res.status(200).send({ message: 'View Count Updated Successfully' })
 })
 
 const getImageAnalytics = asyncHandler(async (req, res) => {
@@ -873,7 +873,7 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
     downloads
   }).populate({
     path: 'image',
-    select: 'imageLinks.thumbnail title description story keywords category photographer license',
+    select: 'imageLinks.thumbnail resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale',
     populate: [
       {
         path: 'category'

@@ -40,6 +40,7 @@ const getMyWishList = asyncHandler(async (req, res) => {
 
     const wishlist = await WishList.findOne({ 'userInfo.user': userId }).populate({
         path: 'images',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
         populate: {
             path: 'photographer',
             select: 'name'
@@ -69,7 +70,10 @@ const deleteWishList = asyncHandler(async (req, res) => {
 const getAllWishLists = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    const wishlists = await WishList.find({}).populate('userInfo.user').populate('images').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const wishlists = await WishList.find({}).populate('userInfo.user').populate({
+        path: 'images',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
+    }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!wishlists || wishlists.length === 0) {
         return res.status(400).send({ message: 'No WishList exists' })

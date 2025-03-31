@@ -343,6 +343,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
+          select: "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
           populate: {
             path: "photographer",
           },
@@ -388,6 +389,7 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
+          select: "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
           populate: {
             path: "photographer",
           },
@@ -459,6 +461,7 @@ const getOrderById = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
+          select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
           populate: {
             path: "photographer",
           },
