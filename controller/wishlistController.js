@@ -40,7 +40,7 @@ const getMyWishList = asyncHandler(async (req, res) => {
 
     const wishlist = await WishList.findOne({ 'userInfo.user': userId }).populate({
         path: 'images',
-        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
         populate: {
             path: 'photographer',
             select: 'name'
@@ -72,7 +72,7 @@ const getAllWishLists = asyncHandler(async (req, res) => {
 
     const wishlists = await WishList.find({}).populate('userInfo.user').populate({
         path: 'images',
-        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
     }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!wishlists || wishlists.length === 0) {
