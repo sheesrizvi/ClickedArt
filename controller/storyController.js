@@ -72,8 +72,10 @@ const getAllStory = asyncHandler(async(req, res) => {
 
     const stories = await Story.find({  }).populate({
         path: 'inspiredBy',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
         populate: {
-            path: 'photographer'
+            path: 'photographer',
+            select: '-bestPhotos'
         }
     }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
@@ -98,7 +100,14 @@ const getMyStory = asyncHandler(async (req, res) => {
 
     const imageIds = images.map((image) => image._id)
 
-    const stories = await Story.find({ inspiredBy: { $in: imageIds } }).sort({ createdAt: -1 })
+    const stories = await Story.find({ inspiredBy: { $in: imageIds } }).populate({
+        path: 'inspiredBy',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
+        populate: {
+            path: 'photographer',
+            select: '-bestPhotos'
+        }
+    }).sort({ createdAt: -1 })
 
     if(!stories || stories.length === 0) {
         return res.status(400).send({ message: 'Story not found' })
@@ -112,8 +121,10 @@ const getStoryById = asyncHandler(async (req, res) => {
 
     const story = await Story.findById(storyId).populate({
         path: 'inspiredBy',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
         populate: {
-            path: 'photographer'
+            path: 'photographer',
+            select: '-bestPhotos'
         }
     })
     
@@ -134,8 +145,10 @@ const getStoryBySlug = asyncHandler(async (req, res) => {
 
     const story = await Story.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') } }).populate({
         path: 'inspiredBy',
+        select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
         populate: {
-            path: 'photographer'
+            path: 'photographer',
+            select: '-bestPhotos'
         }
     })
 

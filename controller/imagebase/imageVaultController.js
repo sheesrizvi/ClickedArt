@@ -873,7 +873,7 @@ const getImageAnalytics = asyncHandler(async (req, res) => {
     downloads
   }).populate({
     path: 'image',
-    select: 'imageLinks.thumbnail resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale',
+    select: 'imageLinks.thumbnail resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug',
     populate: [
       {
         path: 'category'
@@ -1127,7 +1127,10 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: 'Slug is required' })
   }
 
-  let image = await ImageVault.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') }  }).populate('category photographer license')
+  let image = await ImageVault.findOne({ slug: { $regex: new RegExp(`^${slug}$`, 'i') }  }).populate('category license').populate({
+    path: 'photographer',
+    select: '-bestPhotos'
+  })
 
   if(!image) {
     return res.status(400).send({ message: 'No Image found' })
@@ -1145,7 +1148,7 @@ const getImageBySlug = asyncHandler(async (req, res) => {
 const getImageForDownload = asyncHandler(async (req, res) => {
     let { id, resolution } = req.query
     
-    let image = await ImageVault.findOne({ _id: id }).select('imageLinks photographer resolutions title description story keywords category photographer license price location cameraDetails').populate('photographer category license')
+    let image = await ImageVault.findOne({ _id: id }).select('imageLinks photographer resolutions title description story keywords category photographer license price location cameraDetails slug').populate('photographer category license')
     
     let imageUrl = image.imageLinks[resolution]; 
 
