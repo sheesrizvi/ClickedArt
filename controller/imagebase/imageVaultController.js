@@ -114,7 +114,6 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     }
   
    photo.category = category || photo.category
-   photo.imageLinks = imageLinks || photo.imageLinks
    photo.resolutions = resolutions || photo.resolutions
    photo.description = description || photo.description
    photo.title = title || photo.title
