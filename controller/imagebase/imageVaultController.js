@@ -156,11 +156,11 @@ const updateImageInVault = asyncHandler(async (req, res) => {
           const sizePricingModifiers = royaltyShare.sizePricingModifiers;
   
           prices.original = price;
-          if (imageLinks.medium) {
+          if (photo.imageLinks.medium) {
               prices.medium = price * (1 + sizePricingModifiers.medium / 100);
           }
 
-          if(imageLinks.small) {
+          if(photo.imageLinks.small) {
             prices.small = price * (1 + sizePricingModifiers.small / 100);
           }
       }
