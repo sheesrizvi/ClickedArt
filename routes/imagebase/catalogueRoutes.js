@@ -8,7 +8,8 @@ const {
     updateCatalogue,
     removeImagesFromCatalogue,
     deleteCatalogue,
-    searchCatalogues
+    searchCatalogues,
+    updateCatalogueOrder
  } = require('../../controller/imagebase/catalogueController.js')
 
 
@@ -22,5 +23,6 @@ const {
  router.get('/search-catalogue', searchCatalogues)
  router.delete('/delete-catalogue', deleteCatalogue)
  router.post('/remove-images-from-catalogue', removeImagesFromCatalogue)
+ router.post('/update-catalogue-order', updateCatalogueOrder)
 
  module.exports = router

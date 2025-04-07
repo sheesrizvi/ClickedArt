@@ -125,7 +125,9 @@ const updateCatalogue = asyncHandler(async (req, res) => {
     }
     catalogue.name = name || catalogue.name;
     catalogue.description = description || catalogue.description
-    catalogue.order = order || catalogue.order
+    if(order !== undefined) {
+        catalogue.order = order
+    }
 
     if (images) {
         catalogue.images = [...catalogue.images, ...images]
@@ -213,6 +215,20 @@ const searchCatalogues = asyncHandler(async (req, res) => {
     res.status(200).send({ catalogues, pageCount })
 })
 
+const updateCatalogueOrder = asyncHandler(async (req, res) => { 
+    const { arr } = req.body
+    
+    const ops = arr.map(({ id, order }) => ({
+        updateOne: {
+            filter: { _id: id },
+            update: { $set: { order } }
+        }
+    }))
+
+    await Catalogue.bulkWrite(ops)
+    res.status(200).send({ message: 'Catalogue Order Updated Successfully' })
+})
+
 module.exports = {
     createCatalogue,
     getAllCatalogues,
@@ -221,5 +237,6 @@ module.exports = {
     updateCatalogue,
     removeImagesFromCatalogue,
     deleteCatalogue,
-    searchCatalogues
+    searchCatalogues,
+    updateCatalogueOrder
 }
