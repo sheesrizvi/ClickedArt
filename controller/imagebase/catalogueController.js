@@ -3,7 +3,7 @@ const asyncHandler = require('express-async-handler');
 const Subscription = require('../../models/subscriptionModel.js')
 
 const createCatalogue = asyncHandler(async (req, res) => {
-    const { name, description, photographer, images } = req.body;
+    const { name, description, photographer, images, order } = req.body;
     const catalogueExist = await Catalogue.findOne({ name, photographer })
     if(catalogueExist) {
         return res.status(400).send({ message: 'Catalogue already exist with same name for photographer' })
@@ -32,7 +32,7 @@ const createCatalogue = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'Catalogue Uploaded Limit reached for this plan' })
       }
 
-    const catalogue = new Catalogue({ name, description, photographer, images })
+    const catalogue = new Catalogue({ name, description, photographer, images, order })
     await catalogue.save();
     res.status(200).send({message: 'Catalogue created Successfully', catalogue})
 })
@@ -68,7 +68,7 @@ const getAllCatalogues = asyncHandler(async (req, res) => {
 const getCatalogueByPhotographer = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20, photographer } = req.query
 
-    const catalogues = await Catalogue.find({ photographer }).populate('photographer').populate({
+    const catalogues = await Catalogue.find({ photographer }).sort({ order: 1 }).populate('photographer').populate({
         path: 'images',
         populate: [{
             path: 'category'
@@ -117,7 +117,7 @@ const getCatalogueById = asyncHandler(async (req, res) => {
 })
 
 const updateCatalogue = asyncHandler(async (req, res) => {
-    const { catalogueId, name, description, photographer, images } = req.body
+    const { catalogueId, name, description, photographer, images, order } = req.body
     const catalogue = await Catalogue.findOne({_id: catalogueId, photographer})
     if (!catalogue) {
         res.status(404);
@@ -125,6 +125,8 @@ const updateCatalogue = asyncHandler(async (req, res) => {
     }
     catalogue.name = name || catalogue.name;
     catalogue.description = description || catalogue.description
+    catalogue.order = order || catalogue.order
+
     if (images) {
         catalogue.images = [...catalogue.images, ...images]
     }
@@ -146,7 +148,7 @@ const deleteCatalogue = asyncHandler(async (req, res) => {
 
 const removeImagesFromCatalogue = asyncHandler(async (req, res) => {
     const { catalogueId, imagesToRemove } = req.body
-    console.log(req.query)
+
     const catalogue = await Catalogue.findById(catalogueId)
     if (!catalogue) {
         res.status(404);

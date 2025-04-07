@@ -7,7 +7,11 @@ const catalogueSchema = new mongoose.Schema({
     images: [{ 
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ImageVault'
-     }]
+     }],
+    order: {
+        type: Number,
+        default: 0
+    }
 }, {
     timestamps: true
 })
