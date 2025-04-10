@@ -4,22 +4,25 @@ const ImageVault = require('../models/imagebase/imageVaultModel.js')
 const { sendStoryPublishedMail } = require('../middleware/handleEmail.js')
 const Photographer = require('../models/photographerModel.js')
 const { generateSlug } = require('../middleware/slugMiddleware.js')
+const { compressToExactSizeAndUpload } = require('../middleware/compressMiddleware.js')
 
 const createStory = asyncHandler(async (req, res) => {
-    const { title, description, media_url, inspiredBy } = req.body
+    let { title, description, inspiredBy } = req.body
 
     const storyExist = await Story.findOne({ title })
 
     if(storyExist) {
         return res.status(400).send({ message: 'Story exist with same title' })
     }
-    const photographer = await Photographer.findOne({ _id: inspiredBy })
+    const image = await ImageVault.findOne({ _id: inspiredBy }).populate('photographer')
 
-   const slug = generateSlug(title)
+    const slug = generateSlug(title)
 
-    if(photographer) {
-        const photographerName =`${photographer.firstName} ${photographer.lastName}`
-        const email = photographer.email
+    const media_url = await compressToExactSizeAndUpload(image.imageLinks.original)
+    
+    if(image) {
+        const photographerName =`${image.photographer.firstName} ${image.photographer.lastName}`
+        const email = image.photographer.email
         const story = title
         await sendStoryPublishedMail(photographerName, email, story)
     }
@@ -36,20 +39,35 @@ const createStory = asyncHandler(async (req, res) => {
 })
 
 const updateStory = asyncHandler(async (req, res) => {
-    const { storyId, title, description, media_url, inspiredBy } = req.body
+    let { storyId, title, description, inspiredBy } = req.body
 
     const story = await Story.findOne({ _id: storyId })
     if(!story) {
         return res.status(400).send({ message: 'Story not found' })
     }
+
     if(story.title !== title || !story.slug) {
         const slug = generateSlug(title)
         story.slug = slug
     }
     if(title) story.title = title
     if(description) story.description = description
-    if(media_url) story.media_url = media_url
-    if(inspiredBy) story.inspiredBy = inspiredBy
+    
+    if(inspiredBy && inspiredBy.toString() !== story.inspiredBy.toString()) {
+        story.inspiredBy = inspiredBy
+        const image = await ImageVault.findOne({ _id: inspiredBy }).populate('photographer')
+        const media_url = await compressToExactSizeAndUpload(image.imageLinks.original)
+        story.media_url = media_url
+
+        if(image) {
+            const photographerName =`${image.photographer.firstName} ${image.photographer.lastName}`
+            const email = image.photographer.email
+            const story = title
+           // await sendStoryPublishedMail(photographerName, email, story)
+        }
+    
+    } 
+
     await story.save()
 
     res.status(200).send({ message: 'Story updated Successfully' })
