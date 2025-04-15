@@ -324,6 +324,39 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
     res.status(200).send({ photographers, pageCount  })
 })
 
+const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20 } = req.query
+
+    let photographers = await Photographer.find({ active: true, featuredArtist: false }).sort({ firstName: 1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize)
+
+    if(!photographers || photographers.length === 0) return res.status(400).send({ message: 'Photographers not found' })
+
+    const totalDocuments = await Photographer.countDocuments({ active: true, featuredArtist: false })
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+
+  photographers =  await Promise.all(
+        photographers.map(async (photographer) => {
+            const subscription = await Subscription.findOne({ 'userInfo.user':  photographer._id, isActive: true}).populate('planId')
+        
+            const activeSubscription = subscription?.planId?.name || 'Basic'
+            const activeUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
+            const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] } , isActive: false   });
+            
+            return {
+                ...photographer.toObject(),
+                activeSubscription,
+                activeUploadingImgCount,
+                pendingImagesCount
+                }
+        })
+    )
+
+    res.status(200).send({ photographers, pageCount  })
+})
+
 const getPhotographerById = asyncHandler(async (req, res) => {
     const { photographerId } = req.query
 
@@ -637,5 +670,6 @@ module.exports = {
     checkAndUpdateRejectedPhotographers,
     changePassword,
     deletePhotographer,
-    getPendingImagesByPhotographer
+    getPendingImagesByPhotographer,
+    getAllNotFeaturedPhotographers
 }
