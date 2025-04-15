@@ -9,6 +9,7 @@ const ImageVault = require('../models/imagebase/imageVaultModel.js')
 const Referral = require('../models/referralModel.js')
 const { sendApprovedMail, sendRejectionEmail } = require('../middleware/handleEmail.js')
 const Subscription = require('../models/subscriptionModel.js')
+const mongoose = require('mongoose')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
     const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body
@@ -327,13 +328,13 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
 const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
-    let photographers = await Photographer.find({ active: true, featuredArtist: false }).sort({ firstName: 1 })
+    let photographers = await Photographer.find({ active: true, featuredArtist: false, _id: { $ne: new mongoose.Types.ObjectId("67cacbe7303273699a9c7db4") } }).sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
 
     if(!photographers || photographers.length === 0) return res.status(400).send({ message: 'Photographers not found' })
 
-    const totalDocuments = await Photographer.countDocuments({ active: true, featuredArtist: false })
+    const totalDocuments = await Photographer.countDocuments({ active: true, featuredArtist: false, _id: { $ne: new mongoose.Types.ObjectId("67cacbe7303273699a9c7db4") } })
     const pageCount = Math.ceil(totalDocuments/pageSize)
 
 
