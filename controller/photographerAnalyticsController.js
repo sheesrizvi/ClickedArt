@@ -335,7 +335,7 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         },
       ]);
 
-      const totalCustomReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+      const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
 
 
     res.status(200).send({
@@ -346,7 +346,7 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         downloads,
         totalPrintDownloads,
         totalDigitalDownloads,
-        totalCustomReferralAmount
+        totalReferralAmount
     })
 
    

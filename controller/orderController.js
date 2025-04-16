@@ -242,7 +242,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   for (const ord of orders) {
       const order = await Order.findOne({ _id: ord._id }).populate('userInfo.user');
-
+      
       if (!order) {
         console.error(`Order not found for ID: ${ord._id}`);
         continue; 
