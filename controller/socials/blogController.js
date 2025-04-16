@@ -345,6 +345,34 @@ const getMyBlogs = asyncHandler(async (req, res) => {
     
 })
 
+const getMyPendingBlogs = asyncHandler(async (req, res) => {
+    const { pageNumber = 1, pageSize = 20, author } = req.query
+    
+    const totalDocuments = await Blog.countDocuments({ blogType: 'blog', isActive: false, 'authorInfo.author': author })
+
+    const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    const blogs = await Blog.find({ blogType: 'blog', isActive: false, 'authorInfo.author': author }).populate('authorInfo.author').populate('photographer').sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+    const newBlogs = await Promise.all(
+        blogs.map(async (blog) => {
+            // const likeExist = await Like.findOne({ 'entityInfo.entity': blog._id, 'userInfo.user': requesterId });
+            // const commentExist = await Comment.findOne({ 'entityInfo.entity': blog._id, 'userInfo.user': requesterId });
+          
+            return {
+                ...blog.toObject(),
+                // hasLiked: !!likeExist,
+                // hasCommented: !!commentExist,
+            };
+        })
+    );
+    
+   
+    res.status(200).send({ blogs : newBlogs, pageCount })
+
+    
+})
+
 const getBlogBySlug = asyncHandler(async (req, res) => {
     const { slug } = req.query
 
@@ -377,5 +405,6 @@ module.exports =  {
     updateBlogStatus,
     getAllPendingBlogs,
     getMyBlogs,
+    getMyPendingBlogs,
     getBlogBySlug
 }

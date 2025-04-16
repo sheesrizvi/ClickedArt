@@ -245,8 +245,8 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "Start date and end date are required." });
       }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const start = new Date(new Date(startDate).setHours(0, 0, 0, 0)); 
+    const end = new Date(new Date(endDate).setHours(23, 59, 59, 999)); 
 
 
     const orders = await Order.find({
@@ -313,6 +313,31 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         });
     });
   
+    const startOfDay = new Date(new Date(startDate).setHours(0, 0, 0, 0)); 
+    const endOfDay = new Date(new Date(endDate).setHours(23, 59, 59, 999)); 
+
+
+    const referralBalance = await ReferralBalance.aggregate([
+        {
+          $match: {
+            photographer: new mongoose.Types.ObjectId(photographer),
+            createdAt: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            price: { $sum: '$amount' },
+          },
+        },
+      ]);
+
+      const totalCustomReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
+
     res.status(200).send({
         totalSales,
         totalPrintSales,
@@ -320,7 +345,8 @@ const customPhotographerRevenueData  = asyncHandler(async (req, res) => {
         totalPrintCutAmount,
         downloads,
         totalPrintDownloads,
-        totalDigitalDownloads
+        totalDigitalDownloads,
+        totalCustomReferralAmount
     })
 
    

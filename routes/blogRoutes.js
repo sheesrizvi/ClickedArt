@@ -14,7 +14,8 @@ const {
     updateBlogStatus,
     getAllPendingBlogs,
     getMyBlogs,
-    getBlogBySlug
+    getBlogBySlug,
+    getMyPendingBlogs
 } = require('../controller/socials/blogController')
 
 const router = express.Router()
@@ -34,6 +35,7 @@ router.get('/get-my-success-story', getMySuccessStory)
 router.post('/update-blog-status', updateBlogStatus)
 router.get('/get-pending-blogs', getAllPendingBlogs)
 router.get('/get-my-blogs', getMyBlogs)
+router.get('/get-my-pending-blogs', getMyPendingBlogs)
 
 router.get('/get-blog-by-slug', getBlogBySlug)
 module.exports = router
