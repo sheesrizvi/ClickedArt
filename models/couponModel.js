@@ -16,8 +16,8 @@ const CouponSchema = new mongoose.Schema({
     },
     applicableTo: { 
         type: String, 
-        enum: ['user', 'photographer'], 
-        required: true 
+        enum: ['user', 'photographer', 'both'], 
+        required: 'both' 
     },
     status: { 
         type: String, 

@@ -23,6 +23,9 @@ const orderSchema = new mongoose.Schema(
         price: {
             type: Number,
           },
+        initialPrice: {
+          type: Number
+        }
     },
     frameInfo: {
       frame: {
@@ -35,6 +38,9 @@ const orderSchema = new mongoose.Schema(
       size: {
        width: { type: Number },
        height: { type: Number }
+      },
+      initialPrice: {
+        type: Number
       }
      },
      paperInfo: {
@@ -48,12 +54,18 @@ const orderSchema = new mongoose.Schema(
       size: {
         width: { type: Number },
         height: { type: Number }
-       }
+       },
+      initialPrice: {
+        type: Number
+      }
       },
       subTotal: {
         type: Number,
         required: true
       }, 
+      initialSubTotal: {
+        type: Number
+      },
      finalPrice: {
         type: Number
       },

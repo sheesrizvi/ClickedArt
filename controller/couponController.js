@@ -138,9 +138,9 @@ const applyCoupon = asyncHandler(async (req, res) => {
         return res.status(400).send({message: 'Coupon already used by user or user id not provided'})
     }
     
-    if(coupon.applicableTo.toLowerCase() !== type.toLowerCase()) {
-        return res.status(400).send({ message: 'Coupon not applicable for this user type' })
-    }
+    // if(coupon.applicableTo.toLowerCase() !== type.toLowerCase()) {
+    //     return res.status(400).send({ message: 'Coupon not applicable for this user type' })
+    // }
     
     res.status(200).send({message: 'Coupon is active and not used by user',  coupon})
 })

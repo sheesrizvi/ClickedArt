@@ -789,7 +789,7 @@ const sendPaymentInvoiceMail = asyncHandler(async (photographerName, email, s3Li
     text: `
 Dear ${photographerName},
 
-We are pleased to inform you that your recent payment has been successfully processed! Thank you for your valuable contributions to ClickedArt.com.
+Your Invoice is generated. Your payment will be credited in your A/C in next Payment cycle which is 1st week of every month
 
 Here are the details of your payment:
 

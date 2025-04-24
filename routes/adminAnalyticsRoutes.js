@@ -8,7 +8,9 @@ const {
     revenueByCategory,
     getSubsAnalytics,
     getReferralDetailsBySalesUser,
-    getReferralDetailsByDate
+    getReferralDetailsByDate,
+    getAllDigitalOrders,
+    getAllPrintOrders
  } = require('../controller/adminAnalyticsController.js')
 const { masterDataController, documentCountsForAdmin } = require('../controller/masterDataController.js')
 const router = express.Router()
@@ -24,5 +26,8 @@ router.get('/get-features-count', documentCountsForAdmin)
 router.get('/get-subs-analytics', getSubsAnalytics)
 router.get('/get-referral-details-by-sales-user', getReferralDetailsBySalesUser)
 
+
+router.get('/get-all-digital-orders', getAllDigitalOrders)
+router.get('/get-all-print-orders', getAllPrintOrders)
 
 module.exports = router

@@ -20,4 +20,5 @@ router.post('/update-other-admin', isSuperAdmin, updateOtherAdmin)
 router.post('/update-super-admin', isSuperAdmin, updateSuperAdmin)
 router.delete('/delete-other-admin', isSuperAdmin, deleteOtherAdminTypes)
 
+
 module.exports = router

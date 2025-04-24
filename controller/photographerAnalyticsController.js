@@ -190,7 +190,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
   totalPaidAmount = totalPaidAmount && totalPaidAmount.length > 0 ? totalPaidAmount[0].amount : 0
 
   const payoutHistory = await Invoice.find({  photographer: new mongoose.Types.ObjectId(photographer), 
-    paymentStatus: 'paid' })
+   // paymentStatus: 'paid'
+})
     .populate('photographer')
     .populate('orderDetails.order')
     .populate('orderDetails.image')

@@ -231,13 +231,14 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
   const items = itemNames;
-  const s3Link = link || "";
+  const s3Links = orders.map(ord => `https://clickedart.com/bill/${ord._id}`);
+
   await sendOrderThankYouMail(
     customerName,
     orderDate,
     items,
     customerEmail,
-    s3Link
+    s3Links
   );
 
   for (const ord of orders) {

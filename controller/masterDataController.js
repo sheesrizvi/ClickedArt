@@ -54,7 +54,7 @@ const masterDataController = asyncHandler(async (req, res) => {
     
 
             const photographerDetails = await Photographer.findById(photographer);
-    
+        
             const subscription = await Subscription.findOne({ 'userInfo.user': photographerDetails._id }).populate('planId');
           
 
@@ -124,7 +124,11 @@ const masterDataController = asyncHandler(async (req, res) => {
               AmountPaid: amountPaid,
               TDSPaid: parseFloat(tds?.toFixed(2)),
               TotalPaid: totalPaid,
-              pendingBalance: balance
+              pendingBalance: balance,
+              bankAccNumber: monetization?.bankAccNumber || "N/A",
+              ifsc: monetization?.ifsc || "N/A",
+              bankAccountName: monetization?.bankAccountName || "N/A",
+              branch: monetization?.branch || "N/A"
             });
     
           }
