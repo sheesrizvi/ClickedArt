@@ -15,7 +15,6 @@ const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
 const router = express.Router()
 
 
-
 router.post('/register', registerPhotographer)
 router.post('/login', photographerLogin)
 router.post('/update-profile', updatePhotographer)
@@ -36,4 +35,5 @@ router.post('/checkUsernameAndEmailExists', checkPhotographerUserNameExist)
 router.post('/change-password', changePassword)
 router.delete('/delete-photographer', deletePhotographer)
 router.get('/get-pending-images-by-photographer', getPendingImagesByPhotographer)
+
 module.exports = router
