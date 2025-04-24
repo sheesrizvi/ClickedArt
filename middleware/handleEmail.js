@@ -642,18 +642,18 @@ P.S. Follow us on Instagram at https://www.instagram.com/clickedartofficial/ for
 const sendOrderThankYouMail = asyncHandler(async (customerName, orderDate, items, customerEmail, s3Links, orderId) => {
   let attachments = [];
 
-  if (Array.isArray(s3Links) && s3Links.length > 0) {
+  // if (Array.isArray(s3Links) && s3Links.length > 0) {
   
-    for (let link of s3Links) {
-      const response = await axios.get(link, { responseType: 'arraybuffer' });
+  //   for (let link of s3Links) {
+  //     const response = await axios.get(link, { responseType: 'arraybuffer' });
       
-      attachments.push({
-        filename: 'order-details.pdf', 
-        content: response.data,
-        contentType: 'application/pdf', 
-      });
-    }
-  }
+  //     attachments.push({
+  //       filename: 'order-details.pdf', 
+  //       content: response.data,
+  //       contentType: 'application/pdf', 
+  //     });
+  //   }
+  // }
 
   const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
@@ -673,6 +673,9 @@ ${items} ...
 
 You can view your complete order details and download any digital purchases directly from your Order History Page.
 
+________________________________________
+Order Details:
+• Orders Link: [Click here to view your orders](${s3Links})
 ________________________________________
 What Happens Next?
 • Digital Downloads:
@@ -695,7 +698,7 @@ support@clickedart.com
 ________________________________________
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-      attachments,
+      // attachments,
   });
 
   return true;
@@ -768,18 +771,18 @@ P.S. Follow us on Instagram at https://www.instagram.com/clickedartofficial/ for
 const sendPaymentInvoiceMail = asyncHandler(async (photographerName, email, s3Links) => {
   let attachments = [];
 
-  if (Array.isArray(s3Links) && s3Links.length > 0) {
-    console.log(s3Links)
-    for (let link of s3Links) {
-      const response = await axios.get(link, { responseType: 'arraybuffer' });
+  // if (Array.isArray(s3Links) && s3Links.length > 0) {
+  //   console.log(s3Links)
+  //   for (let link of s3Links) {
+  //     const response = await axios.get(link, { responseType: 'arraybuffer' });
       
-      attachments.push({
-        filename: 'invoice-details.pdf', 
-        content: response.data,
-        contentType: 'application/pdf', 
-      });
-    }
-  }
+  //     attachments.push({
+  //       filename: 'invoice-details.pdf', 
+  //       content: response.data,
+  //       contentType: 'application/pdf', 
+  //     });
+  //   }
+  // }
 
   const info = await transporter.sendMail({
     from: `Clicked Art ${process.env.USER_EMAIL}`,
@@ -814,7 +817,7 @@ ________________________________________
 P.S. Stay connected with us on social media for the latest updates and featured artwork:
 Instagram: https://www.instagram.com/clickedartofficial/
     `,
-    attachments,  
+   // attachments,  
   });
 
   return true;
