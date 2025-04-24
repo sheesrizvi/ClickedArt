@@ -96,6 +96,7 @@ const createOrder = asyncHandler(async (req, res) => {
   //   return acc;
   // }, {});
 
+  
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
       const photographerId = item.imageInfo.photographer || "unknown";
@@ -230,7 +231,7 @@ const createOrder = asyncHandler(async (req, res) => {
       }
     }
   }
-  
+
   const items = itemNames;
   const s3Links = orders.map(ord => `https://clickedart.com/bill/${ord._id}`);
 

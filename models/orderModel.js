@@ -25,6 +25,9 @@ const orderSchema = new mongoose.Schema(
           },
         initialPrice: {
           type: Number
+        },
+        discount: {
+          type: Number
         }
     },
     frameInfo: {
@@ -41,6 +44,9 @@ const orderSchema = new mongoose.Schema(
       },
       initialPrice: {
         type: Number
+      },
+      discount: {
+        type: Number
       }
      },
      paperInfo: {
@@ -56,6 +62,9 @@ const orderSchema = new mongoose.Schema(
         height: { type: Number }
        },
       initialPrice: {
+        type: Number
+      },
+      discount: {
         type: Number
       }
       },
