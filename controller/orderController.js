@@ -121,12 +121,18 @@ const createOrder = asyncHandler(async (req, res) => {
       0
     );
 
+    let discountForEachOrder = 0;
+
+    for(let item of items) {
+      discountForEachOrder += (item.imageInfo?.discount || 0) + (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0)
+    }
+
     const updatedItems = items.map((item) => {
       const finalPrice = item.finalPrice || 0;
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
       const totalGST = sgst + cgst || 0;
-
+      
       return {
         ...item,
         sgst,
@@ -143,7 +149,7 @@ const createOrder = asyncHandler(async (req, res) => {
       orderItems: updatedItems,
       paymentMethod,
       shippingAddress,
-      discount,
+      discount: discountForEachOrder,
       totalAmount,
       orderStatus,
       invoiceId,
