@@ -477,7 +477,26 @@ const getAllDigitalOrders = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
     const [ orders, totalDocuments ] = await Promise.all([
-        Order.find({ printStatus: 'no-print' }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
+        Order.find({ printStatus: 'no-print' }).populate({
+            path: "orderItems",
+            populate: [
+              {
+                path: "imageInfo.image",
+                populate: {
+                  path: "photographer",
+                },
+              },
+              {
+                path: "frameInfo.frame",
+              },
+              {
+                path: "paperInfo.paper",
+              },
+              {
+                path: "imageInfo.photographer",
+              },
+            ],
+          }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
         Order.countDocuments({ printStatus: 'no-print' })
     ])
 
@@ -490,7 +509,26 @@ const getAllPrintOrders = asyncHandler(async (req, res) => {
     const { pageNumber = 1, pageSize = 20 } = req.query
 
     const [ orders, totalDocuments ] = await Promise.all([
-        Order.find({ printStatus: { $ne: 'no-print' } }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
+        Order.find({ printStatus: { $ne: 'no-print' } }).populate({
+            path: "orderItems",
+            populate: [
+              {
+                path: "imageInfo.image",
+                populate: {
+                  path: "photographer",
+                },
+              },
+              {
+                path: "frameInfo.frame",
+              },
+              {
+                path: "paperInfo.paper",
+              },
+              {
+                path: "imageInfo.photographer",
+              },
+            ],
+          }).sort({ createdAt: -1 }).skip((pageNumber - 1) * pageSize).limit(pageSize),
         Order.countDocuments({ printStatus: { $ne: 'no-print' } })
     ])
 
