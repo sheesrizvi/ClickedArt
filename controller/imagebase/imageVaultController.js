@@ -981,7 +981,7 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
 
   const images = await Promise.all(
     bestSellers.map(async (image) => {
-      const imageObject = image.toObject();
+      const imageObject = image;
       imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
       return {
         ...imageObject
