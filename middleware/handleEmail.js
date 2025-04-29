@@ -674,8 +674,11 @@ ${items} ...
 You can view your complete order details and download any digital purchases directly from your Order History Page.
 
 ________________________________________
-Order Details:
-• Orders Link: [Click here to view your orders](${s3Links})
+Order Link(s):
+${Array.isArray(s3Links) && s3Links.length > 0 
+  ? s3Links.map((link, idx) => `  ${idx + 1}. ${link}`).join('\n') 
+  : '  No downloadable items found.'}
+
 ________________________________________
 What Happens Next?
 • Digital Downloads:
