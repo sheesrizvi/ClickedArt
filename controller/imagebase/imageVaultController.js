@@ -808,6 +808,23 @@ const searchImages = asyncHandler(async (req, res) => {
     {
       $unwind: { path: '$imageAnalytics', preserveNullAndEmptyArrays: true },
     },
+    {
+      $lookup: {
+        from: 'photographers', 
+        localField: 'photographer',
+        foreignField: '_id',
+        as: 'photographer'
+      }
+    },
+    { $unwind: { path: '$photographer', preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: 'categories', 
+        localField: 'category',
+        foreignField: '_id',
+        as: 'category'
+      }
+    },
     { $sort: sortCriteria },
   ];
 
@@ -1081,7 +1098,7 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
         as: 'category'
       }
     },
-    { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+
     {
       $sort: sortCriteria
     },
@@ -1198,3 +1215,4 @@ module.exports = {
     getImageBySlug,
     getImageForDownload
 }
+
