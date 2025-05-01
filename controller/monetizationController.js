@@ -26,10 +26,6 @@ const createMonetization = asyncHandler(async (req, res) => {
 
     await monetization.save();
 
-   await Photographer.findByIdAndUpdate(photographerId, {
-        $set: { isMonetized: true }
-    }, { new: true });
-
     res.status(201).json({ message: 'Monetization request created successfully', monetization });
 });
 
@@ -74,8 +70,14 @@ const updateMonetizationStatus = asyncHandler(async (req, res) => {
     const email = monetization.photographer.email
     
     if(status === 'rejected') {
+        await Photographer.findByIdAndUpdate(monetization.photographer._id, {
+            $set: { isMonetized: false }
+        }, { new: true });
         sendMonetizationDisApprovalMail(photographerName, email, reasons)
     } else if(status === 'approved') {
+        await Photographer.findByIdAndUpdate(monetization.photographer._id, {
+            $set: { isMonetized: true }
+        }, { new: true });
         sendMonetizationMail(photographerName, email)
     }
 
@@ -127,9 +129,16 @@ const updateMonetization = asyncHandler(async (req, res) => {
         if (businessAccount.gstNumber) monetization.businessAccount.gstNumber = businessAccount.gstNumber;
     }
 
-    if (status) monetization.status = status;
+    monetization.status = 'pending';
 
     await monetization.save();
+
+    
+    await Photographer.findByIdAndUpdate(monetization.photographer, {
+        $set: { isMonetized: false }
+    }, { new: true });
+
+
     res.status(200).json({ message: 'Monetization request updated successfully', monetization });
 });
 

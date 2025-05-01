@@ -49,20 +49,19 @@ const sendResetEmail = asyncHandler(async(email) => {
     const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`, 
       to: email, 
-      subject: `Your OTP - PASSWORD`, 
-      subject: `Your One-Time Password (OTP) for Login`,
+      subject: `Your New Password for Login`,
       text: `
   Hello,
   
-  We’ve generated a One-Time Password (OTP) for your account to help you log in securely.
+  We’ve generated a Temporary New Password for your account to help you log in securely.
+  Please make sure to change your password immediately after logging in.
   
-  Your OTP/Temporary Password is: ${otp}
+  Your Temporary Password is: ${otp}
   
   Please note:
-    • This OTP is valid only for one-time use.
     • Keep it confidential and do not share it with anyone.
     • Once you’ve logged in, we recommend changing your password to ensure your account’s security.
-    • If you didn’t request this OTP, please contact us immediately.
+    • If you didn’t request this, please contact us immediately.
   
   We’re here to assist if you have any questions or need help.
   
