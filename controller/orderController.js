@@ -16,6 +16,7 @@ const Monetization = require("../models/monetizationModel.js");
 const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
+const puppeteer = require("puppeteer");
 const moment = require("moment");
 const { registerDeliveryFromOrder } = require('../controller/deliveryController.js')
 
@@ -721,6 +722,41 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
   res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
 })
 
+const generatePdf = asyncHandler(async (req, res) => {
+  const { id, type = "bill" } = req.query;
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  const page = await browser.newPage();
+
+  await page.goto(`https://clickedart.com/${type}/${id}`, {
+    waitUntil: "networkidle0",
+  });
+
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: {
+      top: "20px",
+      bottom: "20px",
+      left: "20px",
+      right: "20px",
+    },
+  });
+
+  await browser.close();
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename=invoice-${id}.pdf`,
+  });
+
+  res.send(pdfBuffer);
+});
+
 
 module.exports = {
   createOrder,
@@ -736,5 +772,6 @@ module.exports = {
   updatePrintStatus,
   deleteOrder,
   getFailedOrders,
-  updateReadyToShipStatus
+  updateReadyToShipStatus,
+  generatePdf
 };
