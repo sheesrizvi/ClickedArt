@@ -13,7 +13,6 @@ const { createOrder ,
     updatePrintStatus,
     getFailedOrders,
     updateReadyToShipStatus,
-    generatePdf
  } = require('../controller/orderController')
 const router = express.Router()
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware.js')
@@ -32,6 +31,5 @@ router.post('/update-print-status', updatePrintStatus)
 router.delete('/delete-order', deleteOrder)
 router.get('/get-failed-orders', getFailedOrders)
 router.post('/update-ready-to-ship-status', updateReadyToShipStatus)
-router.get('/generate-pdf', generatePdf)
 
 module.exports = router
