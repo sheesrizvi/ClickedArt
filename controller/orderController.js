@@ -16,7 +16,6 @@ const Monetization = require("../models/monetizationModel.js");
 const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
-const puppeteer = require("puppeteer");
 const moment = require("moment");
 const { registerDeliveryFromOrder } = require('../controller/deliveryController.js')
 
