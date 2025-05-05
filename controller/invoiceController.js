@@ -591,6 +591,27 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
   res.status(200).send({ invoices });
 });
 
+
+const getAllInvoices = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const invoices = await Invoice.find({ })
+    .populate('photographer')
+    .populate('orderDetails.order')
+    .populate('orderDetails.image')
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize)
+    .sort({ createdAt: -1 });
+
+  if (!invoices) {
+    return res.status(400).send({ message: 'Invoice not found' });
+  }
+
+  const totalDocuments = await Invoice.countDocuments({ })
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+  res.status(200).send({ invoices, pageCount });
+});
+
 const getInvoiceById = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
@@ -642,6 +663,7 @@ module.exports = {
     generateSingleOrderInvoice,
     getAllInvoicesByPhotographers,
     updateInvoicePaymentStatus,
+    getAllInvoices,
     deleteInvoice,
     getInvoiceById
 }
