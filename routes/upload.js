@@ -700,6 +700,7 @@ async function compressToExactSize(buffer, targetKB = 500) {
 
   // Step 2: Resize image
   const resizedBuffer = await sharp(buffer)
+    .rotate()
     .resize({
       width: Math.round(side),
       height: Math.round(side),
@@ -710,6 +711,7 @@ async function compressToExactSize(buffer, targetKB = 500) {
 
   // Step 3: Compress to WebP
   let outputBuffer = await sharp(resizedBuffer)
+    .rotate()
     .webp({
       quality: 20,  // Adjust for balance
       effort: 6,    // Medium compression
