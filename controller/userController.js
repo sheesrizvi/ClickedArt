@@ -340,7 +340,7 @@ const checkUserNameExist = asyncHandler(async (req, res) => {
 
 
 const changePassword = asyncHandler(async (req, res) => {
-    const { userId, newPassword } = req.body
+    const { userId, newPassword, oldPassword } = req.body
 
     const user = await User.findOne({ _id: userId })
 
@@ -348,7 +348,15 @@ const changePassword = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'User not found' })
     }
 
-    user.password = newPassword
+    if(!newPassword || !oldPassword) {
+        throw new Error('Password Field is required')
+    }
+    
+    if(newPassword && oldPassword) {
+        const isMatch = await user.isPasswordCorrect(oldPassword)
+        if(!isMatch) throw new Error('Password not matched')
+        user.password = newPassword
+    }
 
     await user.save()
 

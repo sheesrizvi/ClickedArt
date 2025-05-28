@@ -616,7 +616,7 @@ const checkAndUpdateRejectedPhotographers = asyncHandler(async (req, res) => {
 
 
 const changePassword = asyncHandler(async (req, res) => {
-    const { userId, newPassword } = req.body
+    const { userId, newPassword, oldPassword } = req.body
 
     const photographer = await Photographer.findOne({ _id: userId })
 
@@ -624,7 +624,15 @@ const changePassword = asyncHandler(async (req, res) => {
         return res.status(400).send({ message: 'Photographer not found' })
     }
 
-    photographer.password = newPassword
+     if(!newPassword || !oldPassword) {
+        throw new Error('Password Field is required')
+    }
+    
+    if(newPassword && oldPassword) {
+        const isMatch = await photographer.isPasswordCorrect(oldPassword)
+        if(!isMatch) throw new Error('Password not matched')
+        photographer.password = newPassword
+    }
 
     await photographer.save()
 
