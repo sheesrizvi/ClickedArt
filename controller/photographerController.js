@@ -586,31 +586,21 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     const { username, email } = req.body
 
     const user = await Photographer.findOne({ username })
-    const usernameExists = user ? true : false
-    // if(user) {
-    //     return res.status(409).send({ 
-    //         usernameExists: true
-    //      })
-    // } 
 
     const userEmail = await Photographer.findOne({ email })
-    if(userEmail) {
-        const isVerified = userEmail.isEmailVerified
+    if(userEmail || user) {
+        const isVerified = userEmail ? userEmail.isEmailVerified : false
         return res.status(409).send({ 
-            emailExists: true,
+            emailExists: !!userEmail,
             isVerified,
-            usernameExists
+            usernameExists: !!user,
          })
     }
 
-   
-    
-
-    res.status(200).send({ 
+     return res.status(200).send({ 
         usernameExists: false,
         emailExists: false
      })
-
 })
 
 
