@@ -330,14 +330,17 @@ const checkUserNameExist = asyncHandler(async (req, res) => {
     const { username, email } = req.body
 
     const user = await User.findOne({ username })
-    if(user) {
-        return res.status(400).send({ exists: true })
-    } 
+    const exists = user ? true : false
+
+    // if(user) {
+    //     return res.status(400).send({ exists: true })
+    // }
+     
     const emailExists = await User.findOne({ email: email })
    
     if(emailExists) {
         const isVerified = emailExists.isActive ? true : false
-        return res.send({ emailExists: true, isVerified  })
+        return res.send({ emailExists: true, isVerified, exists })
     }
     
 
