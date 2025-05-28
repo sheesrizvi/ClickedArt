@@ -594,7 +594,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 
     const userEmail = await Photographer.findOne({ email })
     if(userEmail) {
-        const isVerified = emailExist.isEmailVerified
+        const isVerified = userEmail.isEmailVerified
         return res.status(409).send({ 
             emailExists: true,
             isVerified
