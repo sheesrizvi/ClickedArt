@@ -152,14 +152,19 @@ const getUserById = asyncHandler(async (req, res) => {
 })
 
 const userProfileUpdate = asyncHandler(async (req, res) => {
-    const { userId, firstName, lastName, email, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary  } = req.body
+    const { userId, firstName, lastName, email, oldPassword, password, mobile, whatsapp, shippingAddress, dob, image, interests, connectedAccounts, isMarried, anniversary  } = req.body
     const user = await User.findOne({ _id: userId })
     if(!user) {
         return res.status(400).send({ message: 'User not found' })
     }
     user.firstName = firstName || user.firstName
     user.lastName = lastName || user.lastName
-    user.password = password || user.password
+   
+    if(password && oldPassword) {
+        const isMatch = await user.isPasswordCorrect(oldPassword)
+        if(!isMatch) throw new Error('Password not matched')
+        user.password = password
+    }
     user.shippingAddress = shippingAddress || user.shippingAddress
     user.mobile = mobile || user.mobile
     user.whatsapp = whatsapp || user.whatsapp

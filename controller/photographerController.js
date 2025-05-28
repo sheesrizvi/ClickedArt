@@ -111,6 +111,7 @@ const updatePhotographer = asyncHandler(async (req, res) => {
         photographerId,
         firstName, lastName,
         email, 
+        oldPassword,
         password, 
         bio, 
         dob,
@@ -187,7 +188,14 @@ const updatePhotographer = asyncHandler(async (req, res) => {
     if(yearsOfExperience) photographer.yearsOfExperience = yearsOfExperience;
     if(accountType) photographer.accountType = accountType;
     if(connectedAccounts) photographer.connectedAccounts = connectedAccounts;
-    if(password) photographer.password = password
+    if(password && oldPassword) {
+        const isMatch = await photographer.isPasswordCorrect(oldPassword)
+        console.log("isMatch", isMatch)
+        if(!isMatch) {
+            throw new Error("Password Not matched")
+        }
+        photographer.password = password
+    }
     if(mobile) photographer.mobile = mobile
     if(whatsapp) photographer.whatsapp = whatsapp
     if(expertise) photographer.expertise = expertise
@@ -197,6 +205,7 @@ const updatePhotographer = asyncHandler(async (req, res) => {
     if(coverImage) photographer.coverImage = coverImage
 
     await photographer.save();
+  
 
     res.status(200).json({
         status: true,

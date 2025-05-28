@@ -7,13 +7,44 @@ const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
 const Invoice = require('../models/invoiceModel.js')
 const Subscription = require('../models/subscriptionModel.js')
 const ReferralBalance = require('../models/referralBalanceModel.js')
+const ImageAnalytics = require('../models/imagebase/imageAnalyticsModel.js')
+
+async function getTotalViewsByPhotographer(photographerId) {
+  
+  const result = await ImageAnalytics.aggregate([
+    {
+      $lookup: {
+        from: 'imagevaults', 
+        localField: 'image',
+        foreignField: '_id',
+        as: 'imageData'
+      }
+    },
+    { $unwind: '$imageData' },
+    {
+      $match: {
+        'imageData.photographer': new mongoose.Types.ObjectId(photographerId),
+        'imageData.isActive': true
+      }
+    },
+    {
+      $group: {
+        _id: '$imageData.photographer',
+        totalViews: { $sum: '$views' }
+      }
+    }
+  ]);
+
+  return result.length > 0 ? result[0].totalViews : 0;
+}
+
 
 const photographerDashboardData = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
   
   const totalUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
   const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] } , isActive: false   });
-
+  const totalViews = await getTotalViewsByPhotographer(photographer)
   const orders = await Order.find({
       isPaid: true,
       orderStatus: 'completed',
@@ -234,7 +265,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
       totalPrintDownloads,
       totalDigitalDownloads,
       activeBuyers: activeBuyers[0]?.activeBuyers || 0,
-      totalReferralAmount
+      totalReferralAmount,
+      totalViews
   });
 
 });
