@@ -59,7 +59,8 @@ const photographerDashboardData = asyncHandler(async (req, res) => {
           totalSales: 0,
           totalRoyaltyAmount: 0,
           totalPrintCutAmount: 0,
-          monthlyData: []
+          monthlyData: [],
+          totalViews
       });
   }
 
