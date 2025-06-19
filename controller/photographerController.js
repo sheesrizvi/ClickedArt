@@ -229,6 +229,8 @@ const photographerLogin = asyncHandler(async (req, res) => {
                 throw new Error('Sorry, Your Profile is Inactive for Now')
             }
 
+            photographer.lastLogin = new Date()
+
             res.status(200).json({
              status: true,
              message: 'Photogphotographer Login Successful',
@@ -664,6 +666,32 @@ const getPendingImagesByPhotographer = asyncHandler(async (req, res) => {
     res.status(200).send({ pendingImages, pageCount })
 })
 
+const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const inactivePhotographers = await Photographer.find({
+    lastLogin: { $lt: oneWeekAgo },
+  })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(Number(pageSize));
+
+  if(!inactivePhotographers || inactivePhotographers.length === 0) {
+    return res.status(400).send({ message: "No Inactive Photographers Found" })
+  }
+
+  const totalDocuments = await Photographer.countDocuments({
+    lastLogin: { $lt: oneWeekAgo },
+  })
+
+  const pageCount = Math.ceil(totalDocuments/pageSize)
+
+  res.json({inactivePhotographers, pageCount});
+});
+
+
 module.exports = {
     registerPhotographer,
     photographerLogin,
@@ -686,5 +714,6 @@ module.exports = {
     changePassword,
     deletePhotographer,
     getPendingImagesByPhotographer,
-    getAllNotFeaturedPhotographers
+    getAllNotFeaturedPhotographers,
+    getInactivePhotographersByLastLogin
 }

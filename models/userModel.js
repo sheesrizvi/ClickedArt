@@ -100,6 +100,9 @@ const userSchema = new mongoose.Schema({
   },
   referralcode: {
     type: String
+  },
+  deleted: {
+    default: Boolean
   }
 }
   , {

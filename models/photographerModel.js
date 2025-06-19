@@ -194,6 +194,9 @@ const photographerSchema = new mongoose.Schema({
   isMonetized: {
     type: Boolean,
     default: false
+  },
+  lastLogin: {
+    type: Date
   }
 }, {
   timestamps: true

@@ -92,7 +92,7 @@ const userLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body
     if (email && password) {
         let user = await User.findOne({ email })
-        if (user && (await user.isPasswordCorrect(password)) && user.isActive) {
+        if (user && (await user.isPasswordCorrect(password)) && user.isActive && !user.deleted) {
             user.password = undefined;
             const token = await user.generateAccessToken()
             res.json({
@@ -402,6 +402,14 @@ const getUserAnalytics = asyncHandler(async (req, res) => {
     })
 })
 
+const deleteUser = asyncHandler(async (req, res) => {
+    const { userId } = req.query
+
+    const user = await User.findOneAndUpdate({ _id: userId }, { deleted: true})
+    if(!user) { return res.status(400).send({ message: "User not found" }) }
+    res.send({ message: "User Deleted Successfully" })  
+})
+
 module.exports = {
     userRegistration,
     userLogin,
@@ -417,7 +425,8 @@ module.exports = {
     updateCoverImage,
     checkUserNameExist,
     changePassword,
-    getUserAnalytics
+    getUserAnalytics,
+    deleteUser
 }
 
 

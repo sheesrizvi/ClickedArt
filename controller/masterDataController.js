@@ -146,6 +146,11 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
   const totalPhotos = await ImageVault.countDocuments({ isActive: true })
   const totalPhotographers = await Photographer.countDocuments({ active: true })
 
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const inactivePhotographersByLogin = await Photographer.countDocuments({
+    lastLogin: { $lt: oneWeekAgo },
+  })
   const pendingPhotosIn = await ImageVault.find({
     exclusiveLicenseStatus: { $in: [ 'pending' ] }, isActive: false 
   })
@@ -189,7 +194,8 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     pendingOrders,
     pendingMonetizations,
     pendingBlogs,
-    planActiveUsersCount: activeUsersCount
+    planActiveUsersCount: activeUsersCount,
+    inactivePhotographersByLogin
   })
 })
 
