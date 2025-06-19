@@ -222,7 +222,8 @@ const photographerLogin = asyncHandler(async (req, res) => {
             if(photographer.photographerStatus === 'pending' || photographer.photographerStatus === 'rejected') {
                 throw new Error('Sorry! You need to wait till admin approval')
             }
-            photographer.password = undefined;
+
+           
             const token = await photographer.generateAccessToken()
 
             if(!photographer.active) {
@@ -230,7 +231,8 @@ const photographerLogin = asyncHandler(async (req, res) => {
             }
 
             photographer.lastLogin = new Date()
-
+            await photographer.save()
+            photographer.password = undefined;
             res.status(200).json({
              status: true,
              message: 'Photogphotographer Login Successful',
