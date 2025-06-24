@@ -232,6 +232,7 @@ const photographerLogin = asyncHandler(async (req, res) => {
 
             photographer.lastLogin = new Date()
             await photographer.save()
+            
             photographer.password = undefined;
             res.status(200).json({
              status: true,

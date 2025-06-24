@@ -92,7 +92,10 @@ const userLogin = asyncHandler(async (req, res) => {
     const { email, password } = req.body
     if (email && password) {
         let user = await User.findOne({ email })
-        if (user && (await user.isPasswordCorrect(password)) && user.isActive && !user.deleted) {
+        if (user && (await user.isPasswordCorrect(password)) && user.isActive ) {
+            if(user.deleted === true) {
+                throw new Error("user deleted")
+            }
             user.password = undefined;
             const token = await user.generateAccessToken()
             res.json({
@@ -118,7 +121,10 @@ const resetPassword = asyncHandler(async(req, res) => {
     }
     
     const randomPassword = await sendResetEmail(existedUser.email)
+
     existedUser.password = randomPassword
+    console.log("randomPassword", randomPassword)
+    console.log(existedUser)
     await existedUser.save()
     res.status(200).send({status: true, message: 'OTP sent to your email. Please check for passwrod reset'})
   })
