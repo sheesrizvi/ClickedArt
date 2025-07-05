@@ -198,7 +198,7 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
         user.age = age
     }
 
-    user.image = image || user.image  
+    user.image = image ?? user.image  
     user.interests = interests || user.interests
     user.connectedAccounts = connectedAccounts || user.connectedAccounts
 
