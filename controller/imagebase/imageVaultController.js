@@ -1210,8 +1210,8 @@ const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
 
 const getImagesByEvents= asyncHandler(async (req, res) => {
  const { eventName } = req.query
-
-    const images = await ImageVault.find({ eventName })
+    
+    const images = await ImageVault.findOne({ eventName: eventName.toLowerCase() })
 
     if(!images || images.length === 0) {
       throw new Error('Images not found')

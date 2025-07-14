@@ -21,8 +21,8 @@ const {
         updateNotForSaleStatus,
         getImageBySlug,
         getImageForDownload,
-           getImagesByEvents,
-            getImagesOfEventsByPhotographer
+        getImagesByEvents,
+        getImagesOfEventsByPhotographer
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -30,7 +30,7 @@ const router = express.Router()
 
 
 router.post('/add-image-in-vault', IsAdminOrPhotographer,  addImageInVault)
-router.post('/update-image-in-vault', IsAdminOrPhotographer,  updateImageInVault)
+router.post('/update-image-in-vault',  updateImageInVault)
 router.get('/get-image-by-id', getImageFromVault)
 router.get('/get-all-images', getAllImagesFromVault)
 router.delete('/delete-image', IsAdminOrPhotographer, deleteImagesFromVault)
