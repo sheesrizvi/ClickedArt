@@ -186,7 +186,7 @@ const updateUserPassword = asyncHandler(async (req, res) => {
 
     const Model = userType === 'User' ? User : Photographer
 
-    const user = await Model.findOne({ _id: userId })
+    const user = await Model.findById(userId)
     if(!user) throw new Error('User not found')
     
     user.password = password
