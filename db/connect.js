@@ -6,6 +6,7 @@ const Story = require('../models/storyModel.js')
 const { generateSlug } = require('../middleware/slugMiddleware.js')
 const Photographer = require('../models/photographerModel.js')
 const User = require('../models/userModel.js')
+const Notification = require('../models/notificationModel.js')
 
 const dbConnect = async () => {
     try {
@@ -14,7 +15,7 @@ const dbConnect = async () => {
        }
         const connectionInstance =  await mongoose.connect(process.env.MONGO_URI, dbOptions)
         console.log(`MongoDB Connected ${connectionInstance.connection.host} <-> ${connectionInstance.connection.name}`)
-     
+       
         
        
     } catch(e) {

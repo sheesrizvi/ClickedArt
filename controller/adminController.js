@@ -1,7 +1,8 @@
 const asyncHandler = require("express-async-handler")
 const bcrypt = require('bcrypt')
 const Admin  = require("../models/adminModel.js")
-
+const User = require('../models/userModel.js')
+const Photographer = require('../models/photographerModel.js')
 
 const adminRegistration = asyncHandler(async (req, res) => {
     const { name, email, password } = req.body
@@ -180,6 +181,20 @@ const deleteOtherAdminTypes = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Admin Del' })
 })
 
+const updateUserPassword = asyncHandler(async (req, res) => {
+    const { userId, userType, password } = req.body
+
+    const Model = userType === 'User' ? User : Photographer
+
+    const user = await Model.findOne({ _id: userId })
+    if(!user) throw new Error('User not found')
+    
+    user.password = password
+    await user.save()
+
+    res.status(200).send({ message: "Password Updated" })
+})
+
 module.exports = {
     adminRegistration,
     adminLogin,
@@ -190,5 +205,6 @@ module.exports = {
     updateOtherAdmin,
     updateSuperAdmin,
     getOtherAdminTypes,
-    deleteOtherAdminTypes
+    deleteOtherAdminTypes,
+    updateUserPassword
 }

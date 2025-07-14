@@ -103,6 +103,9 @@ const userSchema = new mongoose.Schema({
   },
   deleted: {
     default: Boolean
+  },
+  pushToken: {
+    type: String
   }
 }
   , {

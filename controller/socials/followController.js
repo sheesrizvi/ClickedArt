@@ -5,15 +5,18 @@ const Follow = require('../../models/socials/followModel.js')
 const User = require('../../models/userModel.js')
 const Photographer = require('../../models/photographerModel.js')
 const ImageVault = require('../../models/imagebase/imageVaultModel.js')
+const {  
+    getAllFollowers,
+    getAllFollowings,
+    getLikedCount } = require('../../middleware/notificationMiddleware.js')
+const { sendGroupedNotifications, sendNotificationsInsideApplicationToSingleUser } = require('../notificationController.js')
 
 // @ Follow/Unfollow User
 const followUser = asyncHandler(async (req, res) => {
-    const { followerId, followingId } = req.body 
+    const { followerId, followingId, followerType, followingType } = req.body 
     if(!followerId || !followingId) return res.status(400).send({ message: "FollowerId and FollowingId is required" })
 
-    const followerType = await UserType.findOne({ user: followerId }).select('type -_id')
-    const followingType = await UserType.findOne({ user: followingId }).select('type -_id')
-    if(!followerType || !followingType || !followerType.type || !followingType.type) return res.status(400).send({ message: 'Follower User or Following User not found' })
+    if(!followerType || !followingType || !followerId || !followingId) return res.status(400).send({ message: 'Follower and Followee details is required' })
 
     const followExist = await Follow.findOne({ 
         'followerInfo.user': followerId,
@@ -21,53 +24,44 @@ const followUser = asyncHandler(async (req, res) => {
      })
    
     if(followExist){
-       return res.status(400).send({ message: 'User already followed' })
+       return res.status(400).send({ message: 'Already followed' })
     }
     const follow = await Follow.create({
         followerInfo: {
             user: followerId,
-            userType: followerType.type
+            userType: followerType
         },
         followingInfo: {
             user: followingId,
-            userType: followingType.type
+            userType: followingType
         }
     })
-   
-    let Type = followerType.type
-    let Model = Type === 'User' ? User : Vendor
-   
-    await Model.findOneAndUpdate({ _id: followerId }, {$inc: { followingCount: 1 } })
-    Type = followingType.type
-    Model = Type === 'User' ? User : Vendor
-    await Model.findOneAndUpdate({ _id: followingId }, { $inc: { followersCount: 1 } })
+
+    let Model = followerType === "User" ? User : Photographer
+    const user = await Model.findOne({ _id: followerId })
+    const title = "New Follower"
+    const body = `${user.firstName} ${user.lastName} has started following you`
+
+    sendNotificationsInsideApplicationToSingleUser(followingId, followingType, title, body).catch(console.error)
     res.status(200).send({ message: 'Follow request successfull', follow , followExist: true })
 })
 
 // @ Unfollow User
 const unfollowUser = asyncHandler(async (req, res) => {
-    const { followerId, followingId } = req.query
-    if(!followerId || !followingId) return res.status(400).send({ message: "FollowerId and FollowingId is required" })
+    const { followerId, followingId, followerType, followingType } = req.body
+    if(!followerId || !followingId || !followerId || !followingId) return res.status(400).send({ message: "FollowerId and FollowingId is required" })
     
-    const followerType = await UserType.findOne({ user: followerId }).select('type -_id').lean();
-    const followingType = await UserType.findOne({ user: followingId }).select('type -_id').lean();
+   
     if(!followerType || !followingType) return res.status(400).send({ message: 'Follower User or Following User not found' })
     
     const isUserFollowed = await Follow.findOne({ 'followerInfo.user': followerId, 'followingInfo.user': followingId })
 
-    if(!isUserFollowed) return res.status(400).send({ message: 'Follow Relation not found' })
+    if(!isUserFollowed) return res.status(400).send({ message: 'You are not following this Photographer' })
         
     await Follow.findOneAndDelete({ 'followerInfo.user': followerId, 'followingInfo.user': followingId })
-    let Type = followerType.type
-    let Model = Type === 'User' ? User : Vendor
-    await Model.findOneAndUpdate({ _id: followerId }, {$inc: { followingCount: -1 } })
-    Type = followingType.type
-    Model = Type === 'User' ? User : Vendor
-         
-    await Model.findOneAndUpdate({ _id: followingId }, { $inc: { followersCount: -1 } })
            
     await Follow.deleteOne({ 'followerInfo.user': followerId, 'followingInfo.user': followingId})
-    res.status(200).send({ message: 'User unfollowed succesfully', followExist: false })
+    res.status(200).send({ message: 'Photographer unfollowed succesfully', followExist: false })
 })
 
 // @ Check whether follower is following a user

@@ -88,6 +88,12 @@ const imageVaultSchema = mongoose.Schema({
     },
     slug: {
         type: String
+    },
+    eventName: {
+        type: String
+    },
+    eventEndDate: {
+        type: Date
     }
 }, {
     timestamps: true

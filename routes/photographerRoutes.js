@@ -9,7 +9,8 @@ const { registerPhotographer, photographerLogin, resetPassword, getAllPhotograph
     deletePhotographer,
     getPendingImagesByPhotographer,
     getAllNotFeaturedPhotographers,
-    getInactivePhotographersByLastLogin
+    getInactivePhotographersByLastLogin,
+    makeArtistOfTheMonth
  } = require('../controller/photographerController')
 const { IsPhotographer, isAdmin } = require('../middleware/authMiddleware')
 // const { resendOTP } = require('../controller/userController')
@@ -37,5 +38,6 @@ router.post('/change-password', changePassword)
 router.delete('/delete-photographer', deletePhotographer)
 router.get('/get-pending-images-by-photographer', getPendingImagesByPhotographer)
 router.get('/get-inactive-photographers-by-last-login', getInactivePhotographersByLastLogin)
+router.post('/make-artist-of-the-month', makeArtistOfTheMonth)
 
 module.exports = router

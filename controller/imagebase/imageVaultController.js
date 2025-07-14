@@ -17,6 +17,14 @@ const {  sendApprovedImageMail,
   setApprovedImageOfNonMonetizedProfile, 
   sendUnapprovedImageMailOfMonetizedProfile,
   sendUnapprovedImageMailOfNonMonetizedProfile } = require('../../middleware/handleEmail.js')
+const {  
+    getLikedCount,
+    hasLiked,
+    getAllFollowers,
+    getAllFollowings
+  } = require('../../middleware/notificationMiddleware.js')
+const { sendGroupedNotifications, sendNotificationsInsideApplicationToSingleUser } = require('../notificationController.js')
+
 
 const Subscription = require('../../models/subscriptionModel.js')
 
@@ -31,7 +39,7 @@ const config = {
 const s3 = new S3Client(config);
 
 const addImageInVault = asyncHandler(async (req, res) => {
-  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, watermark, cameraDetails, price, license, title, notForSale } = req.body
+  const { category, photographer, imageLinks, resolutions, description, story, keywords, location, watermark, cameraDetails, price, license, title, notForSale,  eventName, eventEndDate } = req.body
 
   if(!category || !photographer || !imageLinks ) return res.status(400).send({ message: 'Mandatory Fields are required' })
  
@@ -83,7 +91,8 @@ const addImageInVault = asyncHandler(async (req, res) => {
     license,
     watermark, cameraDetails, price: prices,
     notForSale,
-    slug
+    slug,
+    eventName, eventEndDate
   })
 
   await ImageAnalytics.create({
@@ -97,7 +106,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
 
 const updateImageInVault = asyncHandler(async (req, res) => {
-    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license, notForSale } = req.body
+    const { id, category, photographer, imageLinks, resolutions, title, description, story, keywords, location, watermark, cameraDetails, price, license, notForSale,  eventName, eventEndDate } = req.body
 
     if(!category || !photographer || !imageLinks || !id ) return res.status(400).send({ message: 'Mandatory Fields are required' })
 
@@ -123,7 +132,9 @@ const updateImageInVault = asyncHandler(async (req, res) => {
    photo.cameraDetails = cameraDetails || photo.cameraDetails
    photo.story = story || photo.story
    photo.license = license || photo.license
-   
+   photo.eventName = eventName || photo.eventName
+   photo.eventEndDate = eventEndDate || photo.eventEndDate
+
    if (notForSale !== undefined) {
     photo.notForSale = notForSale;
   }
@@ -174,7 +185,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
 })
 
 const getImageFromVault = asyncHandler(async (req, res) => {
-    const { id } = req.query
+    const { id, userId } = req.query
 
     let image = await ImageVault.findOne({ _id: id }).populate('photographer category license')
 
@@ -185,17 +196,21 @@ const getImageFromVault = asyncHandler(async (req, res) => {
     const imageAnalytics = await ImageAnalytics.findOne({ image: id })
     const imageObject = image.toObject()
     imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+    const likesCount = await getLikedCount(id)
+    const hasLike = await hasLiked(id, userId)
 
     image = {
         ...imageObject,
         imageAnalytics,
+        likesCount,
+        hasLike
     }
     res.status(200).send({ photo: image })
 })
 
 
 const getAllImagesFromVault = asyncHandler(async (req, res) => {
-    const { pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, pageNumber = 1, pageSize = 20 } = req.query
 
     const totalDocuments = await ImageVault.countDocuments({ isActive: true })
     const pageCount = Math.ceil(totalDocuments/pageSize)
@@ -209,12 +224,15 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
             const imageObject = image.toObject();
             imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
-            
+            const id = image._id
+            const likesCount = await getLikedCount(id)
+            const hasLike = await hasLiked(id, userId)
+
             return {
                 ...imageObject,
                 imageAnalytics,
-                // hasLiked: !!likeExist,
-                // hasCommented: !!commentExist,
+                likesCount,
+                hasLike
             };
         })
     );
@@ -224,7 +242,7 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
 })
 
 const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
-    const { photographer, pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, photographer, pageNumber = 1, pageSize = 20 } = req.query
 
     const photos = await ImageVault.find({ photographer, isActive: true }).populate('category photographer license').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
@@ -241,12 +259,15 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
             const imageObject = image.toObject();
             imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+            const id = image._id
+            const likesCount = await getLikedCount(id)
+            const hasLike = await hasLiked(id, userId)
 
             return {
                 ...imageObject,
                 imageAnalytics,
-                // hasLiked: !!likeExist,
-                // hasCommented: !!commentExist,
+                hasLike,
+                likesCount
             };
         })
     )
@@ -255,7 +276,7 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
 })
 
 const getImagesByCategory = asyncHandler(async(req, res) => {
-    const { category, pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, category, pageNumber = 1, pageSize = 20 } = req.query
 
     const photos = await ImageVault.find({ category, isActive: true }).populate('category photographer license').sort({createdAt: -1}).skip((pageNumber - 1) * pageSize).limit(pageSize)
 
@@ -272,12 +293,15 @@ const getImagesByCategory = asyncHandler(async(req, res) => {
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
             const imageObject = image.toObject();
             imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+            const id = image._id
+            const likesCount = await getLikedCount(id)
+            const hasLike = await hasLiked(id, userId)
 
             return {
                 ...imageObject,
                 imageAnalytics,
-                // hasLiked: !!likeExist,
-                // hasCommented: !!commentExist,
+                hasLike,
+                likesCount
             };
         })
     )
@@ -285,12 +309,12 @@ const getImagesByCategory = asyncHandler(async(req, res) => {
 })
 
 const getImagesByCategoryType = asyncHandler(async(req, res) => {
-    const { categoryName, pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, categoryName, pageNumber = 1, pageSize = 20 } = req.query
 
     const category = await Category.findOne({ name: categoryName})
 
     if(!category) return res.status(400).send({ message: 'Category not found with this title' })
-    const photos = await ImageVault.find({ category: category._id, isActive: true }).populate('category photographer license ').skip((pageNumber - 1) * pageSize).limit(pageSize)
+    const photos = await ImageVault.find({ category: category._id, isActive: true }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
     if(!photos || photos.length === 0) return res.status(400).send({ message: 'Photos not found' })
 
@@ -305,10 +329,15 @@ const getImagesByCategoryType = asyncHandler(async(req, res) => {
             const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
             // const imageObject = image.toObject();
             // imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+            const id = image._id
+            const likesCount = await getLikedCount(id)
+            const hasLike = await hasLiked(id, userId)
 
             return {
                 ...image.toObject(),
                 imageAnalytics,
+                hasLike,
+                likesCount
                 // hasLiked: !!likeExist,
                 // hasCommented: !!commentExist,
             };
@@ -403,6 +432,13 @@ const approveImage = asyncHandler(async (req, res) => {
         } else {
           setApprovedImageOfNonMonetizedProfile(photographerName, email, imageTitle)
         }
+        const photographerId = image.photographer._id
+        const followers = await getAllFollowers(photographerId)
+        const title = "New Photo Alert!"
+        const body = `${photographerName} just dropped a new photo`
+        if(followers && followers.length > 0) {
+            sendGroupedNotifications(followers, title, body).catch(console.error)
+        }
 
       } else if (status === 'review') {
         image.rejectionReason = null; 
@@ -410,7 +446,7 @@ const approveImage = asyncHandler(async (req, res) => {
         image.exclusiveLicenseStatus = status
       }
   
-      await image.save();
+     // await image.save();
   
       res.status(200).json({
         message: `Image ${status} successfully.`,
@@ -465,7 +501,7 @@ const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
 })
 
 const getFeaturedArtwork = asyncHandler(async (req, res) => {
-  const { pageNumber = 1, pageSize = 20 } = req.query
+  const { userId, pageNumber = 1, pageSize = 20 } = req.query
 
   const [ featuredArtwork, totalDocuments ] = await Promise.all([
     ImageVault.find({ featuredArtwork: true, isActive: true }).populate('category photographer license').sort({ createdAt: -1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
@@ -478,12 +514,17 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const pageCount = Math.ceil(totalDocuments/pageSize)
   
   const newPhotos = await Promise.all(
-    featuredArtwork.map((image) => {
+    featuredArtwork.map(async (image) => {
       const imageObject = image.toObject()
       imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+       const id = image._id
+       const likesCount = await getLikedCount(id)
+       const hasLike = await hasLiked(id, userId)
 
       return {
-        ...imageObject
+        ...imageObject,
+        likesCount,
+        hasLike
       }
     })
   )
@@ -732,7 +773,7 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 
 
 const searchImages = asyncHandler(async (req, res) => {
-  let { pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc', Query = '' } = req.query;
+  let { userId, pageNumber = 1, pageSize = 20, sortType = 'date_popularity', order = 'desc', Query = '' } = req.query;
   const searchQuery = Query
   
   pageNumber = parseInt(pageNumber)
@@ -835,9 +876,14 @@ const searchImages = asyncHandler(async (req, res) => {
     images.map((async (image) => {
       const imageObject = image;
       imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+      const id = image._id
+      const likesCount = await getLikedCount(id)
+      const hasLike = await hasLiked(id, userId)
 
       return {
-        ...imageObject
+        ...imageObject,
+        likesCount,
+        hasLike
       }
     }))
   )
@@ -927,6 +973,7 @@ const imageAnalyticsData = {
 })
 
 const bestSellerPhotos = asyncHandler(async (req, res) => {
+  const { userId } = req.query
 
   const bestSellers = await Order.aggregate([
     {
@@ -1000,8 +1047,14 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
     bestSellers.map(async (image) => {
       const imageObject = image;
       imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+       
+      const id = image._id
+      const likesCount = await getLikedCount(id)
+      const hasLike = await hasLiked(id, userId)
       return {
-        ...imageObject
+        ...imageObject,
+        likesCount,
+        hasLike
       }
     })
   )
@@ -1039,7 +1092,7 @@ const getRejectedImages = asyncHandler(async (req, res) => {
 })
 
 const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
-  let { pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query
+  let { userId, pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query
 
   pageNumber = parseInt(pageNumber)
   pageSize = parseInt(pageSize)
@@ -1116,8 +1169,15 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
     images.map(async (image) => {
       const imageObject = image;
       imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
+      const id = image._id
+      const likesCount = await getLikedCount(id)
+      const hasLike = await hasLiked(id, userId)
+
       return {
-        ...imageObject
+        ...imageObject,
+        likesCount,
+        hasLike
       }
     })
   )
@@ -1155,7 +1215,7 @@ const updateNotForSaleStatus = asyncHandler(async (req, res) => {
 
 
 const getImageBySlug = asyncHandler(async (req, res) => {
-  const { slug } = req.query
+  const { userId, slug } = req.query
 
   if(!slug) {
     return res.status(400).send({ message: 'Slug is required' })
@@ -1172,8 +1232,14 @@ const getImageBySlug = asyncHandler(async (req, res) => {
   
   const imageObject = image.toObject()
   imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+  const id = image._id
+  const likesCount = await getLikedCount(id)
+  const hasLike = await hasLiked(id, userId)
+
   image = {
     ...imageObject,
+    likesCount,
+    hasLike
   }
 
   res.status(200).send({ image })

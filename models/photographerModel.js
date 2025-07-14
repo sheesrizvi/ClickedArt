@@ -197,6 +197,13 @@ const photographerSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
+  },
+  pushToken: {
+    type: String
+  },
+  artistOfTheMonth: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

@@ -10,6 +10,16 @@ const Referral = require('../models/referralModel.js')
 const { sendApprovedMail, sendRejectionEmail } = require('../middleware/handleEmail.js')
 const Subscription = require('../models/subscriptionModel.js')
 const mongoose = require('mongoose')
+const {  
+    getAllFollowers,
+    isFollowing,
+    getFollowersCount,
+    getAllFollowings,
+    getLikedCount,
+} = require('../middleware/notificationMiddleware.js')
+const { sendGroupedNotifications, sendNotificationsInsideApplicationToSingleUser } = require('./notificationController.js')
+
+
 
 const registerPhotographer = asyncHandler(async (req, res) => {
     const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body
@@ -250,7 +260,7 @@ const photographerLogin = asyncHandler(async (req, res) => {
 const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
    
     const { action, photographerId } = req.body
-   
+     
  
     const photographer = await Photographer.findById(photographerId)
     if(!photographer) {
@@ -271,17 +281,16 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
              user.photographer = photographer._id
              await user.save()
          }
+         
          const name = `${photographer.firstName} ${photographer.lastName}`
          const email = photographer.email
-         sendApprovedMail(name, email)
-
+         sendApprovedMail(name, email).catch(console.error)
      } else if (action === 'rejected') {
          photographer.photographerStatus = 'rejected',
          photographer.rejectedAt = new Date()
          const name = `${photographer.firstName} ${photographer.lastName}`
          const email = photographer.email
-         sendRejectionEmail(name, email)
-         
+         sendRejectionEmail(name, email).catch(console.error)  
      } else {
          return res.status(400).json({status: false, message: "Invalid Action"})
      }
@@ -307,7 +316,7 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
   })
 
 const getAllPhotographers = asyncHandler(async (req, res) => {
-    const { pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, pageNumber = 1, pageSize = 20 } = req.query
 
     let photographers = await Photographer.find({ active: true }).sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
@@ -326,12 +335,21 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
             const activeSubscription = subscription?.planId?.name || 'Basic'
             const activeUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
             const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] } , isActive: false   });
+
+            const photographerId = photographer._id
+            const followers = await getAllFollowers(photographerId)
+            const isFollowed = await isFollowing(userId, photographerId)
+            const followersCount = await getFollowersCount(photographerId)
             
+
             return {
                 ...photographer.toObject(),
                 activeSubscription,
                 activeUploadingImgCount,
-                pendingImagesCount
+                pendingImagesCount,
+                followers,
+                isFollowed,
+                followersCount
                 }
         })
     )
@@ -340,7 +358,7 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
 })
 
 const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
-    const { pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, pageNumber = 1, pageSize = 20 } = req.query
 
     let photographers = await Photographer.find({ active: true, featuredArtist: false, _id: { $ne: new mongoose.Types.ObjectId("67cacbe7303273699a9c7db4") } }).sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
@@ -359,12 +377,21 @@ const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
             const activeSubscription = subscription?.planId?.name || 'Basic'
             const activeUploadingImgCount = await ImageVault.countDocuments({ photographer, isActive: true });
             const pendingImagesCount = await ImageVault.countDocuments({ photographer, exclusiveLicenseStatus: { $in: ['pending', 'review'] } , isActive: false   });
+
+            const photographerId = photographer._id
+            const followers = await getAllFollowers(photographerId)
+            const isFollowed = await isFollowing(userId, photographerId)
+            const followersCount = await getFollowersCount(photographerId)
+            
             
             return {
                 ...photographer.toObject(),
                 activeSubscription,
                 activeUploadingImgCount,
-                pendingImagesCount
+                pendingImagesCount,
+                followers,
+                isFollowed,
+                followersCount
                 }
         })
     )
@@ -373,11 +400,24 @@ const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
 })
 
 const getPhotographerById = asyncHandler(async (req, res) => {
-    const { photographerId } = req.query
+    const { userId, photographerId } = req.query
 
-    const photographer = await Photographer.findOne({ _id: photographerId })
+    let photographer = await Photographer.findOne({ _id: photographerId })
 
     if(!photographer) return res.status(400).send({ message: 'Photographer not found' })
+
+        
+       
+    const followers = await getAllFollowers(photographerId)
+    const isFollowed = await isFollowing(userId, photographerId)
+    const followersCount = await getFollowersCount(photographerId)
+
+    photographer = {
+        ...photographer.toObject(),
+        followers,
+        isFollowed,
+        followersCount
+    }
 
     res.status(200).send({ photographer })
 })
@@ -426,6 +466,29 @@ const updatePhotographerRank = asyncHandler(async (req, res) => {
     res.status(200).send({ message: 'Photographer Rank updated' })
 })
 
+const makeArtistOfTheMonth = asyncHandler(async (req, res) => {
+    const { photographerId } = req.body
+
+    
+    const photographer = await Photographer.findOne({ _id: photographerId })
+
+    if(!photographer) {
+        return res.status(400).send({ message: 'Photographer not found' })
+    }
+
+    await Photographer.updateMany(
+        { artistOfTheMonth: true }, 
+        { $set: { artistOfTheMonth: false } }
+    );
+
+    photographer.artistOfTheMonth = true
+
+    await photographer.save()
+
+    res.status(200).send({ message: 'Photographer is artist of month' })
+})
+
+
 const toggleFeaturedPhotographer = asyncHandler(async (req, res) => {
     const { photographerId } = req.body
     
@@ -442,9 +505,9 @@ const toggleFeaturedPhotographer = asyncHandler(async (req, res) => {
 })
 
 const getFeaturedPhotographer = asyncHandler(async (req, res) => {
-    const { pageNumber = 1, pageSize = 20 } = req.query
+    const { userId, pageNumber = 1, pageSize = 20 } = req.query
 
-    const [ featuredPhotographer, totalDocuments ] = await Promise.all([
+    let [ featuredPhotographer, totalDocuments ] = await Promise.all([
         Photographer.find({ featuredArtist: true }).sort({ firstName: 1 }).skip((pageNumber -1) * pageSize).limit(pageSize),
         Photographer.countDocuments({ featuredArtist: true })
     ])
@@ -453,6 +516,22 @@ const getFeaturedPhotographer = asyncHandler(async (req, res) => {
         return res.status(400).send({  message: 'Featured Photographer not found' })
     }
     const pageCount = Math.ceil(totalDocuments/pageSize)
+
+    featuredPhotographer = await Promise.all(featuredPhotographer.map(async (photographer) => {
+
+        const photographerId = photographer._id
+        const followers = await getAllFollowers(photographerId)
+        const isFollowed = await isFollowing(userId, photographerId)
+        const followersCount = await getFollowersCount(photographerId)
+
+        return {
+            ...photographer.toObject(),
+            followers,
+            isFollowed,
+            followersCount
+        }
+    }))
+
 
     res.status(200).send({  featuredPhotographer, pageCount })
 })
@@ -490,7 +569,7 @@ const verifyPhotographerProfile = asyncHandler(async (req, res) => {
 
 
 const searchPhotographers = async (req, res) => {
-    let { Query, pageSize = 20, pageNumber = 1 } = req.query;
+    let { userId, Query, pageSize = 20, pageNumber = 1 } = req.query;
 
     if(!Query) {
         return res.status(400).send({ message: 'Query is required' })
@@ -499,7 +578,7 @@ const searchPhotographers = async (req, res) => {
       pageSize = parseInt(pageSize, 10)
       pageNumber = parseInt(pageNumber, 10)
 
-      const results = await Photographer.aggregate([
+      let results = await Photographer.aggregate([
         {
           $search: {
             index: 'photographerindex',
@@ -547,19 +626,47 @@ const searchPhotographers = async (req, res) => {
       ])
       const total = totalDocuments.length > 0 ? totalDocuments[0].total : 1
       const pageCount = Math.ceil(total/pageSize)
+
+      results = await Promise.all(
+        results.map(async (photographer) => {
+        const photographerId = photographer._id
+        const followers = await getAllFollowers(photographerId)
+        const isFollowed = await isFollowing(userId, photographerId)
+        const followersCount = await getFollowersCount(photographerId)
+
+        return {
+            ...photographer,
+            followers,
+            isFollowed,
+            followersCount
+        }
+        })
+      )
+
       res.status(200).json({results, pageCount});
     
   };
 
   const getPhotographerByUserName = asyncHandler(async (req, res) => {
-    const { username } = req.query
+    const { userId, username } = req.query
 
-    const user = await Photographer.findOne({ 
+    let user = await Photographer.findOne({ 
         username: { $regex: new RegExp(`^${username}$`, 'i') } 
       });
       
     if(!user) return res.status(400).send({ message: 'User not found' })
+    const photographerId = user._id
+    const followers = await getAllFollowers(photographerId)
+    const isFollowed = await isFollowing(userId, photographerId)
+    const followersCount = await getFollowersCount(photographerId)
 
+    user = {
+        ...user.toObject(),
+        followers,
+        isFollowed,
+        followersCount
+    }
+    
     res.status(200).send({ user })
 })
 
@@ -718,5 +825,6 @@ module.exports = {
     deletePhotographer,
     getPendingImagesByPhotographer,
     getAllNotFeaturedPhotographers,
-    getInactivePhotographersByLastLogin
+    getInactivePhotographersByLastLogin,
+    makeArtistOfTheMonth
 }
