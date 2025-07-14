@@ -1196,7 +1196,7 @@ const getImageForDownload = asyncHandler(async (req, res) => {
 
 })
 
-const getImagesByEvents = asyncHandler(async (req, res) => {
+const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
     const { photographerId, eventName } = req.query
 
     const images = await ImageVault.find({ photographer: photographerId, eventName })
@@ -1208,7 +1208,7 @@ const getImagesByEvents = asyncHandler(async (req, res) => {
     res.status(200).send({ images })
 })
 
-const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
+const getImagesByEvents= asyncHandler(async (req, res) => {
  const { eventName } = req.query
 
     const images = await ImageVault.find({ eventName })
