@@ -101,7 +101,7 @@ dbConnect()
 
 cron.schedule('0 0 * * *', () => {
   console.log('Running the subscription expiry check .');
-  checkAndUpdateSubscriptions().catch(err => console.error('Error in subscription check:', err));
+  checkAndUpdateSubscriptions().catch(err => console.error('Error in subscription check :', err));
 });
 
 cron.schedule('0 1 * * 0', () => {
