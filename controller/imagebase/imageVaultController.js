@@ -1196,6 +1196,30 @@ const getImageForDownload = asyncHandler(async (req, res) => {
 
 })
 
+const getImagesByEvents = asyncHandler(async (req, res) => {
+    const { photographerId, eventName } = req.query
+
+    const images = await ImageVault.find({ photographer: photographerId, eventName })
+
+    if(!images || images.length === 0) {
+      throw new Error('Images not found')
+    }
+
+    res.status(200).send({ images })
+})
+
+const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
+ const { eventName } = req.query
+
+    const images = await ImageVault.find({ eventName })
+
+    if(!images || images.length === 0) {
+      throw new Error('Images not found')
+    }
+
+    res.status(200).send({ images })
+})
+
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -1217,5 +1241,7 @@ module.exports = {
     getAllImagesFromVaultBySorting,
     updateNotForSaleStatus,
     getImageBySlug,
-    getImageForDownload
+    getImageForDownload,
+    getImagesByEvents,
+    getImagesOfEventsByPhotographer
 }
