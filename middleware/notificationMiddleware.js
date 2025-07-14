@@ -15,7 +15,6 @@ const getAllFollowers = asyncHandler(async (userId) => {
     )
 
     
-    
     if(!followerDetails || followerDetails.length === 0) return []
     const followers = followerDetails.map((follow) => (follow.followerInfo.user))
     return followers

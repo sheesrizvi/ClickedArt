@@ -20,7 +20,7 @@ const {
         getAllImagesFromVaultBySorting,
         updateNotForSaleStatus,
         getImageBySlug,
-        getImageForDownload
+        getImageForDownload,
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -52,5 +52,7 @@ router.post('/update-not-for-sale-status', updateNotForSaleStatus)
 
 router.get('/get-image-by-slug', getImageBySlug)
 router.get('/get-image-for-download', verifyToken, getImageForDownload)
+// router.get('/get-images-of-events-by-photographer', getImagesOfEventsByPhotographer)
+// router.get('/get-images-of-events', getListOfAllImagesByEvent)
 
 module.exports = router

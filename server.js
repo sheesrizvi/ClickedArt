@@ -38,7 +38,6 @@ const layoutContentRoutes = require('./routes/layoutContentRoutes.js')
 const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes.js')
 const salesUserRoutes = require('./routes/salesuserRoutes.js')
 const deliveryRoutes = require('./routes/deliveryRoutes.js')
-const notificationRoutes = require('./routes/notificationRoutes.js')
 const rnPushTokenRoutes = require('./routes/rnPushToken.js')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
@@ -47,7 +46,7 @@ const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSen
   weeklyMailToNonMonetizedPhotographers
  } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
-const { raisePickupRequestScheduler } = require('./controller/deliveryController.js')
+const { raisePickupRequestScheduler } = require('./controller/deliveryController.js');
 
 const app = express();
 
@@ -95,8 +94,8 @@ app.use('/api/layout', layoutContentRoutes)
 app.use('/api/adminanalytics', adminAnalyticsRoutes)
 app.use('/api/salesuser', salesUserRoutes)
 app.use('/api/delivery', deliveryRoutes)
-app.use('/api/notifications', notificationRoutes)
 app.use("/api/rnPushTokens", rnPushTokenRoutes)
+
 
 dbConnect()
 
@@ -147,7 +146,7 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(5002, () => {
+app.listen(PORT, () => {
     console.log(`Successfully served on port: ${PORT}.`);
 })  
 
