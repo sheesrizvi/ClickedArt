@@ -147,7 +147,7 @@ app.use(errorHandler)
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Successfully served on port named this: ${PORT}.`);
+    console.log(`Successfully served on port names: ${PORT}.`);
 })  
 
 
