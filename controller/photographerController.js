@@ -529,7 +529,10 @@ const searchPhotographers = async (req, res) => {
         }
       ]);
 
-      const totalDocuments = await Photographer.aggregate([
+
+  
+
+    const totalDocuments = await Photographer.aggregate([
         {
             $search: {
               index: 'photographerindex',
@@ -550,6 +553,7 @@ const searchPhotographers = async (req, res) => {
       res.status(200).json({results, pageCount});
     
   };
+
 
   const getPhotographerByUserName = asyncHandler(async (req, res) => {
     const { username } = req.query

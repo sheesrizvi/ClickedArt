@@ -151,12 +151,7 @@ const orderSchema = new mongoose.Schema(
       },
       pickupId: {
         type: Number
-      },
-      orderType: {
-        type: String,
-        enum: ['platform', 'custom-upload'],
-        default: 'platform'
-      },
+      }
   },
   {
     timestamps: true,

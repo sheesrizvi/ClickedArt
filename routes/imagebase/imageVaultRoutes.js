@@ -22,7 +22,8 @@ const {
         getImageBySlug,
         getImageForDownload,
         getImagesByEvents,
-        getImagesOfEventsByPhotographer
+        getImagesOfEventsByPhotographer,
+        getPhotographerByEvents
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -56,5 +57,6 @@ router.get('/get-image-by-slug', getImageBySlug)
 router.get('/get-image-for-download', verifyToken, getImageForDownload)
 router.get('/get-images-of-events-by-photographer', getImagesOfEventsByPhotographer)
 router.get('/get-images-of-events', getImagesByEvents)
+router.get('/get-photographer-by-events', getPhotographerByEvents)
 
 module.exports = router

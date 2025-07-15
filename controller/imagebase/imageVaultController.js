@@ -1220,6 +1220,29 @@ const getImagesByEvents= asyncHandler(async (req, res) => {
     res.status(200).send({ images })
 })
 
+const getPhotographerByEvents = asyncHandler(async (req, res) => {
+  const { eventName, pageNumber = 1, limit = 20 } = req.query;
+
+  const lowerCaseEvent = eventName.toLowerCase();
+
+  const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+
+  const totalImages = await ImageVault.countDocuments({ eventName: lowerCaseEvent });
+
+  const images = await ImageVault.find({ eventName: lowerCaseEvent })
+    .populate('photographer')
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const photographers = images.map((image) => image.photographer);
+
+  res.send({
+    photographers,
+    pageCount: Math.ceil(totalImages / parseInt(limit))
+  });
+});
+
+
 module.exports = {
     addImageInVault,
     updateImageInVault,
@@ -1243,5 +1266,6 @@ module.exports = {
     getImageBySlug,
     getImageForDownload,
     getImagesByEvents,
-    getImagesOfEventsByPhotographer
-}
+    getImagesOfEventsByPhotographer,
+    getPhotographerByEvents
+  }
