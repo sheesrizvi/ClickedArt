@@ -1224,7 +1224,6 @@ const getPhotographerByEvents = asyncHandler(async (req, res) => {
   const { eventName, pageNumber = 1, limit = 20 } = req.query;
 
   const lowerCaseEvent = eventName.toLowerCase();
-
   const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
 
   const totalImages = await ImageVault.countDocuments({ eventName: lowerCaseEvent });
@@ -1234,7 +1233,14 @@ const getPhotographerByEvents = asyncHandler(async (req, res) => {
     .skip(skip)
     .limit(parseInt(limit));
 
-  const photographers = images.map((image) => image.photographer);
+  const photographerMap = new Map();
+  images.forEach((img) => {
+    if (img.photographer && !photographerMap.has(img.photographer._id.toString())) {
+      photographerMap.set(img.photographer._id.toString(), img.photographer);
+    }
+  });
+
+  const photographers = Array.from(photographerMap.values());
 
   res.send({
     photographers,
