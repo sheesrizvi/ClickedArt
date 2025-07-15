@@ -10,14 +10,8 @@ const orderSchema = new mongoose.Schema(
       imageInfo: {
         image: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: 'imageInfo.imageModel',
+            ref: 'ImageVault'
           }, 
-        imageModel: {
-          type: String,
-          required: false,
-          enum: ['ImageVault', 'CustomUploadImageVault'],
-          default: 'ImageVault' 
-        }, 
         photographer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Photographer',
