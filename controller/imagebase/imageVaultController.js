@@ -16,6 +16,7 @@ const {  sendApprovedImageMail,
   sendUnapprovedImageMail, setApprovedImageOfMonetizedProfile,
   setApprovedImageOfNonMonetizedProfile, 
   sendUnapprovedImageMailOfMonetizedProfile,
+  sendEventSubmissionConfirmation,
   sendUnapprovedImageMailOfNonMonetizedProfile } = require('../../middleware/handleEmail.js')
 
 const Subscription = require('../../models/subscriptionModel.js')
@@ -388,11 +389,12 @@ const approveImage = asyncHandler(async (req, res) => {
         const email = image.photographer.email
         const reasons = image.rejectionReason
         const isMonetized = image.photographer.isMonetized
-
-        if(isMonetized) {
-          sendUnapprovedImageMailOfMonetizedProfile(photographerName, email, imageTitle, reasons)
-        } else {
-          sendUnapprovedImageMailOfNonMonetizedProfile(photographerName, email, imageTitle,  reasons)
+        if(!image.eventName || image.eventName === '') {
+          if(isMonetized) {
+            sendUnapprovedImageMailOfMonetizedProfile(photographerName, email, imageTitle, reasons)
+          } else {
+            sendUnapprovedImageMailOfNonMonetizedProfile(photographerName, email, imageTitle,  reasons)
+          }
         }
       } else if (status === 'approved') {
         const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`
@@ -402,11 +404,14 @@ const approveImage = asyncHandler(async (req, res) => {
         image.rejectionReason = null; 
         image.isActive = true
         image.exclusiveLicenseStatus = status
-        if(isMonetized) {
+        if(image.eventName && image.eventName !== '') {
+          sendEventSubmissionConfirmation(photographerName, email, imageTitle)
+        } else if(isMonetized) {
           setApprovedImageOfMonetizedProfile(photographerName, email, imageTitle)
         } else {
           setApprovedImageOfNonMonetizedProfile(photographerName, email, imageTitle)
         }
+        
 
       } else if (status === 'review') {
         image.rejectionReason = null; 
