@@ -12,7 +12,7 @@ const Subscription = require('../models/subscriptionModel.js')
 const mongoose = require('mongoose')
 
 const registerPhotographer = asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body
+    const { firstName, lastName, active=true, photographerStatus='approved', email, password, mobile, whatsapp, bio, dob, profileImage, shippingAddress, isCompany, companyName, companyEmail, companyAddress, companyPhone, portfolioLink, photographyStyles, yearsOfExperience, accountType, connectedAccounts, expertise, awards ,achievements, bestPhotos, referralcode, coverImage, username } = req.body
 
     if(!firstName || !email || !password  ) {
         return res.status(400).json({status: false, message: 'All Fields are required'})
@@ -70,6 +70,8 @@ const registerPhotographer = asyncHandler(async (req, res) => {
         yearsOfExperience,
         accountType,
         photographyStyles,
+        photographerStatus,
+        active,
         companyName: !companyName ? firstName : companyName,
         isCompany: photographerData.isCompany,
         companyEmail: !companyEmail ?  email : companyEmail,
