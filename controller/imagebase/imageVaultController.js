@@ -405,7 +405,7 @@ const approveImage = asyncHandler(async (req, res) => {
         image.isActive = true
         image.exclusiveLicenseStatus = status
         if(image.eventName && image.eventName !== '') {
-          sendEventSubmissionConfirmation(photographerName, email, imageTitle)
+          // sendEventSubmissionConfirmation(photographerName, email, imageTitle)
         } else if(isMonetized) {
           setApprovedImageOfMonetizedProfile(photographerName, email, imageTitle)
         } else {
