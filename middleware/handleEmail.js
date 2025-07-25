@@ -397,6 +397,60 @@ P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, fea
 return true;
 })
 
+const sendEventSubmissionConfirmation = asyncHandler(async (photographerName, email, imageTitle) => {
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Congratulations - Your Photograph Has Been Selected!",
+    text: `
+Dear ${photographerName},
+
+We are delighted to inform you that your submitted photograph titled *"${imageTitle}"* has been selected by our expert jury for display in the “Frames of India” Photo Exhibition.
+
+This selection reflects the creativity, story, and essence your work brings to the theme:
+“Celebrating 78 Years of Indian Independence”
+
+________________________________________
+
+Exhibition Details:
+• Dates: 11th - 17th August 2025
+• Venue: Hazratganj Metro Station, Lucknow
+
+________________________________________
+
+What This Means:
+• Your photograph(s) will be professionally printed on premium, museum-grade archival media by the organizers.
+• The selected work(s) will be part of a public exhibition at one of the city's busiest locations.
+• No cost is incurred by you - participation and printing are fully sponsored.
+
+________________________________________
+
+Revenue Sharing (in case of sales):
+• 70% to organizers (covers printing, logistics, exhibition management)
+• 30% to you, the photographer - paid within one month of sale
+• You may also purchase your own exhibited print at a 30% discount
+
+________________________________________
+
+Next Steps:
+You will receive final print previews for confirmation before exhibition.
+Our team will also contact you for any additional details needed.
+
+________________________________________
+
+Thank you for sharing your art with the nation.
+
+Warm regards,  
+Team ClickedArt  
+📧 support@clickedart.com  
+🌐 www.clickedart.com
+    `,
+  });
+
+  return true;
+});
+
+
 const setApprovedImageOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) => {
 const info = await transporter.sendMail({
     from: `Clicked Art ${process.env.USER_EMAIL}`,
@@ -1024,6 +1078,7 @@ const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(async (photograph
     setApprovedImageOfMonetizedProfile,
     setApprovedImageOfNonMonetizedProfile,
     sendUnapprovedImageMailOfMonetizedProfile,
+    sendEventSubmissionConfirmation,
     sendUnapprovedImageMailOfNonMonetizedProfile,
     sendMembershipUpgradeMail,
     sendOrderThankYouMail,
