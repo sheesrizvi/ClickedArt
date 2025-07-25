@@ -344,9 +344,6 @@ const getAllCustomOrders = asyncHandler(async (req, res) => {
 
   const orders = await CustomImageOrder.find({})
     .populate('userInfo.user')
-    .populate({
-      path: 'orderItems.imageInfo.image',
-    })
     .populate('orderItems.frameInfo.frame')
     .populate('orderItems.paperInfo.paper')
     .sort({ createdAt: -1 })
@@ -379,7 +376,6 @@ const getMyOrders = asyncHandler(async (req, res) => {
   const { userId } = req.query
  
   const orders = await CustomImageOrder.find({ 'userInfo.user': userId })
-    .populate('orderItems.imageInfo.image')
     .populate('orderItems.frameInfo.frame')
     .populate('orderItems.paperInfo.paper')
     .sort({ createdAt: -1 });
@@ -396,7 +392,6 @@ const getCustomOrderById = asyncHandler(async (req, res) => {
 
   const order = await CustomImageOrder.findById(orderId)
     .populate('userInfo.user')
-    .populate('orderItems.imageInfo.image')
     .populate('orderItems.frameInfo.frame')
     .populate('orderItems.paperInfo.paper');
 

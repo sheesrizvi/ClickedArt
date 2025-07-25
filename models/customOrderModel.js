@@ -10,8 +10,7 @@ const customImageOrderSchema = new mongoose.Schema({
   orderItems: [{ 
         imageInfo: {
           image: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'CustomUploadImageVault'
+              type: String
             }, 
           user: {
               type: mongoose.Schema.Types.ObjectId,
