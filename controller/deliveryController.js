@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler')
 const Order = require('../models/orderModel.js')
+const CustomImageOrder = require('../models/customOrderModel.js')
 const axios = require('axios')
 
 // const checkPincodeAvailablity = asyncHandler(async (req, res) => {
@@ -332,7 +333,7 @@ const registerDelivery = asyncHandler(async (req, res) => {
 
 const registerDeliveryFromOrder = asyncHandler(async (order) => {
   const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
-  console.log(order.userInfo.user)
+ 
   const formData = new URLSearchParams();
   formData.append('format', 'json'); 
   formData.append(
@@ -407,6 +408,89 @@ const registerDeliveryFromOrder = asyncHandler(async (order) => {
       return null
     });
 });
+
+
+const registerCustomDeliveryFromOrder = asyncHandler(async (order) => {
+
+  const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
+
+  const formData = new URLSearchParams();
+  formData.append('format', 'json'); 
+  formData.append(
+    'data',
+    JSON.stringify({
+      shipments: [
+        {
+          name: `${order.userInfo.user.firstName} ${order.userInfo.user.lastName}`,
+          add: `${order.shippingAddress.address}`,
+          pin: `${order.shippingAddress.pincode}`,
+          city: `${order.shippingAddress.city}`,
+          state: `${order.shippingAddress.state}`,
+          country: `${order.shippingAddress.country}`,
+          phone: `${order.userInfo.user.mobile}`,
+          order: `${order._id}`,
+          payment_mode: 'Prepaid',
+          return_pin: '',
+          return_city: '',
+          return_phone: '',
+          return_add: '',
+          return_state: '',
+          return_country: '',
+          products_desc: '',
+          hsn_code: '',
+          cod_amount: '',
+          order_date: null,
+          total_amount: '',
+          seller_add: '',
+          seller_name: '',
+          seller_inv: '',
+          quantity: '',
+          waybill: '',
+          shipment_width: '20',
+          shipment_height: '20',
+          weight: '',
+          seller_gst_tin: '',
+          shipping_mode: 'Surface',
+          address_type: '',
+        },
+      ],
+      pickup_location: {
+        name: 'FORTENETSKILLS SURFACE',
+        add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+        city: 'Lucknow',
+        pin_code: 226010,
+        country: 'India',
+        phone: '7054001058',
+      },
+    })
+  );
+
+  const config = {
+    method: 'post',
+    url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Token ${token}`,
+    },
+    data: formData,
+  };
+
+  axios(config)
+    .then(async (response) => {
+      console.log('Response:', response.data);
+      const waybill = response.data.packages.length > 0 ? response.data.packages[0].waybill : null;
+      console.log("Waybill:", waybill);
+      await CustomImageOrder.findOneAndUpdate({ _id: order._id }, { waybill })
+      return waybill
+    })
+    .catch((error) => {
+      console.log(error)
+      console.error('Error:', error.response ? error.response.data : error.message);
+      return null
+    });
+});
+
+
 
 const getPackageDetails = asyncHandler(async (req, res) => {
   try {
@@ -666,6 +750,69 @@ const raisePickupRequestScheduler = async () => {
 };
 
 
+const raisePickupRequestSchedulerCustom = async () => {
+  try {
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0); 
+    
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999); 
+
+    let orders = await CustomImageOrder.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday }   })
+
+    let orderIds = orders.map((order) => order._id)
+   
+    let expected_package_count = orders.length
+  
+    if(expected_package_count < 1) {
+      return
+    }
+
+    let currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + 1);
+    const pickup_date = currentDate.toISOString().split('T')[0];
+    const pickup_time = "11:00:00";
+    const pickup_location = 'FORTENETSKILLS SURFACE'
+
+    const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
+
+    const payload = {
+      pickup_location,
+      expected_package_count,
+      pickup_date,
+      pickup_time,
+    };
+   
+    const response = await axios.post(DELHIVERY_API_URL, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Token ${token}`,
+      },
+    });
+
+    console.log('Pickup request created successfully')
+    console.log("Response Data", response.data)
+    if(response && response.data && response.data.success) {
+
+      await CustomImageOrder.updateMany(
+        { _id: { $in: orderIds } },
+        { $set: { pickupId: response.data.pickup_id } }
+    );
+    
+    }
+    return
+  } catch (error) {
+
+    console.log("Failed to created pickup request")
+    error = error.response ? error.response.data : error.message
+    console.log("Error", error)
+    return
+  }
+};
+
 module.exports = {
   checkPincodeAvailablity,
   registerDelivery,
@@ -675,5 +822,7 @@ module.exports = {
   registerDeliveryManually,
   raisePickupRequest,
   generateShippingLabel,
-  raisePickupRequestScheduler
+  raisePickupRequestScheduler,
+  registerCustomDeliveryFromOrder,
+  raisePickupRequestSchedulerCustom
 }

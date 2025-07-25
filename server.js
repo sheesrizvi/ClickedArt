@@ -39,6 +39,8 @@ const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes.js')
 const salesUserRoutes = require('./routes/salesuserRoutes.js')
 const deliveryRoutes = require('./routes/deliveryRoutes.js')
 const rnPushTokenRoutes = require('./routes/rnPushToken.js')
+const customUploadImageRoutes = require('./routes/imagebase/customUploadImageRoutes.js')
+const customOrderRoutes = require('./routes/customOrderRoutes')
 const upload  = require("./routes/upload");
 const cron = require('node-cron');
 const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSendExpirySubscriptionEmails,
@@ -46,7 +48,7 @@ const { checkAndUpdateSubscriptions, checkAndSendSubscriptionEmails, checkAndSen
   weeklyMailToNonMonetizedPhotographers
  } = require('./controller/subscriptionController.js')
 const { checkAndUpdateRejectedPhotographers } = require('./controller/photographerController.js')
-const { raisePickupRequestScheduler } = require('./controller/deliveryController.js');
+const { raisePickupRequestScheduler, raisePickupRequestSchedulerCustom } = require('./controller/deliveryController.js');
 
 const app = express();
 
@@ -95,7 +97,8 @@ app.use('/api/adminanalytics', adminAnalyticsRoutes)
 app.use('/api/salesuser', salesUserRoutes)
 app.use('/api/delivery', deliveryRoutes)
 app.use("/api/rnPushTokens", rnPushTokenRoutes)
-
+app.use("/api/custom-uploads", customUploadImageRoutes)
+app.use("/api/custom-order", customOrderRoutes)
 
 dbConnect()
 
@@ -136,6 +139,12 @@ cron.schedule('55 23 * * *', () => {
   console.log('Running the raise pickup request scheduler check')
   raisePickupRequestScheduler()
 })
+
+cron.schedule('55 23 * * *', () => {
+  console.log('Running the raise pickup request scheduler check')
+  raisePickupRequestSchedulerCustom()
+})
+
 
 
 app.use(notFound)

@@ -3,7 +3,7 @@
 const mongoose = require('mongoose');
 
 const customUploadImageSchema = new mongoose.Schema({
-  uploadedBy: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'userType',
     required: true

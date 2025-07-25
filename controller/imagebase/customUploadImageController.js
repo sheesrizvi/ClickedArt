@@ -3,7 +3,7 @@ const CustomUploadImageVault = require('../../models/imagebase/customImageUpload
 
 
 const addCustomUploadImage = asyncHandler(async (req, res) => {
-  const { url, name, uploadedBy, userType } = req.body;
+  const { url, name, user, userType } = req.body;
  
   if (!url || !userType) {
     res.status(400);
@@ -13,8 +13,8 @@ const addCustomUploadImage = asyncHandler(async (req, res) => {
   const newImage = await CustomUploadImageVault.create({
     url,
     name,
-    userType,
-    uploadedBy
+    user,
+    userType
   });
 
   res.status(201).json({message: "Custom Image Uploaded", newImage});
@@ -57,7 +57,7 @@ const deleteCustomUploadImage = asyncHandler(async (req, res) => {
 
 const getCustomUploadImageById = asyncHandler(async (req, res) => {
   const { id } = req.query
-  const image = await CustomUploadImageVault.findById(id);
+  const image = await CustomUploadImageVault.findById(id).populate('user')
 
   if (!image) {
     res.status(404);
@@ -71,8 +71,8 @@ const getCustomUploadImageById = asyncHandler(async (req, res) => {
 const getCustomUploadsByUser = asyncHandler(async (req, res) => {
   const { userId } = req.query
   const uploads = await CustomUploadImageVault.find({
-    uploadedBy: userId
-  }).populate('uploadedBy')
+    user: userId
+  }).populate('user')
 
   res.json({uploads});
 });
