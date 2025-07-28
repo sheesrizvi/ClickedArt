@@ -17,7 +17,9 @@ const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
 const moment = require("moment");
-const { registerDeliveryFromOrder } = require('../controller/deliveryController.js')
+const {
+  registerDeliveryFromOrder,
+} = require("../controller/deliveryController.js");
 
 const getCounter = async (financialYear) => {
   const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
@@ -51,9 +53,7 @@ const deleteOrder = asyncHandler(async (req, res) => {
   res.status(200).send({ message: "Order deleted" });
 });
 
-
 const createOrder = asyncHandler(async (req, res) => {
-
   const {
     userId,
     orderItems,
@@ -97,7 +97,6 @@ const createOrder = asyncHandler(async (req, res) => {
   //   return acc;
   // }, {});
 
-  
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
       const photographerId = item.imageInfo.photographer || "unknown";
@@ -124,8 +123,11 @@ const createOrder = asyncHandler(async (req, res) => {
 
     let discountForEachOrder = 0;
 
-    for(let item of items) {
-      discountForEachOrder += (item.imageInfo?.discount || 0) + (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0)
+    for (let item of items) {
+      discountForEachOrder +=
+        (item.imageInfo?.discount || 0) +
+        (item.frameInfo?.discount || 0) +
+        (item.paperInfo?.discount || 0);
     }
 
     const updatedItems = items.map((item) => {
@@ -133,7 +135,7 @@ const createOrder = asyncHandler(async (req, res) => {
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
       const totalGST = sgst + cgst || 0;
-      
+
       return {
         ...item,
         sgst,
@@ -240,7 +242,7 @@ const createOrder = asyncHandler(async (req, res) => {
   }
 
   const items = itemNames;
-  const s3Links = orders.map(ord => `https://clickedart.com/bill/${ord._id}`);
+  const s3Links = orders.map((ord) => `https://clickedart.com/bill/${ord._id}`);
 
   await sendOrderThankYouMail(
     customerName,
@@ -251,25 +253,25 @@ const createOrder = asyncHandler(async (req, res) => {
   );
 
   for (const ord of orders) {
-      const order = await Order.findOne({ _id: ord._id }).populate('userInfo.user');
-      
-      if (!order) {
-        console.error(`Order not found for ID: ${ord._id}`);
-        continue; 
-      }
+    const order = await Order.findOne({ _id: ord._id }).populate(
+      "userInfo.user"
+    );
 
-      if(order.printStatus === 'no-print') {
-        continue;
-      }
-  
-     console.log("Fetched Order:", order);
-     await registerDeliveryFromOrder(order);
+    if (!order) {
+      console.error(`Order not found for ID: ${ord._id}`);
+      continue;
+    }
+
+    if (order.printStatus === "no-print") {
+      continue;
+    }
+
+    console.log("Fetched Order:", order);
+    await registerDeliveryFromOrder(order);
   }
-  
+
   res.status(201).send(orders);
 });
-
-
 
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
@@ -355,7 +357,8 @@ const getMyOrders = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
-          select: "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
+          select:
+            "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
           populate: {
             path: "photographer",
           },
@@ -401,7 +404,8 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
-          select: "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
+          select:
+            "imageLinks.thumbnail photographer  resolutions title description story keywords category photographer license price location cameraDetails",
           populate: {
             path: "photographer",
           },
@@ -473,7 +477,8 @@ const getOrderById = asyncHandler(async (req, res) => {
       populate: [
         {
           path: "imageInfo.image",
-          select: "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
+          select:
+            "imageLinks.thumbnail photographer resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale",
           populate: {
             path: "photographer",
           },
@@ -493,7 +498,6 @@ const getOrderById = asyncHandler(async (req, res) => {
 
   res.status(200).send({ order });
 });
-
 
 const getOrderByStatus = asyncHandler(async (req, res) => {
   const { status, pageNumber = 1, pageSize = 20 } = req.query;
@@ -549,7 +553,8 @@ const payment = asyncHandler(async (req, res) => {
     return;
   }
 
-  const user = await User.findById(userId) || await Photographer.findById(userId);
+  const user =
+    (await User.findById(userId)) || (await Photographer.findById(userId));
 
   if (!user) {
     res.status(404).json({ message: "User not found." });
@@ -614,7 +619,12 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 
 const calculateCartPrice = async (req, res) => {
   try {
-    const { items, photographerId } = req.body;
+    const {
+      items,
+      photographerId,
+      isCustom = false,
+      isCustomDiscount = false,
+    } = req.body;
 
     let totalImagePrice = 0;
     let totalPaperPrice = 0;
@@ -635,16 +645,18 @@ const calculateCartPrice = async (req, res) => {
       const { imageId, paperId, frameId, width, height, resolution } = item;
 
       const image = await ImageVault.findById(imageId);
-      if (!image) continue;
+      if (!image && !isCustom) continue;
 
-      const ownImage = image.photographer.toString() === photographerId;
+      const ownImage =
+        photographerId && image.photographer?.toString() === photographerId;
 
-      const imagePrice =
-        resolution === "small"
-          ? image.price.small
-          : resolution === "medium"
-          ? image.price.medium
-          : image.price.original;
+      const imagePrice = isCustom
+        ? 0
+        : resolution === "small"
+        ? image.price.small
+        : resolution === "medium"
+        ? image.price.medium
+        : image.price.original;
 
       let paperPrice = 0;
       let framePrice = 0;
@@ -657,7 +669,7 @@ const calculateCartPrice = async (req, res) => {
             (dim) => dim.width === width && dim.height === height
           );
           const photographerDiscount = paper?.photographerDiscount || 0;
-          discount = ownImage ? photographerDiscount : 0;
+          discount = ownImage || isCustomDiscount ? photographerDiscount : 0;
 
           if (customDimension) {
             paperPrice = customDimension.price;
@@ -709,20 +721,25 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
 });
 
 const updateReadyToShipStatus = asyncHandler(async (req, res) => {
-  const { orderId, status = false } = req.body
+  const { orderId, status = false } = req.body;
 
-  if(!orderId) {
-    return res.status(400).send({ message: 'Order Id not found' })
+  if (!orderId) {
+    return res.status(400).send({ message: "Order Id not found" });
   }
-  let readyToShipTimeStamp
-  if(status === true) {
-    readyToShipTimeStamp = new Date()
+  let readyToShipTimeStamp;
+  if (status === true) {
+    readyToShipTimeStamp = new Date();
   }
- 
-  await Order.findOneAndUpdate({ _id: orderId }, { readyToShip: status, readyToShipTimeStamp })
 
-  res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
-})
+  await Order.findOneAndUpdate(
+    { _id: orderId },
+    { readyToShip: status, readyToShipTimeStamp }
+  );
+
+  res
+    .status(200)
+    .send({ message: "Ready To Ship Status Updated Successfully" });
+});
 
 module.exports = {
   createOrder,
@@ -738,5 +755,5 @@ module.exports = {
   updatePrintStatus,
   deleteOrder,
   getFailedOrders,
-  updateReadyToShipStatus
+  updateReadyToShipStatus,
 };
