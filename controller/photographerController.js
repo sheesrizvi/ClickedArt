@@ -866,6 +866,66 @@ const getPendingImagesByPhotographer = asyncHandler(async (req, res) => {
   res.status(200).send({ pendingImages, pageCount });
 });
 
+const makeArtistOfTheMonth = asyncHandler(async (req, res) => {
+  const { photographerId } = req.body;
+
+  const photographer = await Photographer.findById(photographerId);
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+
+  if (photographer.artistOfTheMonth) {
+    return res.status(409).send({
+      message: "Photographer is already Artist of the Month",
+    });
+  }
+
+  await Photographer.updateMany(
+    { artistOfTheMonth: true },
+    { $set: { artistOfTheMonth: false } }
+  );
+
+  photographer.artistOfTheMonth = true;
+  photographer.artistOfTheMonthDate = new Date();
+  await photographer.save();
+
+  res.status(200).send({
+    message: "Photographer is now Artist of the Month",
+    photographer,
+  });
+});
+
+const getArtistOfTheMonth = asyncHandler(async (req, res) => {
+  const artist = await Photographer.findOne({ artistOfTheMonth: true });
+
+  if (!artist) {
+    return res.status(404).send({ message: "No Artist of the Month found" });
+  }
+
+  res.status(200).send(artist);
+});
+
+const removeArtistOfTheMonth = asyncHandler(async (req, res) => {
+  const currentArtist = await Photographer.findOne({ artistOfTheMonth: true });
+
+  if (!currentArtist) {
+    return res
+      .status(404)
+      .send({ message: "No Artist of the Month to remove" });
+  }
+
+  currentArtist.artistOfTheMonth = false;
+  currentArtist.artistOfTheMonthDate = null;
+  await currentArtist.save();
+
+  res
+    .status(200)
+    .send({
+      message: "Artist of the Month removed",
+      photographer: currentArtist,
+    });
+});
+
 const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
@@ -915,4 +975,7 @@ module.exports = {
   getPendingImagesByPhotographer,
   getAllNotFeaturedPhotographers,
   getInactivePhotographersByLastLogin,
+  makeArtistOfTheMonth,
+  getArtistOfTheMonth,
+  removeArtistOfTheMonth,
 };
