@@ -1,26 +1,28 @@
-const express = require('express')
-const { 
-    sendPushNotification,
-    sendNotificationToAllUsers,
-    sendNotificationToOneUser,
-    sendNotificationToChannelUsers,
-    sendNotificationsInsideApplicationToSingleUser,
-    sendNotificationsInsideApplicationToMultipleUser,
-    getNotificationByUserId,
-    getNotificationById,
-    getNotifications,
-    readStatusUpdate,
-    deleteNotification,
- } = require('../controller/notificationController.js')
+const express = require("express");
+const router = express.Router();
+const {
+  sendNotification,
+  updatePushToken,
+  deletePushToken,
+  sendNotificationToAll,
+  sendNotificationToSelected,
+  saveAnonymousToken,
+  getMyNotifications,
+  markNotificationAsRead,
+  getAllNotifications,
+  deleteNotification,
+} = require("../controller/notificationController");
+const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
 
-const router = express.Router()
+router.post("/send-notification", sendNotification);
+router.post("/send-notification-all", sendNotificationToAll);
+router.put("/push-token", verifyToken, updatePushToken);
+router.put("/delete-push-token", verifyToken, deletePushToken);
+router.post("/send-selected", sendNotificationToSelected);
+router.post("/save-token", saveAnonymousToken);
+router.get("/my", verifyToken, getMyNotifications);
+router.put("/read/:id", verifyToken, markNotificationAsRead);
+router.get("/all", verifyToken, isAdmin, getAllNotifications);
+router.delete("/:id", verifyToken, isAdmin, deleteNotification);
 
-router.post('/send-test-push-notification', sendPushNotification)
-router.post('/send-notification-to-all-users', sendNotificationToAllUsers)
-router.post('/send-notification-to-one-user', sendNotificationToOneUser)
-router.post('/read-status-update', readStatusUpdate)
-router.delete('/delete-notifications', deleteNotification)
-router.get('/get-notifications-by-user-id', getNotificationByUserId)
-
-
-module.exports = router
+module.exports = router;

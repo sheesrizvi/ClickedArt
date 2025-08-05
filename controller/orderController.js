@@ -20,6 +20,9 @@ const moment = require("moment");
 const {
   registerDeliveryFromOrder,
 } = require("../controller/deliveryController.js");
+const {
+  sendNotificationToUser,
+} = require("../middleware/notificationUtils.js");
 
 const getCounter = async (financialYear) => {
   const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
@@ -461,6 +464,19 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     order.isPaid = true;
   }
 
+  await sendNotificationToUser({
+    userId: order.userInfo.user,
+    userType: order.userInfo.userType,
+    title: `Order Status Updated`,
+    body: `Your order is now: ${
+      orderStatus?.slice(0, 1).toUpperCase() + orderStatus?.slice(1)
+    }`,
+    type: "order",
+    data: {
+      url: `clickedart://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id}`,
+    },
+  });
+
   await order.save();
   res.status(200).send({ message: "Order status updated" });
 });
@@ -716,6 +732,19 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
   order.printStatus = printStatus;
 
   await order.save();
+
+  await sendNotificationToUser({
+    userId: order.userInfo.user,
+    userType: order.userInfo.userType,
+    title: "Print Status Updated",
+    body: `Your order is now: ${
+      printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
+    }`,
+    type: "order",
+    data: {
+      url: `clickedart://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id}`,
+    },
+  });
 
   res.status(200).send({ message: "Print Status updated successfully" });
 });
