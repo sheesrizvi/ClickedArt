@@ -6,6 +6,8 @@ const {
   deletePushToken,
   sendNotificationToAll,
   sendNotificationToSelected,
+  sendNotificationToUserApp,
+  sendNotificationToPhotographerApp,
   saveAnonymousToken,
   getMyNotifications,
   markNotificationAsRead,
@@ -16,6 +18,11 @@ const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
 
 router.post("/send-notification", sendNotification);
 router.post("/send-notification-all", sendNotificationToAll);
+router.post("/send-notification-user-app", sendNotificationToUserApp);
+router.post(
+  "/send-notification-photographer-app",
+  sendNotificationToPhotographerApp
+);
 router.put("/push-token", verifyToken, updatePushToken);
 router.put("/delete-push-token", verifyToken, deletePushToken);
 router.post("/send-selected", sendNotificationToSelected);

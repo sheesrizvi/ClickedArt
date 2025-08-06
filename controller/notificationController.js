@@ -59,7 +59,7 @@ exports.sendNotification = async (req, res) => {
     android: {
       priority: "high",
     },
-    data: safeData
+    data: safeData,
   };
 
   try {
@@ -69,7 +69,7 @@ exports.sendNotification = async (req, res) => {
       userDocs: [],
       title,
       body,
-      data: safeData
+      data: safeData,
     });
     res.status(200).json({ success: true, response });
   } catch (error) {
@@ -267,11 +267,11 @@ exports.deletePushToken = async (req, res) => {
 };
 
 exports.saveAnonymousToken = async (req, res) => {
-  const { token } = req.body;
+  const { token, source = "UserApp" } = req.body;
   if (!token) return res.status(400).json({ error: "Token required" });
 
   try {
-    await PushToken.updateOne({ token }, { token }, { upsert: true });
+    await PushToken.updateOne({ token }, { token, source }, { upsert: true });
     res.json({ success: true });
   } catch (err) {
     console.error("Save anonymous token error:", err);
@@ -291,8 +291,8 @@ exports.getMyNotifications = async (req, res) => {
         },
       },
     })
-    .sort({ createdAt: -1 })
-    .limit(50);
+      .sort({ createdAt: -1 })
+      .limit(50);
 
     res.json({ success: true, notifications });
   } catch (error) {
@@ -363,5 +363,129 @@ exports.deleteNotification = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to delete notification" });
+  }
+};
+
+exports.sendNotificationToUserApp = async (req, res) => {
+  const {
+    title,
+    body,
+    data,
+    type = "system",
+    actorInfo,
+    entityInfo,
+    image,
+  } = req.body;
+
+  const safeData = buildSafeData(data, title, body);
+
+  try {
+    const userDocs = await User.find({ pushToken: { $ne: null } });
+    const anonUserTokens = await PushToken.find({ source: "UserApp" }, "token");
+
+    const tokens = [
+      ...userDocs.map((u) => u.pushToken),
+      ...anonUserTokens.map((t) => t.token),
+    ];
+
+    const uniqueTokens = [...new Set(tokens)];
+
+    const messages = uniqueTokens.map((token) => ({
+      token,
+      android: {
+        priority: "high",
+      },
+      data: safeData,
+    }));
+
+    const messaging = getMessaging();
+    const responses = await Promise.allSettled(
+      messages.map((m) => messaging.send(m))
+    );
+
+    // Save notification only for registered users
+    await saveNotification({
+      userDocs,
+      title,
+      body,
+      data: safeData,
+      type,
+      actorInfo,
+      entityInfo,
+      image,
+    });
+
+    res.json({ success: true, sent: responses.length });
+  } catch (err) {
+    console.error("[UserApp Notification Error]", err);
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to send UserApp notifications" });
+  }
+};
+
+exports.sendNotificationToPhotographerApp = async (req, res) => {
+  const {
+    title,
+    body,
+    data,
+    type = "system",
+    actorInfo,
+    entityInfo,
+    image,
+  } = req.body;
+
+  const safeData = buildSafeData(data, title, body);
+
+  try {
+    const photographerDocs = await Photographer.find({
+      pushToken: { $ne: null },
+    });
+    const anonPhotographerTokens = await PushToken.find(
+      { source: "PhotographerApp" },
+      "token"
+    );
+
+    const tokens = [
+      ...photographerDocs.map((p) => p.pushToken),
+      ...anonPhotographerTokens.map((t) => t.token),
+    ];
+
+    const uniqueTokens = [...new Set(tokens)];
+
+    const messages = uniqueTokens.map((token) => ({
+      token,
+      android: {
+        priority: "high",
+      },
+      data: safeData,
+    }));
+
+    const messaging = getMessaging();
+    const responses = await Promise.allSettled(
+      messages.map((m) => messaging.send(m))
+    );
+
+    // Save notification only for registered photographers
+    await saveNotification({
+      userDocs: photographerDocs,
+      title,
+      body,
+      data: safeData,
+      type,
+      actorInfo,
+      entityInfo,
+      image,
+    });
+
+    res.json({ success: true, sent: responses.length });
+  } catch (err) {
+    console.error("[PhotographerApp Notification Error]", err);
+    res
+      .status(500)
+      .json({
+        success: false,
+        error: "Failed to send PhotographerApp notifications",
+      });
   }
 };
