@@ -464,6 +464,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     order.isPaid = true;
   }
 
+
   await sendNotificationToUser({
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
@@ -473,7 +474,11 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     }`,
     type: "order",
     data: {
-      url: `clickedart://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id}`,
+      url: `${
+        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+      }://${order.printStatus === "no-print" ? "digitalorder" : order.userInfo.userType === "User" ? "printorder" : "accounts"}/${
+        order._id
+      }`,
     },
   });
 
@@ -742,7 +747,10 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
     }`,
     type: "order",
     data: {
-      url: `clickedart://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id}`,
+      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+        }://${printStatus === "no-print" ? "digitalorder" : order.userInfo.userType === "User" ? "printorder" : "accounts"}/${
+        order._id
+      }`,
     },
   });
 

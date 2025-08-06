@@ -21,6 +21,9 @@ const {
   sendEventSubmissionConfirmation,
   sendUnapprovedImageMailOfNonMonetizedProfile,
 } = require("../../middleware/handleEmail.js");
+const {
+  sendNotificationToUser,
+} = require("../../middleware/notificationUtils.js");
 
 const Subscription = require("../../models/subscriptionModel.js");
 
@@ -531,6 +534,20 @@ const approveImage = asyncHandler(async (req, res) => {
         email,
         imageTitle
       );
+    }
+    try {
+      await sendNotificationToUser({
+        userId: image.photographer._id,
+        userType: "Photographer",
+        title: "Image Approved",
+        body: `Your image "${imageTitle}" has been approved.`,
+        type: "image",
+        data: {
+          url: `clickedartartist://profile`,
+        },
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
     }
   } else if (status === "review") {
     image.rejectionReason = null;

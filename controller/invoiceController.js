@@ -1,18 +1,23 @@
-const Invoice = require('../models/invoiceModel')
-const asyncHandler = require('express-async-handler')
-const Order = require('../models/orderModel')
-const RoyaltySettings = require('../models/imagebase/royaltyModel')
-const GST = require('../models/gstModel')
-const Photographer = require('../models/photographerModel.js')
-const ReferralBalance = require('../models/referralBalanceModel.js')
-const mongoose = require('mongoose');
-const Subscription = require('../models/subscriptionModel.js');
-const Monetization = require('../models/monetizationModel.js')
-const Counter = require('../models/counterModel.js')
-const { sendPaymentInvoiceMail } = require('../middleware/handleEmail.js')
+const Invoice = require("../models/invoiceModel");
+const asyncHandler = require("express-async-handler");
+const Order = require("../models/orderModel");
+const RoyaltySettings = require("../models/imagebase/royaltyModel");
+const GST = require("../models/gstModel");
+const Photographer = require("../models/photographerModel.js");
+const ReferralBalance = require("../models/referralBalanceModel.js");
+const mongoose = require("mongoose");
+const Subscription = require("../models/subscriptionModel.js");
+const Monetization = require("../models/monetizationModel.js");
+const Counter = require("../models/counterModel.js");
+const { sendPaymentInvoiceMail } = require("../middleware/handleEmail.js");
+const {
+  sendNotificationToUser,
+} = require("../middleware/notificationUtils.js");
 
 const getCounter = async (financialYear) => {
-  const counterDoc = await Counter.findOne({ financialYear }).sort({ createdAt: -1 });
+  const counterDoc = await Counter.findOne({ financialYear }).sort({
+    createdAt: -1,
+  });
   if (!counterDoc) {
     await Counter.create({ financialYear, counter: 0 });
     return 1;
@@ -26,9 +31,8 @@ const incrementCounter = async (financialYear) => {
     { $inc: { counter: 1 } },
     { new: true }
   );
-  return
+  return;
 };
-
 
 // const generateInvoice = async (req, res) => {
 //   try {
@@ -40,12 +44,11 @@ const incrementCounter = async (financialYear) => {
 //     const financialYear = currentMonth < 3
 //       ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
 //       : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-    
 
 //     const nextCounter = await getCounter(financialYear);
 //     const invoiceNumber = nextCounter.toString().padStart(4, '0');
 //     const invoiceId = `CAP/${financialYear}/${invoiceNumber}`;
-   
+
 //     const existingInvoice = await Invoice.findOne({
 //       photographer: photographerId,
 //       $or: [
@@ -60,9 +63,9 @@ const incrementCounter = async (financialYear) => {
 //       return res.status(400).send({ message: 'invoice already existed for this range' })
 //     }
 
-//     const startGenDate = new Date(startDate); 
+//     const startGenDate = new Date(startDate);
 //     const endGenDate = new Date(endDate);
-//     endGenDate.setHours(23, 59, 59, 999); 
+//     endGenDate.setHours(23, 59, 59, 999);
 
 //     const orders = await Order.find({
 //       'orderItems.imageInfo.photographer': photographerId,
@@ -74,7 +77,6 @@ const incrementCounter = async (financialYear) => {
 //       .populate('orderItems.paperInfo.paper')
 //       .populate('orderItems.frameInfo.frame');
 
-   
 //     const referralBalance = await ReferralBalance.aggregate([
 //       {
 //         $match: {
@@ -89,7 +91,7 @@ const incrementCounter = async (financialYear) => {
 //         },
 //       },
 //     ]);
-    
+
 //     const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
 
 //     if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
@@ -109,26 +111,24 @@ const incrementCounter = async (financialYear) => {
 //     }
 
 //    const monetization = await Monetization.findOne({ photographer: photographerId  });
-  
-//    let gstRecord 
+
+//    let gstRecord
 //     if(monetization) {
-//       gstRecord =  monetization.businessAccount?.gstNumber 
+//       gstRecord =  monetization.businessAccount?.gstNumber
 //     } else {
 //       gstRecord = null
-//     } 
+//     }
 
 //     const subscription = await Subscription.findOne({
 //       'userInfo.user': photographerId,
 //       'userInfo.userType': 'Photographer',
 //       isActive: true,
 //     }).populate('planId');
-    
+
 //     const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    
 
 //     let royaltyShare;
 //     let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
-   
 
 //     if (!subscription || subscription?.planId?.name === 'Basic') {
 //       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
@@ -148,11 +148,11 @@ const incrementCounter = async (financialYear) => {
 //     const pendingPrintDetails = []
 
 //     for (const order of orders) {
-    
+
 //       for (const orderItem of order.orderItems) {
 //         const { image, resolution, price } = orderItem.imageInfo;
 //         const printPrice = orderItem.subTotal
-//         // let paperInfo 
+//         // let paperInfo
 //         // let frameInfo
 //         // if(orderItem.subTotal) {
 //         //  paperInfo = orderItem.paperInfo || { }
@@ -160,10 +160,10 @@ const incrementCounter = async (financialYear) => {
 //         // }
 
 //         let paperInfo = {};
-//         let frameInfo = orderItem.frameInfo || null; 
-      
+//         let frameInfo = orderItem.frameInfo || null;
+
 //         if (orderItem.subTotal) {
-//           paperInfo = orderItem.paperInfo || {}; 
+//           paperInfo = orderItem.paperInfo || {};
 //         }
 
 //         if (!image || !resolution || typeof price !== 'number') {
@@ -175,9 +175,8 @@ const incrementCounter = async (financialYear) => {
 
 //         let printcutAmount = 0
 
-       
 //         printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
-       
+
 //         if(orderItem.subTotal && order.printStatus === 'delivered') {
 //           totalPrintcutAmount += printcutAmount;
 //           totalAmountPayable += printcutAmount;
@@ -187,7 +186,7 @@ const incrementCounter = async (financialYear) => {
 //           photographer: photographerId,
 //           endDate: { $lt: new Date(startDate) },
 //         }).sort({ endDate: -1 });
-        
+
 //         if (previousInvoice && previousInvoice.pendingPrintDetails) {
 //           for (const pending of previousInvoice.pendingPrintDetails) {
 //             prevPendingPrintCutAmount += parseFloat(pending.printcutAmount) || 0;
@@ -197,7 +196,7 @@ const incrementCounter = async (financialYear) => {
 //         console.log(order.printStatus)
 
 //         if(orderItem.subTotal && (order.printStatus === 'processing' || order.printStatus === 'printing' || order.printStatus === 'packed' || order.printStatus === 'shipped')) {
-         
+
 //           pendingPrintDetails.push({
 //             order: order._id,
 //             image: image._id,
@@ -223,11 +222,11 @@ const incrementCounter = async (financialYear) => {
 //           });
 //         }
 
-//       } 
+//       }
 //     }
 
 //     totalAmountPayable += totalReferralAmount;
-  
+
 //     const invoice = new Invoice({
 //       invoiceId,
 //       startDate,
@@ -262,15 +261,15 @@ const generateInvoice = async (req, res) => {
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
-    const financialYear = currentMonth < 3
-      ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
-      : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-    
+    const financialYear =
+      currentMonth < 3
+        ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+        : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
 
     const nextCounter = await getCounter(financialYear);
-    const invoiceNumber = nextCounter.toString().padStart(4, '0');
+    const invoiceNumber = nextCounter.toString().padStart(4, "0");
     const invoiceId = `CAP/${financialYear}/${invoiceNumber}`;
-   
+
     const existingInvoice = await Invoice.findOne({
       photographer: photographerId,
       $or: [
@@ -281,50 +280,55 @@ const generateInvoice = async (req, res) => {
       ],
     });
 
-    if(existingInvoice) {
-      return res.status(400).send({ message: 'invoice already existed for this range' })
+    if (existingInvoice) {
+      return res
+        .status(400)
+        .send({ message: "invoice already existed for this range" });
     }
 
-    const startGenDate = new Date(startDate); 
+    const startGenDate = new Date(startDate);
     const endGenDate = new Date(endDate);
-    endGenDate.setHours(23, 59, 59, 999); 
+    endGenDate.setHours(23, 59, 59, 999);
 
     const orders = await Order.find({
-      'orderItems.imageInfo.photographer': photographerId,
-      orderStatus: 'completed',
+      "orderItems.imageInfo.photographer": photographerId,
+      orderStatus: "completed",
       createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
     })
-      .populate('orderItems.imageInfo.image')
-      .populate('orderItems.paperInfo.paper')
-      .populate('orderItems.frameInfo.frame');
+      .populate("orderItems.imageInfo.image")
+      .populate("orderItems.paperInfo.paper")
+      .populate("orderItems.frameInfo.frame");
 
-   
     const referralBalance = await ReferralBalance.aggregate([
       {
         $match: {
           photographer: new mongoose.Types.ObjectId(photographerId),
-          createdAt: { $gte: new Date(startGenDate), $lte: new Date(endGenDate) },
+          createdAt: {
+            $gte: new Date(startGenDate),
+            $lte: new Date(endGenDate),
+          },
         },
       },
       {
         $group: {
           _id: null,
-          price: { $sum: '$amount' },
+          price: { $sum: "$amount" },
         },
       },
     ]);
-    
-    const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
+
+    const totalReferralAmount =
+      referralBalance.length > 0 ? referralBalance[0].price : 0;
 
     if ((!orders || orders.length === 0) && totalReferralAmount < 0) {
       const invoice = new Invoice({
         photographer: photographerId,
         totalAmountPayable: totalReferralAmount,
         totalReferralAmount,
-        paymentStatus: 'pending',
+        paymentStatus: "pending",
       });
       return res.status(400).send({ invoice });
-    } 
+    }
 
     // if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
     //   const invoice = new Invoice({
@@ -334,35 +338,37 @@ const generateInvoice = async (req, res) => {
     //     paymentStatus: 'pending',
     //   });
     //   return res.status(200).send({ invoice });
-    // } 
+    // }
 
-   const monetization = await Monetization.findOne({ photographer: photographerId  });
-  
-   let gstRecord 
-    if(monetization) {
-      gstRecord =  monetization.businessAccount?.gstNumber 
+    const monetization = await Monetization.findOne({
+      photographer: photographerId,
+    });
+
+    let gstRecord;
+    if (monetization) {
+      gstRecord = monetization.businessAccount?.gstNumber;
     } else {
-      gstRecord = null
-    } 
+      gstRecord = null;
+    }
 
     const subscription = await Subscription.findOne({
-      'userInfo.user': photographerId,
-      'userInfo.userType': 'Photographer',
+      "userInfo.user": photographerId,
+      "userInfo.userType": "Photographer",
       isActive: true,
-    }).populate('planId');
-    
-    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    
+    }).populate("planId");
+
+    const royaltySettings = await RoyaltySettings.findOne({
+      licensingType: "exclusive",
+    });
 
     let royaltyShare;
-    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
-   
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
 
-    if (!subscription || subscription?.planId?.name === 'Basic') {
-      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
-    } else if (subscription?.planId?.name === 'Intermediate') {
+    if (!subscription || subscription?.planId?.name === "Basic") {
+      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50;
+    } else if (subscription?.planId?.name === "Intermediate") {
       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
-    } else if (subscription?.planId?.name === 'Premium') {
+    } else if (subscription?.planId?.name === "Premium") {
       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
     } else {
       royaltyShare = 50;
@@ -372,31 +378,29 @@ const generateInvoice = async (req, res) => {
     let totalPrintcutAmount = 0;
     let totalAmountPayable = 0;
     const orderDetails = [];
-    const pendingPrintDetails = []
+    const pendingPrintDetails = [];
 
     for (const order of orders) {
-    
       for (const orderItem of order.orderItems) {
         const { image, resolution, price } = orderItem.imageInfo;
-        const printPrice = orderItem.subTotal
-        let paperInfo
-        let frameInfo
-        if(orderItem.subTotal) {
-         paperInfo = orderItem.paperInfo
-         frameInfo = orderItem.frameInfo
+        const printPrice = orderItem.subTotal;
+        let paperInfo;
+        let frameInfo;
+        if (orderItem.subTotal) {
+          paperInfo = orderItem.paperInfo;
+          frameInfo = orderItem.frameInfo;
         }
-        if (!image || !resolution || typeof price !== 'number') {
-          throw new Error('Image, resolution, or price missing in order item.');
+        if (!image || !resolution || typeof price !== "number") {
+          throw new Error("Image, resolution, or price missing in order item.");
         }
         const royaltyAmount = (price * royaltyShare) / 100;
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyAmount;
 
-          let printcutAmount = 0
-          printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
-          totalPrintcutAmount += printcutAmount;
-          totalAmountPayable += printcutAmount;
-        
+        let printcutAmount = 0;
+        printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+        totalPrintcutAmount += printcutAmount;
+        totalAmountPayable += printcutAmount;
 
         orderDetails.push({
           order: order._id,
@@ -409,13 +413,11 @@ const generateInvoice = async (req, res) => {
           royaltyAmount,
           printcutAmount: printcutAmount?.toFixed(2),
         });
-
-
       }
     }
 
     totalAmountPayable += totalReferralAmount;
-  
+
     const invoice = new Invoice({
       invoiceId,
       startDate,
@@ -423,69 +425,86 @@ const generateInvoice = async (req, res) => {
       photographer: photographerId,
       orderDetails,
       totalRoyaltyAmount: totalRoyaltyAmount.toFixed(2),
-      totalPrintcutAmount:totalPrintcutAmount.toFixed(2),
+      totalPrintcutAmount: totalPrintcutAmount.toFixed(2),
       totalReferralAmount: totalReferralAmount,
       totalAmountPayable: totalAmountPayable.toFixed(1),
-      paymentStatus: 'pending',
-      pendingPrintDetails
+      paymentStatus: "pending",
+      pendingPrintDetails,
     });
 
     await invoice.save();
     await incrementCounter(financialYear);
 
-    const photographerDetails = await Photographer.findOne({ _id: photographerId })
-    const photographerName = `${photographerDetails.firstName} ${photographerDetails.lastName}`
-    const email = photographerDetails.email
-    const s3Links = [`https://clickedart.com/invoice/${invoice._id}`] || []
-    
-    await sendPaymentInvoiceMail(photographerName, email, s3Links)
+    const photographerDetails = await Photographer.findOne({
+      _id: photographerId,
+    });
+    const photographerName = `${photographerDetails.firstName} ${photographerDetails.lastName}`;
+    const email = photographerDetails.email;
+    const s3Links = [`https://clickedart.com/invoice/${invoice._id}`] || [];
+
+    await sendPaymentInvoiceMail(photographerName, email, s3Links);
+    await sendNotificationToUser({
+      userId: photographerId,
+      userType: "Photographer",
+      title: "Invoice Generated",
+      body: `Your invoice for the period ${startDate} to ${endDate} has been generated.`,
+      type: "invoice",
+      data: {
+        url: link || `clickedartartist://accounts/${invoice._id}`,
+      },
+    });
 
     res.status(201).json({
-      message: 'Invoice generated successfully.',
+      message: "Invoice generated successfully.",
       invoice,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
-
 
 const generateSingleOrderInvoice = async (req, res) => {
   try {
     const { orderId } = req.query;
 
     const order = await Order.findById(orderId)
-      .populate('orderItems.imageInfo.image')
-      .populate('orderItems.paperInfo.paper')
-      .populate('orderItems.frameInfo.frame');
+      .populate("orderItems.imageInfo.image")
+      .populate("orderItems.paperInfo.paper")
+      .populate("orderItems.frameInfo.frame");
 
-    if (!order || order.orderStatus !== 'completed') {
-      return res.status(404).json({ message: 'Completed order not found for the provided ID.' });
+    if (!order || order.orderStatus !== "completed") {
+      return res
+        .status(404)
+        .json({ message: "Completed order not found for the provided ID." });
     }
 
     const photographerId = order.orderItems[0].imageInfo.photographer;
 
-    const monetization = await Monetization.findOne({ photographer: photographerId });
+    const monetization = await Monetization.findOne({
+      photographer: photographerId,
+    });
     const gstRecord = monetization?.businessAccount?.gstNumber || null;
 
     const subscription = await Subscription.findOne({
-      'userInfo.user': photographerId,
-      'userInfo.userType': 'Photographer',
+      "userInfo.user": photographerId,
+      "userInfo.userType": "Photographer",
       isActive: true,
-    }).populate('planId');
+    }).populate("planId");
 
-    const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    
+    const royaltySettings = await RoyaltySettings.findOne({
+      licensingType: "exclusive",
+    });
 
     let royaltyShare;
-    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
-   
+    let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10;
 
-    if (!subscription || subscription?.planId?.name === 'Basic') {
-      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
-    } else if (subscription?.planId?.name === 'Intermediate') {
+    if (!subscription || subscription?.planId?.name === "Basic") {
+      royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50;
+    } else if (subscription?.planId?.name === "Intermediate") {
       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.intermediate || 70;
-    } else if (subscription?.planId?.name === 'Premium') {
+    } else if (subscription?.planId?.name === "Premium") {
       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.premium || 90;
     } else {
       royaltyShare = 50;
@@ -497,12 +516,11 @@ const generateSingleOrderInvoice = async (req, res) => {
     const orderDetails = [];
 
     for (const orderItem of order.orderItems) {
-     
       const { image, resolution, price, photographer } = orderItem.imageInfo;
 
       if (photographer.toString() === photographerId.toString()) {
-        if (!image || !resolution || typeof price !== 'number') {
-          throw new Error('Image, resolution, or price missing in order item.');
+        if (!image || !resolution || typeof price !== "number") {
+          throw new Error("Image, resolution, or price missing in order item.");
         }
 
         const royaltyAmount = (price * royaltyShare) / 100;
@@ -510,10 +528,10 @@ const generateSingleOrderInvoice = async (req, res) => {
         totalRoyaltyAmount += royaltyAmount;
         totalAmountPayable += royaltyWithGST;
 
-        const printcutAmount = (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
+        const printcutAmount =
+          (orderItem.subTotal * printRoyaltyShare) / 100 || 0;
         totalPrintcutAmount += printcutAmount;
         totalAmountPayable += printcutAmount;
-
 
         orderDetails.push({
           order: order._id,
@@ -529,17 +547,16 @@ const generateSingleOrderInvoice = async (req, res) => {
 
     if (orderDetails.length === 0) {
       return res.status(404).json({
-        message: 'No valid order items found for the photographer in this order.',
+        message:
+          "No valid order items found for the photographer in this order.",
       });
     }
 
     const gst = totalAmountPayable - (totalRoyaltyAmount + totalPrintcutAmount);
 
-
     const tdsPercentage = 10;
-    const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
-    totalAmountPayable  = totalAmountPayable - tdsAmount;
-
+    const tdsAmount = (totalAmountPayable * tdsPercentage) / 100;
+    totalAmountPayable = totalAmountPayable - tdsAmount;
 
     const invoice = new Invoice({
       photographer: photographerId,
@@ -548,32 +565,30 @@ const generateSingleOrderInvoice = async (req, res) => {
       totalPrintcutAmount: Math.round(totalPrintcutAmount),
       gst: gst.toFixed(2),
       totalAmountPayable: totalAmountPayable.toFixed(2),
-      paymentStatus: 'pending',
-      tdsAmount
+      paymentStatus: "pending",
+      tdsAmount,
     });
 
     await invoice.save();
 
-
     res.status(201).json({
-      message: 'Invoice generated successfully.',
+      message: "Invoice generated successfully.",
       invoice,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
-
-
-
 
 const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
   const { photographer } = req.query;
 
   const invoices = await Invoice.find({ photographer })
-    .populate('photographer')
-    .populate('orderDetails.order')
-    .populate('orderDetails.image')
+    .populate("photographer")
+    .populate("orderDetails.order")
+    .populate("orderDetails.image")
     // .populate({
     //   path: 'orderDetails.order',
     //   populate: [
@@ -585,30 +600,29 @@ const getAllInvoicesByPhotographers = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 });
 
   if (!invoices) {
-    return res.status(400).send({ message: 'Invoice not found' });
+    return res.status(400).send({ message: "Invoice not found" });
   }
 
   res.status(200).send({ invoices });
 });
 
-
 const getAllInvoices = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const invoices = await Invoice.find({ })
-    .populate('photographer')
-    .populate('orderDetails.order')
-    .populate('orderDetails.image')
+  const invoices = await Invoice.find({})
+    .populate("photographer")
+    .populate("orderDetails.order")
+    .populate("orderDetails.image")
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize)
     .sort({ createdAt: -1 });
 
   if (!invoices) {
-    return res.status(400).send({ message: 'Invoice not found' });
+    return res.status(400).send({ message: "Invoice not found" });
   }
 
-  const totalDocuments = await Invoice.countDocuments({ })
-  const pageCount = Math.ceil(totalDocuments/pageSize)
+  const totalDocuments = await Invoice.countDocuments({});
+  const pageCount = Math.ceil(totalDocuments / pageSize);
   res.status(200).send({ invoices, pageCount });
 });
 
@@ -616,60 +630,65 @@ const getInvoiceById = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
   const invoice = await Invoice.findById(id)
-    .populate('photographer')
-    .populate('orderDetails.order')
-    .populate('orderDetails.image')
-    
-    if (!invoice) {
-    return res.status(400).send({ message: 'Invoice not found' });
+    .populate("photographer")
+    .populate("orderDetails.order")
+    .populate("orderDetails.image");
+
+  if (!invoice) {
+    return res.status(400).send({ message: "Invoice not found" });
   }
 
   res.status(200).send({ invoice });
 });
 
 const updateInvoicePaymentStatus = asyncHandler(async (req, res) => {
-  const { invoiceId, status } = req.body
+  const { invoiceId, status } = req.body;
 
-  if(!invoiceId) {
-    return res.status(400).send({ message: 'Invoice Id not found' })
+  if (!invoiceId) {
+    return res.status(400).send({ message: "Invoice Id not found" });
   }
 
-  const invoice = await Invoice.findByIdAndUpdate(invoiceId, {
-    paymentStatus: status
-  }, { new: true })
+  const invoice = await Invoice.findByIdAndUpdate(
+    invoiceId,
+    {
+      paymentStatus: status,
+    },
+    { new: true }
+  );
 
-  if(!invoice) {
-    return res.status(400).send({ message: 'Invoice not found' })
+  if (!invoice) {
+    return res.status(400).send({ message: "Invoice not found" });
   }
 
-  res.status(200).send({ message: 'Invoice Payment status updated successfully' })
-})
+  res
+    .status(200)
+    .send({ message: "Invoice Payment status updated successfully" });
+});
 
 const deleteInvoice = asyncHandler(async (req, res) => {
-  const { invoiceId } = req.query
+  const { invoiceId } = req.query;
 
-  const invoice = await Invoice.findOneAndDelete({ _id: invoiceId })
+  const invoice = await Invoice.findOneAndDelete({ _id: invoiceId });
 
-  if(!invoice) {
-    return res.status(400).send({ message: 'Invoice deleted successfully' })
+  if (!invoice) {
+    return res.status(400).send({ message: "Invoice deleted successfully" });
   }
 
-  res.status(200).send({ message: 'Invoice Deleted Successfully'})
-
-})
+  res.status(200).send({ message: "Invoice Deleted Successfully" });
+});
 
 module.exports = {
-    generateInvoice,
-    generateSingleOrderInvoice,
-    getAllInvoicesByPhotographers,
-    updateInvoicePaymentStatus,
-    getAllInvoices,
-    deleteInvoice,
-    getInvoiceById
-}
+  generateInvoice,
+  generateSingleOrderInvoice,
+  getAllInvoicesByPhotographers,
+  updateInvoicePaymentStatus,
+  getAllInvoices,
+  deleteInvoice,
+  getInvoiceById,
+};
 
 // const groupedByOrder = orderDetails.reduce((grouped, item) => {
-//   const orderId = item.order.toString(); 
+//   const orderId = item.order.toString();
 
 //   if (!grouped[orderId]) {
 //     grouped[orderId] = [];
@@ -679,7 +698,6 @@ module.exports = {
 
 //   return grouped;
 // }, {});
-
 
 // const generateInvoice = async (req, res) => {
 //   try {
@@ -691,12 +709,11 @@ module.exports = {
 //     const financialYear = currentMonth < 3
 //       ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
 //       : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-    
 
 //     const nextCounter = await getCounter(financialYear);
 //     const invoiceNumber = nextCounter.toString().padStart(4, '0');
 //     const invoiceId = `CA/${financialYear}/${invoiceNumber}`;
-   
+
 //     const existingInvoice = await Invoice.findOne({
 //       photographer: photographerId,
 //       $or: [
@@ -719,7 +736,6 @@ module.exports = {
 //     //     endDateOfExistingInvoice: existingInvoice.endDate
 //     //   });
 //     // }
-  
 
 //     const orders = await Order.find({
 //       'orderItems.imageInfo.photographer': photographerId,
@@ -730,7 +746,6 @@ module.exports = {
 //       .populate('orderItems.paperInfo.paper')
 //       .populate('orderItems.frameInfo.frame');
 
-   
 //     const referralBalance = await ReferralBalance.aggregate([
 //       {
 //         $match: {
@@ -745,7 +760,7 @@ module.exports = {
 //         },
 //       },
 //     ]);
-    
+
 //     const totalReferralAmount = referralBalance.length > 0 ? referralBalance[0].price : 0;
 
 //     if ((!orders || orders.length === 0) && totalReferralAmount > 0) {
@@ -765,26 +780,24 @@ module.exports = {
 //     }
 
 //    const monetization = await Monetization.findOne({ photographer: photographerId  });
-  
-//    let gstRecord 
+
+//    let gstRecord
 //     if(monetization) {
-//       gstRecord =  monetization.businessAccount?.gstNumber 
+//       gstRecord =  monetization.businessAccount?.gstNumber
 //     } else {
 //       gstRecord = null
-//     } 
+//     }
 
 //     const subscription = await Subscription.findOne({
 //       'userInfo.user': photographerId,
 //       'userInfo.userType': 'Photographer',
 //       isActive: true,
 //     }).populate('planId');
-    
+
 //     const royaltySettings = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
-    
 
 //     let royaltyShare;
 //     let printRoyaltyShare = royaltySettings?.printRoyaltyShare || 10
-   
 
 //     if (!subscription || subscription?.planId?.name === 'Basic') {
 //       royaltyShare = royaltySettings?.planWiseRoyaltyShare?.basic || 50
@@ -800,9 +813,9 @@ module.exports = {
 //     let totalPrintcutAmount = 0;
 //     let totalAmountPayable = 0;
 //     const orderDetails = [];
-    
+
 //     for (const order of orders) {
-    
+
 //       for (const orderItem of order.orderItems) {
 //         const { image, resolution, price } = orderItem.imageInfo;
 //         const printPrice = orderItem.subTotal
@@ -841,11 +854,11 @@ module.exports = {
 
 //     totalAmountPayable += totalReferralAmount;
 //     const gst = totalAmountPayable - (totalRoyaltyAmount +  totalPrintcutAmount + totalReferralAmount);
-    
+
 //     const tdsPercentage = 10;
-//     const tdsAmount = (totalAmountPayable * tdsPercentage) / 100; 
+//     const tdsAmount = (totalAmountPayable * tdsPercentage) / 100;
 //     totalAmountPayable  = totalAmountPayable - tdsAmount;
-    
+
 //     const invoice = new Invoice({
 //       invoiceId,
 //       startDate,
