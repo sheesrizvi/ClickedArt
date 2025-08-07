@@ -476,7 +476,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     data: {
       url: `${
         order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-      }://${order.printStatus === "no-print" ? "digitalorder" : order.userInfo.userType === "User" ? "printorder" : "accounts"}/${
+      }://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${
         order._id
       }`,
     },
@@ -748,7 +748,7 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
     type: "order",
     data: {
       url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-        }://${printStatus === "no-print" ? "digitalorder" : order.userInfo.userType === "User" ? "printorder" : "accounts"}/${
+        }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
         order._id
       }`,
     },
