@@ -455,23 +455,26 @@ const updateCoverImage = asyncHandler(async (req, res) => {
 });
 
 const checkUserNameExist = asyncHandler(async (req, res) => {
-  const { username, email } = req.body;
+  const { email, mobile } = req.body;
 
-  const user = await User.findOne({ username });
-  const exists = user ? true : false;
+  const userEmail = await User.findOne({ email });
+  const userMobile = await User.findOne({ mobile });
 
-  // if(user) {
-  //     return res.status(400).send({ exists: true })
-  // }
+  if (userEmail || userMobile) {
+    const isVerified = userEmail ? userEmail.isActive : false;
 
-  const emailExists = await User.findOne({ email: email });
-
-  if (emailExists) {
-    const isVerified = emailExists.isActive ? true : false;
-    return res.send({ emailExists: true, isVerified, exists });
+    return res.status(409).send({
+      emailExists: !!userEmail,
+      mobileExists: !!userMobile,
+      isVerified,
+    });
   }
 
-  res.status(200).send({ exists: false, emailExists: false });
+  return res.status(200).send({
+    usernameExists: false,
+    emailExists: false,
+    mobileExists: false,
+  });
 });
 
 const changePassword = asyncHandler(async (req, res) => {
