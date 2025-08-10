@@ -1461,6 +1461,77 @@ const getPhotographerByEvents = asyncHandler(async (req, res) => {
   });
 });
 
+const addEventToImage = asyncHandler(async (req, res) => {
+  const { imageId, eventName } = req.body;
+  if (!imageId || !eventName) {
+    return res
+      .status(400)
+      .send({ message: "Image ID and Event Name are required" });
+  }
+  const image = await ImageVault.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  image.eventName = eventName.toLowerCase();
+  await image.save();
+
+  res.status(200).send({ message: "Event added to image successfully" });
+});
+
+const removeEventFromImage = asyncHandler(async (req, res) => {
+  const { imageId } = req.body;
+  if (!imageId) {
+    return res.status(400).send({ message: "Image ID is required" });
+  }
+  const image = await ImageVault.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  image.eventName = "";
+  await image.save();
+  res.status(200).send({ message: "Event removed from image successfully" });
+});
+
+const selectImageForEvent = asyncHandler(async (req, res) => {
+  // set selectedForEvent to true for the image
+  const { imageId } = req.body;
+  if (!imageId) {
+    return res.status(400).send({ message: "Image ID is required" });
+  }
+  const image = await ImageVault.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  const isSelected = image.selectedForEvent;
+
+  if (isSelected) {
+    image.selectedForEvent = false;
+  } else {
+    image.selectedForEvent = true;
+  }
+  await image.save();
+  res.status(200).send({
+    message: `Image ${
+      isSelected ? "deselected" : "selected"
+    } for event successfully`,
+  });
+});
+
+const getSelectImagesForEvent = asyncHandler(async (req, res) => {
+  const { eventName } = req.query;
+
+  const images = await ImageVault.find({
+    eventName: eventName.toLowerCase(),
+    selectedForEvent: true,
+  }).populate("category photographer");
+
+  if (!images || images.length === 0) {
+    throw new Error("Images not found");
+  }
+
+  res.status(200).send({ images });
+});
+
 module.exports = {
   addImageInVault,
   updateImageInVault,
@@ -1486,4 +1557,8 @@ module.exports = {
   getImagesByEvents,
   getImagesOfEventsByPhotographer,
   getPhotographerByEvents,
+  addEventToImage,
+  removeEventFromImage,
+  selectImageForEvent,
+  getSelectImagesForEvent,
 };

@@ -23,7 +23,11 @@ const {
         getImageForDownload,
         getImagesByEvents,
         getImagesOfEventsByPhotographer,
-        getPhotographerByEvents
+        getPhotographerByEvents,
+        addEventToImage,
+        removeEventFromImage,
+        selectImageForEvent,
+        getSelectImagesForEvent,
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -58,5 +62,9 @@ router.get('/get-image-for-download', verifyToken, getImageForDownload)
 router.get('/get-images-of-events-by-photographer', getImagesOfEventsByPhotographer)
 router.get('/get-images-of-events', getImagesByEvents)
 router.get('/get-photographer-by-events', getPhotographerByEvents)
+router.post('/add-event-to-image', IsAdminOrPhotographer, addEventToImage)
+router.post('/remove-event-from-image', IsAdminOrPhotographer, removeEventFromImage)
+router.post('/select-image-for-event', IsAdminOrPhotographer, selectImageForEvent)
+router.get('/get-selected-images-of-events', getSelectImagesForEvent)
 
 module.exports = router

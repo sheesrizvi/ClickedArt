@@ -94,6 +94,10 @@ const imageVaultSchema = mongoose.Schema({
     },
     eventEndDate: {
         type: Date
+    },
+    selectedForEvent: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
