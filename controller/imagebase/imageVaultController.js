@@ -1419,6 +1419,7 @@ const getImagesByEvents = asyncHandler(async (req, res) => {
 
   const images = await ImageVault.find({
     eventName: eventName.toLowerCase(),
+    isActive: true,
   }).populate("category photographer");
 
   if (!images || images.length === 0) {
