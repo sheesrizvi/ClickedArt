@@ -60,6 +60,16 @@ const addImageInVault = asyncHandler(async (req, res) => {
   if (!category || !photographer || !imageLinks)
     return res.status(400).send({ message: "Mandatory Fields are required" });
 
+  if (price === undefined || price === null) {
+    return res.status(400).send({ message: "Price is required" });
+  }
+
+  if (price > 25000) {
+    return res
+      .status(400)
+      .send({ message: "Price cannot be more than 25000" });
+  }
+
   if (category.length < 1 || category.length > 5) {
     return res
       .status(400)
@@ -173,6 +183,16 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     return res
       .status(400)
       .send({ message: "You can select min 1 and max 5 categories" });
+  }
+
+    if (price === undefined || price === null) {
+    return res.status(400).send({ message: "Price is required" });
+  }
+
+  if (price > 25000) {
+    return res
+      .status(400)
+      .send({ message: "Price cannot be more than 25000" });
   }
 
   const photo = await ImageVault.findOne({ _id: id, photographer });
