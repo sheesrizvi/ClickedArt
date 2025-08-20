@@ -5,19 +5,16 @@ const { Upload } = require("@aws-sdk/lib-storage");
 const sharp = require("sharp");
 const multer = require("multer");
 const multerS3 = require("multer-s3");
-const asyncHandler = require('express-async-handler')
+const asyncHandler = require("express-async-handler");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const fs = require('fs')
-const axios = require('axios')
-const RoyaltySettings = require('../models/imagebase/royaltyModel.js')
-const CustomWatermark = require('../models/imagebase/customWatermarkModel.js')
+const fs = require("fs");
+const axios = require("axios");
+const RoyaltySettings = require("../models/imagebase/royaltyModel.js");
+const CustomWatermark = require("../models/imagebase/customWatermarkModel.js");
 const { S3 } = require("@aws-sdk/client-s3");
-const sizeOf = require('image-size');
-
-
-
+const sizeOf = require("image-size");
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -28,7 +25,6 @@ const config = {
 };
 
 const s3 = new S3Client(config);
-
 
 const upload = multer({
   storage: multerS3({
@@ -42,22 +38,20 @@ const upload = multer({
   }),
 });
 
-
 const upload1 = multer({
   storage: multer.memoryStorage(),
 });
-
 
 // router.post(
 //   "/uploadSingleImage",
 //   upload.single("image"),
 //   async (req, res) => {
 //     const result = req.file;
-    
+
 //     if (!result) {
 //       return res.status(400).send("No file uploaded.");
 //     }
-  
+
 //     res.send(`${result.location}`);
 //   }
 // );
@@ -65,136 +59,137 @@ const upload1 = multer({
 const multerStorage = multer.memoryStorage();
 const uploadMulter = multer({ storage: multerStorage });
 
-router.post("/uploadSingleImage", uploadMulter.single("image"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).send("No file uploaded.");
-  }
- 
-  try {
-
-    // const compressedBuffer = await sharp(req.file.buffer)
-    //   .resize({ fit: "inside", withoutEnlargement: true }) 
-    //   .webp({  
-    //     quality: 5, 
-    //     effort: 6, 
-    //     nearLossless: false,
-    //     smartSubsample: true,
-    //     lossless: false,
-    //     alphaQuality: 50
-    //    }) 
-    //   .toBuffer();
-    
-    const compressedBuffer = await compressToExactSize(req.file.buffer)
-
-    const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}.webp`;
-
-    const uploadParams = {
-      Bucket: process.env.AWS_BUCKET,
-      Key: fileName,
-      Body: compressedBuffer,
-      ContentType: "image/webp"
-    };
-
-    const uploadCommand = new PutObjectCommand(uploadParams);
-    await s3.send(uploadCommand);
-    process.env.AWS_BUCKET_REGION
-    const fileUrl = `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${fileName}`;
-    res.send(fileUrl);
-
-  } catch (error) {
-    console.error("Error processing/uploading image:", error);
-    res.status(500).send("Error processing/uploading image.");
-  }
-});
-
 router.post(
-  "/uploadMultiple",
-  upload.array("image", 150),
+  "/uploadSingleImage",
+  uploadMulter.single("image"),
   async (req, res) => {
-    const result = req.files;
-
-    if (!result || result.length === 0) {
-      return res.status(400).send("No files uploaded.");
-    }
-
-    let arr = [];
-    result.forEach((single) => {
-      arr.push(single.location);
-    });
-
-   
-    res.send(arr);
-  }
-);
-
-
-
-router.post("/uploadPhotoForMultipleResolution", upload1.single("image"), async (req, res) => {
-  try {
-    const result = req.file;
-    
     if (!req.file) {
       return res.status(400).send("No file uploaded.");
     }
 
-    const originalImageBuffer = req.file.buffer;
+    try {
+      // const compressedBuffer = await sharp(req.file.buffer)
+      //   .resize({ fit: "inside", withoutEnlargement: true })
+      //   .webp({
+      //     quality: 5,
+      //     effort: 6,
+      //     nearLossless: false,
+      //     smartSubsample: true,
+      //     lossless: false,
+      //     alphaQuality: 50
+      //    })
+      //   .toBuffer();
 
-    const resolutions = {
-      original: null, 
-      large: { width: 1920, height: 1280 }, 
-      medium: { width: 1280, height: 853 }, 
-      small: { width: 640, height: 427 },
-      standard: { width: 1920, height: 1080 }, 
-      fullscreen: { width: 2560, height: 1440 }, 
-      ultraHD: { width: 3840, height: 2160 }, 
-    };
+      const compressedBuffer = await compressToExactSize(req.file.buffer);
 
-    const uploadPromises = Object.entries(resolutions).map(async ([key, size]) => {
-      const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${result.originalname}`;
-      const fileKey = `images/${fileName}`;
-    
-      let processedBuffer;
-      if (size) {
-        processedBuffer = await sharp(originalImageBuffer)
-          .resize(size.width, size.height)
-          .toBuffer();
-      } else {
-        processedBuffer = originalImageBuffer;
-      }
+      const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}.webp`;
 
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: process.env.AWS_BUCKET,
-          Key: fileKey,
-          Body: processedBuffer,
-          ContentType: req.file.mimetype,
-        },
-      });
+      const uploadParams = {
+        Bucket: process.env.AWS_BUCKET,
+        Key: fileName,
+        Body: compressedBuffer,
+        ContentType: "image/webp",
+      };
 
-      await upload.done();
-      
-      return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
-    });
-
-   
-    const uploadResults = await Promise.all(uploadPromises);
-
-    const urls = uploadResults.reduce((acc, { key, url }) => {
-      acc[key] = url;
-      return acc;
-    }, {});
-
-    res.send(urls);
-  } catch (error) {
-    console.error("Error processing image:", error);
-    res.status(500).send("Failed to upload image.");
+      const uploadCommand = new PutObjectCommand(uploadParams);
+      await s3.send(uploadCommand);
+      process.env.AWS_BUCKET_REGION;
+      const fileUrl = `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${fileName}`;
+      res.send(fileUrl);
+    } catch (error) {
+      console.error("Error processing/uploading image:", error);
+      res.status(500).send("Error processing/uploading image.");
+    }
   }
+);
+
+router.post("/uploadMultiple", upload.array("image", 150), async (req, res) => {
+  const result = req.files;
+
+  if (!result || result.length === 0) {
+    return res.status(400).send("No files uploaded.");
+  }
+
+  let arr = [];
+  result.forEach((single) => {
+    arr.push(single.location);
+  });
+
+  res.send(arr);
 });
 
+router.post(
+  "/uploadPhotoForMultipleResolution",
+  upload1.single("image"),
+  async (req, res) => {
+    try {
+      const result = req.file;
 
+      if (!req.file) {
+        return res.status(400).send("No file uploaded.");
+      }
 
+      const originalImageBuffer = req.file.buffer;
 
+      const resolutions = {
+        original: null,
+        large: { width: 1920, height: 1280 },
+        medium: { width: 1280, height: 853 },
+        small: { width: 640, height: 427 },
+        standard: { width: 1920, height: 1080 },
+        fullscreen: { width: 2560, height: 1440 },
+        ultraHD: { width: 3840, height: 2160 },
+      };
+
+      const uploadPromises = Object.entries(resolutions).map(
+        async ([key, size]) => {
+          const fileName = `${Date.now()}_${Math.round(
+            Math.random() * 1e9
+          )}_${key}_${result.originalname}`;
+          const fileKey = `images/${fileName}`;
+
+          let processedBuffer;
+          if (size) {
+            processedBuffer = await sharp(originalImageBuffer)
+              .resize(size.width, size.height)
+              .toBuffer();
+          } else {
+            processedBuffer = originalImageBuffer;
+          }
+
+          const upload = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET,
+              Key: fileKey,
+              Body: processedBuffer,
+              ContentType: req.file.mimetype,
+            },
+          });
+
+          await upload.done();
+
+          return {
+            key,
+            url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
+          };
+        }
+      );
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      const urls = uploadResults.reduce((acc, { key, url }) => {
+        acc[key] = url;
+        return acc;
+      }, {});
+
+      res.send(urls);
+    } catch (error) {
+      console.error("Error processing image:", error);
+      res.status(500).send("Failed to upload image.");
+    }
+  }
+);
 
 // @ primary route in our case for converting images into multiple resolution
 router.post(
@@ -205,12 +200,12 @@ router.post(
       if (!req.file) {
         return res.status(400).send("No file uploaded.");
       }
-      req.body.photographerId = '123',
-      req.body.watermarkOptions = 'custom'
+      (req.body.photographerId = "123"), (req.body.watermarkOptions = "custom");
 
-      
       const originalImageBuffer = req.file.buffer;
-      const { width, height, format } = await sharp(originalImageBuffer).metadata();
+      const { width, height, format } = await sharp(
+        originalImageBuffer
+      ).metadata();
       const fileSizeInMB = req.file.size / (1024 * 1024);
       console.log(fileSizeInMB);
 
@@ -221,57 +216,58 @@ router.post(
 
       const resolutions = {
         small: {
-          width: Math.round(width * 0.6),  
+          width: Math.round(width * 0.6),
           height: Math.round(height * 0.6),
         },
         medium: {
-          width: Math.round(width * 0.75), 
+          width: Math.round(width * 0.75),
           height: Math.round(height * 0.75),
         },
       };
 
-      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+      const convertToTargetSizeAndResolution = async (
+        buffer,
+        targetSize,
+        targetResolution,
+        format
+      ) => {
         let processedBuffer = buffer;
-
 
         processedBuffer = await sharp(buffer)
           .resize(targetResolution.width, targetResolution.height)
-          .toBuffer(); 
+          .toBuffer();
 
- 
         if (format === "jpeg" || format === "jpg") {
           let quality = 90;
           while (true) {
-            processedBuffer = await sharp(processedBuffer) 
+            processedBuffer = await sharp(processedBuffer)
               .jpeg({ quality })
               .toBuffer();
 
             if (processedBuffer.length <= targetSize || quality <= 10) {
               break;
             }
-            quality -= 5; 
+            quality -= 5;
           }
         } else if (format === "png") {
-         
-          processedBuffer = await sharp(processedBuffer) 
-            .png({ compressionLevel: 9, quality: 100 }) 
+          processedBuffer = await sharp(processedBuffer)
+            .png({ compressionLevel: 9, quality: 100 })
             .toBuffer();
         } else if (format === "webp") {
           let quality = 90;
           while (true) {
-            processedBuffer = await sharp(processedBuffer) 
+            processedBuffer = await sharp(processedBuffer)
               .webp({ quality })
               .toBuffer();
 
             if (processedBuffer.length <= targetSize || quality <= 10) {
               break;
             }
-            quality -= 5; 
+            quality -= 5;
           }
         } else {
-         
-          processedBuffer = await sharp(processedBuffer) 
-            .jpeg({ quality: 85 }) 
+          processedBuffer = await sharp(processedBuffer)
+            .jpeg({ quality: 85 })
             .toBuffer();
         }
 
@@ -285,41 +281,47 @@ router.post(
           ? ["small"]
           : [];
 
-      const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
-        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
-        const fileKey = `images/${fileName}`;
+      const uploadPromises = ["original", ...conversionTargets].map(
+        async (key) => {
+          const fileName = `${Date.now()}_${Math.round(
+            Math.random() * 1e9
+          )}_${key}_${req.file.originalname}`;
+          const fileKey = `images/${fileName}`;
 
-        let processedBuffer;
-        if (key === "original") {
-          processedBuffer = originalImageBuffer;
-        } else {
-          const targetResolution = resolutions[key];
-          const targetSize = sizeTargets[key];
-          processedBuffer = await convertToTargetSizeAndResolution(
-            originalImageBuffer,
-            targetSize,
-            targetResolution,
-            format
-          );
+          let processedBuffer;
+          if (key === "original") {
+            processedBuffer = originalImageBuffer;
+          } else {
+            const targetResolution = resolutions[key];
+            const targetSize = sizeTargets[key];
+            processedBuffer = await convertToTargetSizeAndResolution(
+              originalImageBuffer,
+              targetSize,
+              targetResolution,
+              format
+            );
+          }
+
+          const upload = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET,
+              Key: fileKey,
+              Body: processedBuffer,
+              ContentType: req.file.mimetype,
+            },
+          });
+
+          await upload.done();
+
+          return {
+            key,
+            url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
+          };
         }
-
-        const upload = new Upload({
-          client: s3,
-          params: {
-            Bucket: process.env.AWS_BUCKET,
-            Key: fileKey,
-            Body: processedBuffer,
-            ContentType: req.file.mimetype,
-          },
-        });
-
-        await upload.done();
-
-        return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
-      });
+      );
 
       const uploadResults = await Promise.all(uploadPromises);
-
 
       const urls = uploadResults.reduce((acc, { key, url }) => {
         acc[key] = url;
@@ -334,7 +336,6 @@ router.post(
         returnedResolutions.small = resolutions.small;
       }
 
-
       res.send({ urls, resolutions: returnedResolutions });
     } catch (error) {
       console.error("Error processing image:", error);
@@ -343,9 +344,6 @@ router.post(
   }
 );
 
-
-
-
 router.delete("/deleteImage", async (req, res) => {
   try {
     let image = req.query.image;
@@ -353,7 +351,7 @@ router.delete("/deleteImage", async (req, res) => {
     image = Array.isArray(image) ? image : [image];
 
     const deletePromises = image.map(async (file) => {
-      const fileKey = file.split(".amazonaws.com/")[1]; 
+      const fileKey = file.split(".amazonaws.com/")[1];
 
       if (!fileKey) {
         throw new Error("Invalid file URL provided");
@@ -371,39 +369,37 @@ router.delete("/deleteImage", async (req, res) => {
 
     res.status(200).send({ message: "Images deleted successfully", responses });
   } catch (error) {
-
     console.error("Error deleting images:", error);
     res.status(500).send({ message: "Failed to delete images", error });
   }
 });
 
+router.delete(
+  "/delete-all-resolutions",
+  asyncHandler(async (req, res) => {
+    const { images } = req.query;
+    const deletePromises = [];
 
-router.delete('/delete-all-resolutions', asyncHandler(async (req, res) => {
-  const { images } = req.query
-  const deletePromises = [];
+    for (const [key, url] of Object.entries(images)) {
+      if (url) {
+        const fileKey = url.split(".amazonaws.com/")[1];
+        if (fileKey) {
+          const command = new DeleteObjectCommand({
+            Bucket: process.env.AWS_BUCKET,
+            Key: fileKey,
+          });
 
-  for (const [key, url] of Object.entries(images)) {
-    if (url) {
-    
-      const fileKey = url.split(".amazonaws.com/")[1]; 
-      if (fileKey) {
-        const command = new DeleteObjectCommand({
-          Bucket: process.env.AWS_BUCKET, 
-          Key: fileKey,
-        });
-
-        deletePromises.push(s3.send(command));
+          deletePromises.push(s3.send(command));
+        }
       }
     }
-  }
 
-  const results = await Promise.all(deletePromises);
+    const results = await Promise.all(deletePromises);
 
-  console.log("Deleted images:", results);
-  return { message: "Images deleted successfully", results };
-
-}))
-
+    console.log("Deleted images:", results);
+    return { message: "Images deleted successfully", results };
+  })
+);
 
 router.post(
   "/handle-photos-with-watermark-and-resolutions",
@@ -415,7 +411,7 @@ router.post(
       }
 
       const watermarkType = req.body.watermarkType;
-      
+
       let watermarkBuffer;
 
       if (watermarkType === "Basic") {
@@ -424,24 +420,31 @@ router.post(
           return res.status(400).send("Watermark image not found for Basic.");
         }
         const watermarkUrl = royaltySettings.watermarkImage;
-        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        const watermarkResponse = await axios.get(watermarkUrl, {
+          responseType: "arraybuffer",
+        });
         watermarkBuffer = Buffer.from(watermarkResponse.data);
       } else if (watermarkType === "Custom") {
+        const customWatermark = await CustomWatermark.findOne({
+          photographer: req.body.photographer,
+        });
 
-        const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer }); 
-        
         if (!customWatermark || !customWatermark.watermarkImage) {
           return res.status(400).send("Custom watermark image not found.");
         }
         const watermarkUrl = customWatermark.watermarkImage;
-        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        const watermarkResponse = await axios.get(watermarkUrl, {
+          responseType: "arraybuffer",
+        });
         watermarkBuffer = Buffer.from(watermarkResponse.data);
       } else {
         return res.status(400).send("Invalid watermark type.");
       }
 
       const originalImageBuffer = req.file.buffer;
-      const { width, height, format } = await sharp(originalImageBuffer).metadata();
+      const { width, height, format } = await sharp(
+        originalImageBuffer
+      ).metadata();
       const fileSizeInMB = req.file.size / (1024 * 1024);
 
       const sizeTargets = {
@@ -462,7 +465,7 @@ router.post(
 
       const addWatermark = async (buffer, width, height) => {
         if (!watermarkBuffer) {
-          return buffer; 
+          return buffer;
         }
 
         const watermarkWidth = Math.round(width * 0.05);
@@ -484,7 +487,12 @@ router.post(
           .toBuffer();
       };
 
-      const convertToTargetSizeAndResolution = async (buffer, targetSize, targetResolution, format) => {
+      const convertToTargetSizeAndResolution = async (
+        buffer,
+        targetSize,
+        targetResolution,
+        format
+      ) => {
         let processedBuffer = await addWatermark(buffer, width, height);
 
         processedBuffer = await sharp(processedBuffer)
@@ -535,38 +543,49 @@ router.post(
           ? ["small"]
           : [];
 
-      const uploadPromises = ["original", ...conversionTargets].map(async (key) => {
-        const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}_${key}_${req.file.originalname}`;
-        const fileKey = `images/${fileName}`;
+      const uploadPromises = ["original", ...conversionTargets].map(
+        async (key) => {
+          const fileName = `${Date.now()}_${Math.round(
+            Math.random() * 1e9
+          )}_${key}_${req.file.originalname}`;
+          const fileKey = `images/${fileName}`;
 
-        let processedBuffer;
-        if (key === "original") {
-          processedBuffer = await addWatermark(originalImageBuffer, width, height);
-        } else {
-          const targetResolution = resolutions[key];
-          const targetSize = sizeTargets[key];
-          processedBuffer = await convertToTargetSizeAndResolution(
-            originalImageBuffer,
-            targetSize,
-            targetResolution,
-            format
-          );
+          let processedBuffer;
+          if (key === "original") {
+            processedBuffer = await addWatermark(
+              originalImageBuffer,
+              width,
+              height
+            );
+          } else {
+            const targetResolution = resolutions[key];
+            const targetSize = sizeTargets[key];
+            processedBuffer = await convertToTargetSizeAndResolution(
+              originalImageBuffer,
+              targetSize,
+              targetResolution,
+              format
+            );
+          }
+
+          const upload = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET,
+              Key: fileKey,
+              Body: processedBuffer,
+              ContentType: req.file.mimetype,
+            },
+          });
+
+          await upload.done();
+
+          return {
+            key,
+            url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
+          };
         }
-
-        const upload = new Upload({
-          client: s3,
-          params: {
-            Bucket: process.env.AWS_BUCKET,
-            Key: fileKey,
-            Body: processedBuffer,
-            ContentType: req.file.mimetype,
-          },
-        });
-
-        await upload.done();
-
-        return { key, url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` };
-      });
+      );
 
       const uploadResults = await Promise.all(uploadPromises);
 
@@ -591,14 +610,19 @@ router.post(
   }
 );
 
-
-const convertToTargetSizeAndResolution = async (buffer, targetResolution, format) => {
+const convertToTargetSizeAndResolution = async (
+  buffer,
+  targetResolution,
+  format
+) => {
   let processedBuffer;
 
   // Only resize if targetResolution is provided (e.g., for small/medium sizes)
   if (targetResolution) {
     processedBuffer = await sharp(buffer)
-      .resize(targetResolution.width, targetResolution.height, { fit: "inside" }) // Ensure the aspect ratio is preserved
+      .resize(targetResolution.width, targetResolution.height, {
+        fit: "inside",
+      }) // Ensure the aspect ratio is preserved
       .toBuffer();
   } else {
     // If it's the original image, don't resize or compress it
@@ -623,9 +647,6 @@ const convertToTargetSizeAndResolution = async (buffer, targetResolution, format
   return processedBuffer;
 };
 
-
-
-
 // async function compressImage(buffer) {
 //   try {
 //     let quality = 90;
@@ -648,29 +669,29 @@ const convertToTargetSizeAndResolution = async (buffer, targetResolution, format
 //   }
 // }
 
+router.post(
+  "/share-size-of-original-image",
+  upload1.single("image"),
+  async (req, res) => {
+    const imageUrl = req.body.imageUrl;
+    const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+    const imageBuffer = Buffer.from(response.data);
+    //
+    const metadata1 = await sharp(imageBuffer).metadata();
+    const dimensions = sizeOf(imageBuffer);
+    const width1 = metadata1.width;
+    const height1 = metadata1.height;
+    const width2 = dimensions.width;
+    const height2 = dimensions.height;
 
-
-router.post('/share-size-of-original-image', upload1.single('image'), async (req, res) => {
-  const imageUrl = req.body.imageUrl;
-  const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
-  const imageBuffer = Buffer.from(response.data);
-  //
-  const metadata1 = await sharp(imageBuffer).metadata();
-  const dimensions = sizeOf(imageBuffer);
-  const width1 = metadata1.width;
-  const height1 = metadata1.height;
-  const width2 = dimensions.width
-  const height2 = dimensions.height
-
-  //
-  res.status(200).send({
-    width1,
-    height1,
-    dimensions
-  })
-
-})
-
+    //
+    res.status(200).send({
+      width1,
+      height1,
+      dimensions,
+    });
+  }
+);
 
 // async function compressImage(inputBuffer, quality = 4) {
 //   const imagemin = (await import('imagemin')).default;
@@ -679,7 +700,7 @@ router.post('/share-size-of-original-image', upload1.single('image'), async (req
 //   const outputBuffer = await imagemin.buffer(inputBuffer, {
 //     plugins: [
 //       imageminWebp({
-//         quality: 4,       
+//         quality: 4,
 //         method: 6,
 //         alphaQuality: 10,
 //         nearLossless: 1, // Use 0 (off) or 1 (on), not 'true'
@@ -687,7 +708,7 @@ router.post('/share-size-of-original-image', upload1.single('image'), async (req
 //       }),
 //     ],
 //   });
-  
+
 //   return outputBuffer;
 // }
 
@@ -704,7 +725,7 @@ async function compressToExactSize(buffer, targetKB = 500) {
     .resize({
       width: Math.round(side),
       height: Math.round(side),
-      fit: 'inside',
+      fit: "inside",
       withoutEnlargement: true,
     })
     .toBuffer();
@@ -713,20 +734,18 @@ async function compressToExactSize(buffer, targetKB = 500) {
   let outputBuffer = await sharp(resizedBuffer)
     .rotate()
     .webp({
-      quality: 20,  // Adjust for balance
-      effort: 6,    // Medium compression
+      quality: 20, // Adjust for balance
+      effort: 6, // Medium compression
       nearLossless: false,
       smartSubsample: true,
-      lossless: false, 
-      alphaQuality: 50, 
+      lossless: false,
+      alphaQuality: 50,
     })
     .toBuffer();
 
   console.log(`Final size: ${(outputBuffer.byteLength / 1024).toFixed(2)} KB`);
   return outputBuffer;
 }
-
-
 
 router.post(
   "/handle-photos-with-watermark-and-resolutions-options",
@@ -738,9 +757,11 @@ router.post(
       const customText = req.body.customText;
       const imageUrl = req.body.imageUrl;
 
-      const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+      });
       const imageBuffer = Buffer.from(response.data);
-      const correctedImageBuffer = await sharp(imageBuffer).rotate().toBuffer(); 
+      const correctedImageBuffer = await sharp(imageBuffer).rotate().toBuffer();
 
       let watermarkBuffer;
 
@@ -751,67 +772,88 @@ router.post(
           const response = await axios.get(royaltySettings.watermarkImage, {
             responseType: "arraybuffer",
           });
-  // Changes
+          // Changes
           const originalImage = await sharp(correctedImageBuffer).metadata();
           const originalWidth = originalImage.width;
           const originalHeight = originalImage.height;
 
-          const watermarkScaleFactor = 0.3; 
+          const watermarkScaleFactor = 0.3;
           const watermarkWidth = originalWidth * watermarkScaleFactor;
           const watermarkHeight = originalHeight * watermarkScaleFactor;
 
           const royaltyBuffer = Buffer.from(response.data);
 
           // watermarkBuffer = await sharp(royaltyBuffer)
-          // .resize(Math.round(watermarkWidth), Math.round(watermarkHeight)) 
-          // .png() 
+          // .resize(Math.round(watermarkWidth), Math.round(watermarkHeight))
+          // .png()
           // .toBuffer();
 
-            watermarkBuffer = await sharp(royaltyBuffer)
+          watermarkBuffer = await sharp(royaltyBuffer)
             .resize({
               width: Math.round(watermarkWidth),
               height: Math.round(watermarkHeight),
-              fit: sharp.fit.inside,  
-              withoutEnlargement: true,  
+              fit: sharp.fit.inside,
+              withoutEnlargement: true,
             })
-            .ensureAlpha()  
+            .ensureAlpha()
             .modulate({
               brightness: 1,
-              opacity: 0.05,  
+              opacity: 0.05,
             })
             .png()
             .toBuffer();
 
-            // To Done         
-            // royaltyBuffer = Buffer.from(response.data);
-            // watermarkBuffer = await sharp(royaltyBuffer).png().toBuffer(); 
+          // To Done
+          // royaltyBuffer = Buffer.from(response.data);
+          // watermarkBuffer = await sharp(royaltyBuffer).png().toBuffer();
         }
 
-        if (!royaltySettings || !royaltySettings.watermarkImage || !watermarkBuffer) {
-          const { width, height } = await sharp(correctedImageBuffer).metadata();
-          watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        if (
+          !royaltySettings ||
+          !royaltySettings.watermarkImage ||
+          !watermarkBuffer
+        ) {
+          const { width, height } = await sharp(
+            correctedImageBuffer
+          ).metadata();
+          watermarkBuffer = await createTextImageBuffer(
+            "ClickedArt",
+            width,
+            height
+          );
         }
-      } else if (plan === "intermediate" || (plan === "premium" && isCustomText)) {
+      } else if (
+        plan === "intermediate" ||
+        (plan === "premium" && isCustomText)
+      ) {
         if (!customText) {
           return res.status(400).send("Custom text is required.");
         }
-        console.log('premium && customText')
+        console.log("premium && customText");
         const { width, height } = await sharp(correctedImageBuffer).metadata();
-        
-        watermarkBuffer = await createTextImageBuffer(customText, width, height);
+
+        watermarkBuffer = await createTextImageBuffer(
+          customText,
+          width,
+          height
+        );
       } else if (plan === "premium" && !isCustomText) {
-        console.log('premium' && 'no custom text')
-        const customWatermark = await CustomWatermark.findOne({ photographer: req.body.photographer });
+        console.log("premium" && "no custom text");
+        const customWatermark = await CustomWatermark.findOne({
+          photographer: req.body.photographer,
+        });
         if (!customWatermark || !customWatermark.watermarkImage) {
           return res.status(400).send("Custom watermark image not found.");
         }
         const watermarkUrl = customWatermark.watermarkImage;
 
-        const watermarkResponse = await axios.get(watermarkUrl, { responseType: "arraybuffer" });
+        const watermarkResponse = await axios.get(watermarkUrl, {
+          responseType: "arraybuffer",
+        });
         const originalWatermarkBuffer = Buffer.from(watermarkResponse.data);
-        watermarkBuffer = await removeBackgroundWithSharp(originalWatermarkBuffer);
-
-        
+        watermarkBuffer = await removeBackgroundWithSharp(
+          originalWatermarkBuffer
+        );
       } else {
         return res.status(400).send("Invalid plan.");
       }
@@ -853,10 +895,15 @@ router.post(
         }
       };
 
-      const convertToTargetSizeAndResolution = async (buffer, targetResolution, metadata) => {
+      const convertToTargetSizeAndResolution = async (
+        buffer,
+        targetResolution,
+        metadata
+      ) => {
         const { width, height } = metadata;
         const originalAspectRatio = width / height;
-        const targetAspectRatio = targetResolution.width / targetResolution.height;
+        const targetAspectRatio =
+          targetResolution.width / targetResolution.height;
 
         let resizeOptions;
         if (originalAspectRatio > targetAspectRatio) {
@@ -865,7 +912,9 @@ router.post(
           resizeOptions = { height: targetResolution.height };
         }
 
-        const processedBuffer = await sharp(buffer).resize(resizeOptions).toBuffer();
+        const processedBuffer = await sharp(buffer)
+          .resize(resizeOptions)
+          .toBuffer();
         return processedBuffer;
       };
 
@@ -884,7 +933,6 @@ router.post(
       //     height: Math.round(Math.sqrt(12 * 1_000_000 * Math.max(height / width, 1))),
       //   },
       // };
-      
 
       const resolutions = {
         small: {
@@ -898,13 +946,17 @@ router.post(
       };
 
       console.log(
-        `Small Resolution: ${resolutions.small.width}x${resolutions.small.height} (${(
+        `Small Resolution: ${resolutions.small.width}x${
+          resolutions.small.height
+        } (${(
           (resolutions.small.width * resolutions.small.height) /
           1_000_000
         ).toFixed(2)} MP)`
       );
       console.log(
-        `Medium Resolution: ${resolutions.medium.width}x${resolutions.medium.height} (${(
+        `Medium Resolution: ${resolutions.medium.width}x${
+          resolutions.medium.height
+        } (${(
           (resolutions.medium.width * resolutions.medium.height) /
           1_000_000
         ).toFixed(2)} MP)`
@@ -917,78 +969,83 @@ router.post(
           ? ["small"]
           : [];
 
-      const uploadPromises = ["thumbnail", "original", ...conversionTargets].map(
-        async (key) => {
-          
-          // const fileName = `${Date.now()}_${Math.round(
-          //   Math.random() * 1e9
-          // )}_${key}_${req.body.imageUrl.split("/").pop()}`;
-          // const fileKey = `images/${fileName}`;
+      const uploadPromises = [
+        "thumbnail",
+        "original",
+        ...conversionTargets,
+      ].map(async (key) => {
+        // const fileName = `${Date.now()}_${Math.round(
+        //   Math.random() * 1e9
+        // )}_${key}_${req.body.imageUrl.split("/").pop()}`;
+        // const fileKey = `images/${fileName}`;
 
-          const extension = key === "thumbnail" ? "webp" : req.body.imageUrl.split(".").pop();
-          const fileName = `${Date.now()}_${Math.round(
-              Math.random() * 1e9
-          )}_${key}.${extension}`;
-          const fileKey = `images/${fileName}`;
-          console.log(fileKey)
+        const extension =
+          key === "thumbnail" ? "webp" : req.body.imageUrl.split(".").pop();
+        const fileName = `${Date.now()}_${Math.round(
+          Math.random() * 1e9
+        )}_${key}.${extension}`;
+        const fileKey = `images/${fileName}`;
+        console.log(fileKey);
 
-          let processedBuffer;
-          
-          if (key === "thumbnail") {
-            processedBuffer = await addWatermark(
-              correctedImageBuffer,
-              metadata,
-              plan === "premium" && !isCustomText
-            );
+        let processedBuffer;
 
-            processedBuffer = await sharp(processedBuffer)
-                                    // .toFormat('webp') 
-                                    .webp({ quality: 80 })
-                                    .toBuffer();
+        if (key === "thumbnail") {
+          processedBuffer = await addWatermark(
+            correctedImageBuffer,
+            metadata,
+            plan === "premium" && !isCustomText
+          );
 
-            if (processedBuffer.length >  500 * 1024) {
-              console.log("Thumbnail exceeds 500KB, reducing quality...");
-              // processedBuffer = await sharp(processedBuffer)
-              //   .resize({ width, fit: 'inside' })
-              //   .webp({ quality: 5 }) 
-              //   .toBuffer();
-              processedBuffer = await compressToExactSize(processedBuffer)
-             
-            }
+          processedBuffer = await sharp(processedBuffer)
+            // .toFormat('webp')
+            .webp({ quality: 80 })
+            .toBuffer();
 
-            const metadataAfterWebP = await sharp(processedBuffer).metadata();
-            console.log("Thumbnail format after conversion:", metadataAfterWebP.format);
-
-          } else if (key === "original") {
-            processedBuffer = correctedImageBuffer;
-          } else {
-            const targetResolution = resolutions[key];
-            processedBuffer = await convertToTargetSizeAndResolution(
-              correctedImageBuffer,
-              targetResolution,
-              metadata
-            );
+          if (processedBuffer.length > 500 * 1024) {
+            console.log("Thumbnail exceeds 500KB, reducing quality...");
+            // processedBuffer = await sharp(processedBuffer)
+            //   .resize({ width, fit: 'inside' })
+            //   .webp({ quality: 5 })
+            //   .toBuffer();
+            processedBuffer = await compressToExactSize(processedBuffer);
           }
-         
 
-          const upload = new Upload({
-            client: s3,
-            params: {
-              Bucket: process.env.AWS_BUCKET,
-              Key: fileKey,
-              Body: processedBuffer,
-              ContentType: key === "thumbnail" ? "image/webp" : response.headers["content-type"],
-            },
-          });
-
-          await upload.done();
-
-          return {
-            key,
-            url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
-          };
+          const metadataAfterWebP = await sharp(processedBuffer).metadata();
+          console.log(
+            "Thumbnail format after conversion:",
+            metadataAfterWebP.format
+          );
+        } else if (key === "original") {
+          processedBuffer = correctedImageBuffer;
+        } else {
+          const targetResolution = resolutions[key];
+          processedBuffer = await convertToTargetSizeAndResolution(
+            correctedImageBuffer,
+            targetResolution,
+            metadata
+          );
         }
-      );
+
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET,
+            Key: fileKey,
+            Body: processedBuffer,
+            ContentType:
+              key === "thumbnail"
+                ? "image/webp"
+                : response.headers["content-type"],
+          },
+        });
+
+        await upload.done();
+
+        return {
+          key,
+          url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
+        };
+      });
 
       const uploadResults = await Promise.all(uploadPromises);
 
@@ -997,16 +1054,21 @@ router.post(
         return acc;
       }, {});
       const originalImageMetaData = await sharp(imageBuffer).metadata();
-      const returnedResolutions = { thumbnail: { width, height }, original: { width: originalImageMetaData.width, height: originalImageMetaData.height } };
+      const returnedResolutions = {
+        thumbnail: { width, height },
+        original: {
+          width: originalImageMetaData.width,
+          height: originalImageMetaData.height,
+        },
+      };
       if (imageSizeInMP > 12) {
         returnedResolutions.medium = resolutions.medium;
         returnedResolutions.small = resolutions.small;
       } else if (imageSizeInMP > 4) {
         returnedResolutions.small = resolutions.small;
       }
-      urls.original = imageUrl
-     
-      
+      urls.original = imageUrl;
+
       res.send({ urls, resolutions: returnedResolutions });
     } catch (error) {
       console.error("Error processing image:", error);
@@ -1014,8 +1076,6 @@ router.post(
     }
   }
 );
-
-
 
 const createTextImageBuffer = async (text, width, height) => {
   const svg = `
@@ -1028,12 +1088,9 @@ const createTextImageBuffer = async (text, width, height) => {
   return Buffer.from(svg);
 };
 
-
-
- const removeBackgroundWithSharp = async (buffer) => {
-  return buffer
+const removeBackgroundWithSharp = async (buffer) => {
+  return buffer;
 };
- 
 
 router.post("/upload-watermark-image", async (req, res) => {
   const { imageUrl } = req.body;
@@ -1044,36 +1101,33 @@ router.post("/upload-watermark-image", async (req, res) => {
 
   try {
     const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
-    
+
     const imageBuffer = Buffer.from(response.data);
 
     const processedBuffer = await sharp(imageBuffer)
-  .ensureAlpha() 
-  .raw() 
-  .toBuffer({ resolveWithObject: true }) 
-  .then(({ data, info }) => {
-   
-    const pixelData = Buffer.from(data);
-    for (let i = 3; i < pixelData.length; i += 4) {
-      pixelData[i] = Math.round(pixelData[i] * 0.5); 
-    }
-    return sharp(pixelData, {
-      raw: {
-        width: info.width,
-        height: info.height,
-        channels: info.channels,
-      },
-    })
-      .toFormat("png") 
-      .toBuffer();
-  });
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+      .then(({ data, info }) => {
+        const pixelData = Buffer.from(data);
+        for (let i = 3; i < pixelData.length; i += 4) {
+          pixelData[i] = Math.round(pixelData[i] * 0.5);
+        }
+        return sharp(pixelData, {
+          raw: {
+            width: info.width,
+            height: info.height,
+            channels: info.channels,
+          },
+        })
+          .toFormat("png")
+          .toBuffer();
+      });
 
-
-      const fileName = `${Date.now()}_${Math.round(
-        Math.random() * 1e9
-      )}_watermark_${req.body.imageUrl.split("/").pop()}`;
-      const fileKey = `images/${fileName}`;
-
+    const fileName = `${Date.now()}_${Math.round(
+      Math.random() * 1e9
+    )}_watermark_${req.body.imageUrl.split("/").pop()}`;
+    const fileKey = `images/${fileName}`;
 
     const upload = new Upload({
       client: s3,
@@ -1087,14 +1141,31 @@ router.post("/upload-watermark-image", async (req, res) => {
 
     await upload.done();
 
-    res.send({ message: "Image processed and uploaded", url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}` });
+    res.send({
+      message: "Image processed and uploaded",
+      url: `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${fileKey}`,
+    });
   } catch (error) {
     console.error("Error processing image:", error);
     res.status(500).send("Failed to process and upload the image.");
   }
 });
 
+const uploadAny = multer({ storage: multer.memoryStorage() });
 
+router.post("/uploadFile", uploadAny.single("file"), async (req, res) => {
+  if (!req.file) return res.status(400).send("No file uploaded.");
+  const fileExt = path.extname(req.file.originalname) || "";
+  const fileName = `${Date.now()}_${Math.round(Math.random() * 1e9)}${fileExt}`;
+  const uploadParams = {
+    Bucket: process.env.AWS_BUCKET,
+    Key: `files/${fileName}`,
+    Body: req.file.buffer,
+    ContentType: req.file.mimetype || "application/octet-stream",
+  };
+  await s3.send(new PutObjectCommand(uploadParams));
+  const url = `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/files/${fileName}`;
+  res.send({ url });
+});
 
-
-module.exports = router
+module.exports = router;

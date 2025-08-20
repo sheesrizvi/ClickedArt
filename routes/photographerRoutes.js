@@ -24,6 +24,11 @@ const {
   makeArtistOfTheMonth,
   getArtistOfTheMonth,
   removeArtistOfTheMonth,
+  getCertificateByEventName,
+  addEventCertificate,
+  removeEventCertificate,
+  getEventCertificates,
+  getAllEventCertificates,
 } = require("../controller/photographerController");
 const { IsPhotographer, isAdmin } = require("../middleware/authMiddleware");
 // const { resendOTP } = require('../controller/userController')
@@ -70,5 +75,10 @@ router.get(
 router.post("/make-artist-of-the-month", isAdmin, makeArtistOfTheMonth);
 router.get("/get-artist-of-the-month", getArtistOfTheMonth);
 router.post("/remove-artist-of-the-month", isAdmin, removeArtistOfTheMonth);
+router.get("/get-certificate-by-event-name", getCertificateByEventName);
+router.post("/add-event-certificate", addEventCertificate);
+router.delete("/remove-event-certificate", removeEventCertificate);
+router.get("/get-event-certificates", getEventCertificates);
+router.get("/get-all-event-certificates", getAllEventCertificates);
 
 module.exports = router;

@@ -210,6 +210,12 @@ const photographerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    eventCertificates: [
+      {
+        eventName: { type: String, required: true },
+        fileUrl: { type: String, required: true },
+      },
+    ],
   },
   {
     timestamps: true,

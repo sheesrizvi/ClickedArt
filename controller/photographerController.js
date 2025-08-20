@@ -918,12 +918,10 @@ const removeArtistOfTheMonth = asyncHandler(async (req, res) => {
   currentArtist.artistOfTheMonthDate = null;
   await currentArtist.save();
 
-  res
-    .status(200)
-    .send({
-      message: "Artist of the Month removed",
-      photographer: currentArtist,
-    });
+  res.status(200).send({
+    message: "Artist of the Month removed",
+    photographer: currentArtist,
+  });
 });
 
 const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
@@ -949,6 +947,97 @@ const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.json({ inactivePhotographers, pageCount });
+});
+
+const getCertificateByEventName = asyncHandler(async (req, res) => {
+  const { photographerId, eventName } = req.query;
+  const photographer = await Photographer.findById(photographerId);
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+  const certificate = photographer.eventCertificates.find(
+    (cert) => cert.eventName === eventName
+  );
+  if (!certificate) {
+    return res
+      .status(404)
+      .send({ message: "Certificate not found for this event" });
+  }
+  res.status(200).send({ certificate });
+});
+
+const addEventCertificate = asyncHandler(async (req, res) => {
+  const { photographerId, eventName, fileUrl } = req.body;
+  const photographer = await Photographer.findById(photographerId);
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+  const existingCertificate = photographer.eventCertificates.find(
+    (cert) => cert.eventName === eventName
+  );
+  if (existingCertificate) {
+    return res
+      .status(400)
+      .send({ message: "Certificate for this event already exists" });
+  }
+  photographer.eventCertificates.push({ eventName, fileUrl });
+  await photographer.save();
+  res.status(201).send({
+    message: "Event certificate added successfully",
+    certificate: { eventName, fileUrl },
+  });
+});
+
+const removeEventCertificate = asyncHandler(async (req, res) => {
+  const { photographerId, eventName } = req.query;
+  const photographer = await Photographer.findById(photographerId);
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+  const certificateIndex = photographer.eventCertificates.findIndex(
+    (cert) => cert.eventName === eventName
+  );
+  if (certificateIndex === -1) {
+    return res
+      .status(404)
+      .send({ message: "Certificate not found for this event" });
+  }
+  photographer.eventCertificates.splice(certificateIndex, 1);
+  await photographer.save();
+  res.status(200).send({
+    message: "Event certificate removed successfully",
+    eventName,
+  });
+});
+
+const getEventCertificates = asyncHandler(async (req, res) => {
+  const { photographerId } = req.query;
+  const photographer = await Photographer.findById(photographerId);
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+  if (!photographer.eventCertificates || photographer.eventCertificates.length === 0) {
+    return res.status(404).send({ message: "No event certificates found" });
+  }
+  res.status(200).send({
+    eventCertificates: photographer.eventCertificates,
+  });
+});
+
+const getAllEventCertificates = asyncHandler(async (req, res) => {
+  const photographers = await Photographer.find({});
+  const allCertificates = photographers.flatMap((photographer) =>
+    photographer.eventCertificates.map((cert) => ({
+      photographerId: photographer._id,
+      photographerName: `${photographer.firstName} ${photographer.lastName}`,
+      eventName: cert.eventName,
+      fileUrl: cert.fileUrl,
+    }))
+  );
+  if (allCertificates.length === 0) {
+    return res.status(404).send({ message: "No event certificates found" });
+  }
+  res.status(200).send({ eventCertificates: allCertificates });
 });
 
 module.exports = {
@@ -978,4 +1067,9 @@ module.exports = {
   makeArtistOfTheMonth,
   getArtistOfTheMonth,
   removeArtistOfTheMonth,
+  getCertificateByEventName,
+  addEventCertificate,
+  removeEventCertificate,
+  getEventCertificates,
+  getAllEventCertificates,
 };
