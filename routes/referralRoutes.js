@@ -8,7 +8,8 @@ const {
     getReferralByPhotographer,
     getActiveReferralByPhotographer,
     isActiveReferral,
-    getAllActiveReferrals
+    getAllActiveReferrals,
+    getUsersUsingReferral
  } = require('../controller/referralController.js')
 const router = express.Router()
 
@@ -20,5 +21,6 @@ router.get('/get-active-referral-by-photographer', getActiveReferralByPhotograph
 router.get('/get-all-referrals', getAllReferrals)
 router.get('/get-active-referral-by-code', isActiveReferral)
 router.get('/get-all-active-referrals', getAllActiveReferrals)
+router.get('/get-users-using-referral', getUsersUsingReferral)
 
 module.exports = router

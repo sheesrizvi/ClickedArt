@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Referral = require('../models/referralModel.js');
 const Photographer = require('../models/photographerModel.js');
+const User = require('../models/userModel.js');
 const mongoose = require('mongoose')
 
 const createReferral = asyncHandler(async (req, res) => {
@@ -112,6 +113,17 @@ const getActiveReferralByPhotographer = asyncHandler(async (req, res) => {
     res.status(200).send({ referrals })
 })
 
+const getUsersUsingReferral = asyncHandler(async (req, res) => {
+    const { code } = req.query
+    const users = await User.find({ referralcode: code }).select('-password -pushToken')
+    const photographers = await Photographer.find({ referralcode: code }).select('-password -pushToken')
+    users.push(...photographers);
+    if (!users) {
+        return res.status(404).json({ message: 'No users found for this referral code' })
+    }
+    res.status(200).send({ users });
+})
+
 const isActiveReferral = asyncHandler(async (req, res) => {
     const { code } = req.query
 
@@ -133,5 +145,6 @@ module.exports = {
     getReferralByPhotographer,
     getActiveReferralByPhotographer,
     isActiveReferral,
-    getAllActiveReferrals
+    getAllActiveReferrals,
+    getUsersUsingReferral
 };
