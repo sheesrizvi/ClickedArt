@@ -17,8 +17,14 @@ const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
 const moment = require("moment");
-const { registerDeliveryFromOrder, registerCustomDeliveryFromOrder } = require('../controller/deliveryController.js')
-const CustomImageOrder = require('../models/customOrderModel.js')
+const {
+  registerDeliveryFromOrder,
+  registerCustomDeliveryFromOrder,
+} = require("../controller/deliveryController.js");
+const CustomImageOrder = require("../models/customOrderModel.js");
+const {
+  sendNotificationToUser,
+} = require("../middleware/notificationUtils.js");
 
 const getCounter = async (financialYear) => {
   const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
@@ -51,7 +57,6 @@ const incrementCounter = async (financialYear) => {
 //     coupon,
 //     orderStatus = 'pending',
 //   } = req.body;
-
 
 //   const userTypeData = await UserType.findOne({ user: userId }).select('type -_id');
 //   const userType = userTypeData?.type || 'User';
@@ -90,7 +95,6 @@ const incrementCounter = async (financialYear) => {
 
 //   const finalAmount = totalAmount;
 
-
 //   const newOrder = new CustomImageOrder({
 //     user: userId,
 //     userType,
@@ -112,7 +116,6 @@ const incrementCounter = async (financialYear) => {
 
 //   await incrementCounter(financialYear);
 
-
 //   if (coupon) {
 //     const couponData = await Coupon.findOne({ code: coupon });
 //     if (couponData) {
@@ -121,7 +124,6 @@ const incrementCounter = async (financialYear) => {
 //       await couponData.save();
 //     }
 //   }
-
 
 //   const orderExists = await CustomImageOrder.findOne({ user: userId, _id: { $ne: savedOrder._id } });
 
@@ -140,7 +142,6 @@ const incrementCounter = async (financialYear) => {
 // //       });
 // //     }
 // //   }
-
 
 //   const itemNames = [];
 
@@ -168,20 +169,19 @@ const incrementCounter = async (financialYear) => {
 
 //   // for (const ord of orders) {
 //   //       const order = await CustomImageOrder.findOne({ _id: ord._id }).populate('userInfo.user');
-        
+
 //   //       if (!order) {
 //   //         console.error(`Order not found for ID: ${ord._id}`);
-//   //         continue; 
+//   //         continue;
 //   //       }
-  
+
 //   //       if(order.printStatus === 'no-print') {
 //   //         continue;
 //   //       }
-    
+
 //   //      console.log("Fetched Order:", order);
 //   //      await registerDeliveryFromOrder(order);
 //   //   }
-    
 
 //   res.status(201).json(savedOrder);
 // });
@@ -195,11 +195,13 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     isPaid = true,
     invoiceId,
     coupon,
-    orderStatus = 'pending',
+    orderStatus = "pending",
   } = req.body;
 
-  const userTypeData = await UserType.findOne({ user: userId }).select('type -_id');
-  const userType = userTypeData?.type || 'User';
+  const userTypeData = await UserType.findOne({ user: userId }).select(
+    "type -_id"
+  );
+  const userType = userTypeData?.type || "User";
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -218,10 +220,14 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     const totalGST = sgst + cgst;
 
     const nextCounter = await getCounter(financialYear);
-    const invoiceNumber = `CUO/${financialYear}/${String(nextCounter).padStart(4, '0')}`;
+    const invoiceNumber = `CUO/${financialYear}/${String(nextCounter).padStart(
+      4,
+      "0"
+    )}`;
     await incrementCounter(financialYear);
 
-    const discount = (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
+    const discount =
+      (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
     const totalAmount = finalPrice;
     const finalAmount = totalAmount;
 
@@ -240,7 +246,7 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
       ],
       quantity: 1,
       orderStatus,
-      printStatus: 'processing',
+      printStatus: "processing",
       isPaid,
       paymentMethod,
       invoiceId,
@@ -270,17 +276,19 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
 
   for (let item of orderItems) {
     if (item.frameInfo?.frame) {
-      const frame = await Frame.findById(item.frameInfo.frame).select('name');
+      const frame = await Frame.findById(item.frameInfo.frame).select("name");
       if (frame?.name) itemNames.push(`Frame: ${frame.name}`);
     }
     if (item.paperInfo?.paper) {
-      const paper = await Paper.findById(item.paperInfo.paper).select('name');
+      const paper = await Paper.findById(item.paperInfo.paper).select("name");
       if (paper?.name) itemNames.push(`Paper: ${paper.name}`);
     }
   }
 
-  const orderDate = moment().format('dddd, MMMM Do YYYY');
-  const s3Links = orders.map((order) => `https://clickedart.com/bill/${order._id}`);
+  const orderDate = moment().format("dddd, MMMM Do YYYY");
+  const s3Links = orders.map(
+    (order) => `https://clickedart.com/bill/${order._id}`
+  );
 
   await sendOrderThankYouMail(
     `${user.firstName} ${user.lastName}`,
@@ -291,14 +299,16 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
   );
 
   for (const ord of orders) {
-    const order = await CustomImageOrder.findById(ord._id).populate('userInfo.user');
+    const order = await CustomImageOrder.findById(ord._id).populate(
+      "userInfo.user"
+    );
 
     if (!order) {
       console.error(`Order not found for ID: ${ord._id}`);
       continue;
     }
 
-    if (order.printStatus === 'no-print') {
+    if (order.printStatus === "no-print") {
       continue;
     }
 
@@ -309,8 +319,6 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, orders });
 });
 
-
-
 const updatePrintStatus = asyncHandler(async (req, res) => {
   const { orderId, printStatus } = req.body;
 
@@ -320,38 +328,60 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
 
   await order.save();
 
+  await sendNotificationToUser({
+    userId: order.userInfo.user,
+    userType: order.userInfo.userType,
+    title: "Print Status Updated",
+    body: `Your order is now: ${
+      printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
+    }`,
+    type: "order",
+    data: {
+      url: `${
+        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+      }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
+        order._id
+      }?type=custom`,
+    },
+  });
+
   res.status(200).send({ message: "Print Status updated successfully" });
 });
 
 const updateReadyToShipStatus = asyncHandler(async (req, res) => {
-  const { orderId, status = false } = req.body
+  const { orderId, status = false } = req.body;
 
-  if(!orderId) {
-    return res.status(400).send({ message: 'Order Id not found' })
+  if (!orderId) {
+    return res.status(400).send({ message: "Order Id not found" });
   }
-  let readyToShipTimeStamp
-  if(status === true) {
-    readyToShipTimeStamp = new Date()
+  let readyToShipTimeStamp;
+  if (status === true) {
+    readyToShipTimeStamp = new Date();
   }
- 
-  await CustomImageOrder.findOneAndUpdate({ _id: orderId }, { readyToShip: status, readyToShipTimeStamp })
 
-  res.status(200).send({ message: 'Ready To Ship Status Updated Successfully' })
-})
+  await CustomImageOrder.findOneAndUpdate(
+    { _id: orderId },
+    { readyToShip: status, readyToShipTimeStamp }
+  );
+
+  res
+    .status(200)
+    .send({ message: "Ready To Ship Status Updated Successfully" });
+});
 
 const getAllCustomOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
   const orders = await CustomImageOrder.find({})
-    .populate('userInfo.user')
-    .populate('orderItems.frameInfo.frame')
-    .populate('orderItems.paperInfo.paper')
+    .populate("userInfo.user")
+    .populate("orderItems.frameInfo.frame")
+    .populate("orderItems.paperInfo.paper")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(Number(pageSize));
 
   if (!orders || orders.length === 0) {
-    return res.status(400).json({ message: 'Order not found' });
+    return res.status(400).json({ message: "Order not found" });
   }
 
   const totalDocuments = await CustomImageOrder.countDocuments();
@@ -361,27 +391,27 @@ const getAllCustomOrders = asyncHandler(async (req, res) => {
 });
 
 const getFailedOrders = asyncHandler(async (req, res) => {
-  const failedOrders = await CustomImageOrder.find({ orderStatus: 'failed' })
-    .populate('userInfo.user')
+  const failedOrders = await CustomImageOrder.find({ orderStatus: "failed" })
+    .populate("userInfo.user")
     .sort({ createdAt: -1 });
 
   if (!failedOrders || failedOrders.length === 0) {
-    return res.status(400).json({ message: 'No failed orders found' });
+    return res.status(400).json({ message: "No failed orders found" });
   }
 
   res.status(200).json(failedOrders);
 });
 
 const getMyOrders = asyncHandler(async (req, res) => {
-  const { userId } = req.query
- 
-  const orders = await CustomImageOrder.find({ 'userInfo.user': userId })
-    .populate('orderItems.frameInfo.frame')
-    .populate('orderItems.paperInfo.paper')
+  const { userId } = req.query;
+
+  const orders = await CustomImageOrder.find({ "userInfo.user": userId })
+    .populate("orderItems.frameInfo.frame")
+    .populate("orderItems.paperInfo.paper")
     .sort({ createdAt: -1 });
 
   if (!orders || orders.length === 0) {
-    return res.status(400).json({ message: 'No orders found for this user' });
+    return res.status(400).json({ message: "No orders found for this user" });
   }
 
   res.status(200).json(orders);
@@ -391,36 +421,34 @@ const getCustomOrderById = asyncHandler(async (req, res) => {
   const { orderId } = req.query;
 
   const order = await CustomImageOrder.findById(orderId)
-    .populate('userInfo.user')
-    .populate('orderItems.frameInfo.frame')
-    .populate('orderItems.paperInfo.paper');
+    .populate("userInfo.user")
+    .populate("orderItems.frameInfo.frame")
+    .populate("orderItems.paperInfo.paper");
 
   if (!order) {
-    return res.status(404).json({ message: 'Order not found' });
+    return res.status(404).json({ message: "Order not found" });
   }
 
   res.status(200).json(order);
 });
 
 const updateCustomOrderStatus = asyncHandler(async (req, res) => {
-
   const { orderId, orderStatus, printStatus, isPaid } = req.body;
 
   const order = await CustomImageOrder.findById(orderId);
 
   if (!order) {
-    return res.status(404).json({ message: 'Order not found' });
+    return res.status(404).json({ message: "Order not found" });
   }
 
   if (orderStatus) order.orderStatus = orderStatus;
   if (printStatus) order.printStatus = printStatus;
-  if (typeof isPaid === 'boolean') order.isPaid = isPaid;
+  if (typeof isPaid === "boolean") order.isPaid = isPaid;
 
   const updated = await order.save();
 
   res.status(200).json(updated);
 });
-
 
 module.exports = {
   createCustomUploadOrder,
@@ -430,5 +458,5 @@ module.exports = {
   getFailedOrders,
   getMyOrders,
   getCustomOrderById,
-  updateCustomOrderStatus
+  updateCustomOrderStatus,
 };
