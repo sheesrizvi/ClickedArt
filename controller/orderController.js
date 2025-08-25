@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Order = require("../models/orderModel");
 const Photographer = require("../models/photographerModel");
+const LayoutContent = require("../models/layoutContentModel");
 const UserType = require("../models/typeModel");
 const asyncHandler = require("express-async-handler");
 const ImageVault = require("../models/imagebase/imageVaultModel");
@@ -464,7 +465,6 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     order.isPaid = true;
   }
 
-
   await sendNotificationToUser({
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
@@ -651,6 +651,7 @@ const calculateCartPrice = async (req, res) => {
     let totalPaperPrice = 0;
     let totalFramePrice = 0;
     let totalFinalPrice = 0;
+    let maxDeliveryCharge = 0; // 👈 track highest
 
     const frameIds = items
       ?.filter((item) => item.frameId)
@@ -661,6 +662,8 @@ const calculateCartPrice = async (req, res) => {
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
+
+    const content = await LayoutContent.findOne();
 
     for (let item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
@@ -698,6 +701,11 @@ const calculateCartPrice = async (req, res) => {
             const area = width * height;
             paperPrice = area * paper.basePricePerSquareInch;
           }
+
+          if (content?.charges?.delivery) {
+            const itemDeliveryCharge = width * height * 1; // ₹1 per sq.in.
+            maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge); // 👈 pick max
+          }
         }
       }
 
@@ -712,6 +720,7 @@ const calculateCartPrice = async (req, res) => {
       totalImagePrice += imagePrice;
       totalPaperPrice += paperPrice;
       totalFramePrice += framePrice;
+
       totalFinalPrice += paperPrice
         ? (paperPrice + framePrice) * (1 - discount / 100)
         : imagePrice + paperPrice + framePrice;
@@ -722,6 +731,8 @@ const calculateCartPrice = async (req, res) => {
       totalPaperPrice,
       totalFramePrice,
       totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
+      totalDeliveryCharge: maxDeliveryCharge,
+      platformFeeAllowed: !!content?.charges?.platform,
     });
   } catch (error) {
     console.error(error);
@@ -747,8 +758,9 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
     }`,
     type: "order",
     data: {
-      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-        }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
+      url: `${
+        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+      }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
         order._id
       }`,
     },
