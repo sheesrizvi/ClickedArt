@@ -996,24 +996,28 @@ router.post(
             plan === "premium" && !isCustomText
           );
 
+          // Resize thumbnail with max width/height (e.g., 1600px) while preserving aspect ratio
           processedBuffer = await sharp(processedBuffer)
-            // .toFormat('webp')
-            .webp({ quality: 80 })
+            .resize({
+              width: 1600,
+              height: 1600,
+              fit: "inside",
+              withoutEnlargement: true, 
+            })
+            .webp({ quality: 70 })
             .toBuffer();
 
           if (processedBuffer.length > 500 * 1024) {
             console.log("Thumbnail exceeds 500KB, reducing quality...");
-            // processedBuffer = await sharp(processedBuffer)
-            //   .resize({ width, fit: 'inside' })
-            //   .webp({ quality: 5 })
-            //   .toBuffer();
             processedBuffer = await compressToExactSize(processedBuffer);
           }
 
           const metadataAfterWebP = await sharp(processedBuffer).metadata();
           console.log(
-            "Thumbnail format after conversion:",
-            metadataAfterWebP.format
+            "Thumbnail final resolution:",
+            metadataAfterWebP.width,
+            "x",
+            metadataAfterWebP.height
           );
         } else if (key === "original") {
           processedBuffer = correctedImageBuffer;
