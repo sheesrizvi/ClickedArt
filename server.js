@@ -42,6 +42,8 @@ const rnPushTokenRoutes = require("./routes/rnPushToken.js");
 const customUploadImageRoutes = require("./routes/imagebase/customUploadImageRoutes.js");
 const customOrderRoutes = require("./routes/customOrderRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const termsRoutes = require("./routes/termsRoutes");
+const privacyPolicyRoutes = require("./routes/privacyPolicyRoutes");
 const upload = require("./routes/upload");
 const cron = require("node-cron");
 const {
@@ -109,6 +111,8 @@ app.use("/api/rnPushTokens", rnPushTokenRoutes);
 app.use("/api/custom-uploads", customUploadImageRoutes);
 app.use("/api/custom-order", customOrderRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/terms", termsRoutes);
+app.use("/api/privacy-policy", privacyPolicyRoutes);
 app.use("/api/test", (req, res) => {
   res.status(200).json({ message: "Test route is working!" });
 });
