@@ -60,8 +60,6 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
   } = req.body;
 
 
- 
-
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
