@@ -13,7 +13,7 @@ const dbConnect = async () => {
        const dbOptions = {
         dbName : 'ClickedArt'
        }
-        const connectionInstance =  await mongoose.connect(process.env.MONGO_URI, dbOptions)
+        const connectionInstance =  await mongoose.connect(process.env.MONGO_URL, dbOptions)
         console.log(`MongoDB Connected ${connectionInstance.connection.host} <-> ${connectionInstance.connection.name}`)
     } catch(e) {
         console.log('MongoDB Connection Error', e.message)

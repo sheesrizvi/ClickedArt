@@ -46,149 +46,10 @@ const incrementCounter = async (financialYear) => {
   return;
 };
 
-// const createCustomUploadOrder = asyncHandler(async (req, res) => {
-//   const {
-//     userId,
-//     orderItems,
-//     paymentMethod,
-//     shippingAddress,
-//     isPaid = true,
-//     invoiceId,
-//     coupon,
-//     orderStatus = 'pending',
-//   } = req.body;
-
-//   const userTypeData = await UserType.findOne({ user: userId }).select('type -_id');
-//   const userType = userTypeData?.type || 'User';
-
-//   const today = new Date();
-//   const currentYear = today.getFullYear();
-//   const currentMonth = today.getMonth();
-//   const financialYear =
-//     currentMonth < 3
-//       ? `${currentYear - 1}-${currentYear.toString().slice(-2)}`
-//       : `${currentYear}-${(currentYear + 1).toString().slice(-2)}`;
-
-//   const nextCounter = await getCounter(financialYear);
-//   const invoiceNumber = `CUO/${financialYear}/${String(nextCounter).padStart(4, '0')}`;
-
-//   let totalAmount = 0;
-//   let discount = 0;
-
-//   const updatedItems = orderItems.map((item) => {
-//     const finalPrice = item.finalPrice || item.subTotal || 0;
-//     const sgst = finalPrice * 0.09;
-//     const cgst = finalPrice * 0.09;
-//     const totalGST = sgst + cgst;
-
-//     discount += (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
-
-//     totalAmount += finalPrice;
-
-//     return {
-//       ...item,
-//       sgst,
-//       cgst,
-//       totalGST,
-//     };
-//   });
-
-//   const finalAmount = totalAmount;
-
-//   const newOrder = new CustomImageOrder({
-//     user: userId,
-//     userType,
-//     orderItems: updatedItems,
-//     quantity: updatedItems.length,
-//     orderStatus,
-//     printStatus: 'processing',
-//     isPaid,
-//     paymentMethod,
-//     invoiceId,
-//     invoiceNumber,
-//     shippingAddress,
-//     totalAmount,
-//     finalAmount,
-//     discount,
-//   });
-
-//   const savedOrder = await newOrder.save();
-
-//   await incrementCounter(financialYear);
-
-//   if (coupon) {
-//     const couponData = await Coupon.findOne({ code: coupon });
-//     if (couponData) {
-//       couponData.usageCount += 1;
-//       couponData.users.push({ user: userId, userType });
-//       await couponData.save();
-//     }
-//   }
-
-//   const orderExists = await CustomImageOrder.findOne({ user: userId, _id: { $ne: savedOrder._id } });
-
-//   const user = await User.findById(userId);
-
-// //   if (user && user.referralcode && !orderExists) {
-// //     const referral = await Referral.findOne({ code: user.referralcode });
-
-// //     if (referral && referral.applicableTo === 'user') {
-// //       const price = (finalAmount * 100) / 118;
-// //       const balance = Math.round(price * (referral.commissionRate / 100));
-
-// //       await ReferralBalance.create({
-// //         photographer: referral.photographer,
-// //         amount: balance,
-// //       });
-// //     }
-// //   }
-
-//   const itemNames = [];
-
-//   for (let item of orderItems) {
-//     if (item.frameInfo?.frame) {
-//       const frame = await Frame.findById(item.frameInfo.frame).select('name');
-//       if (frame?.name) itemNames.push(`Frame: ${frame.name}`);
-//     }
-//     if (item.paperInfo?.paper) {
-//       const paper = await Paper.findById(item.paperInfo.paper).select('name');
-//       if (paper?.name) itemNames.push(`Paper: ${paper.name}`);
-//     }
-//   }
-
-//   const orderDate = moment().format('dddd, MMMM Do YYYY');
-//   const s3Link = `https://clickedart.com/bill/${savedOrder._id}`;
-
-//   await sendOrderThankYouMail(
-//     `${user.firstName} ${user.lastName}`,
-//     orderDate,
-//     itemNames,
-//     user.email,
-//     [s3Link]
-//   );
-
-//   // for (const ord of orders) {
-//   //       const order = await CustomImageOrder.findOne({ _id: ord._id }).populate('userInfo.user');
-
-//   //       if (!order) {
-//   //         console.error(`Order not found for ID: ${ord._id}`);
-//   //         continue;
-//   //       }
-
-//   //       if(order.printStatus === 'no-print') {
-//   //         continue;
-//   //       }
-
-//   //      console.log("Fetched Order:", order);
-//   //      await registerDeliveryFromOrder(order);
-//   //   }
-
-//   res.status(201).json(savedOrder);
-// });
-
 const createCustomUploadOrder = asyncHandler(async (req, res) => {
   const {
     userId,
+    userType,
     orderItems,
     paymentMethod,
     shippingAddress,
@@ -198,10 +59,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     orderStatus = "pending",
   } = req.body;
 
-  const userTypeData = await UserType.findOne({ user: userId }).select(
-    "type -_id"
-  );
-  const userType = userTypeData?.type || "User";
+
+ 
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -270,7 +129,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  const user = await User.findById(userId);
+  const Model = userType === 'User' ? User : Photographer
+  const user = await Model.findById(userId);
 
   const itemNames = [];
 
@@ -290,7 +150,7 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     (order) => `https://clickedart.com/bill/${order._id}`
   );
 
-  await sendOrderThankYouMail(
+  sendOrderThankYouMail(
     `${user.firstName} ${user.lastName}`,
     orderDate,
     itemNames,
