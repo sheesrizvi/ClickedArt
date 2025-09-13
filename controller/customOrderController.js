@@ -56,9 +56,9 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     isPaid = true,
     invoiceId,
     coupon,
+    finalAmount,
     orderStatus = "pending",
   } = req.body;
-
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -71,7 +71,26 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
   const orders = [];
 
   for (const item of orderItems) {
-    const finalPrice = item.finalPrice || item.subTotal || 0;
+    let finalPrice = item.finalPrice || item.subTotal || 0;
+    let discount = 0;
+
+    if (userType === "Photographer" && item.paperInfo?.paper) {
+      const paper = await Paper.findById(item.paperInfo.paper).select(
+        "photographerDiscount"
+      );
+      if (paper?.photographerDiscount) {
+        const photographerDiscount =
+          (finalPrice * paper.photographerDiscount) / 100;
+        discount += photographerDiscount;
+        finalPrice -= photographerDiscount;
+      }
+    }
+
+    discount +=
+      (item.frameInfo?.discount || 0) +
+      (item.paperInfo?.discount || 0) +
+      (item.imageInfo?.discount || 0);
+
     const sgst = finalPrice * 0.09;
     const cgst = finalPrice * 0.09;
     const totalGST = sgst + cgst;
@@ -83,16 +102,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     )}`;
     await incrementCounter(financialYear);
 
-    const discount =
-      (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
-    const totalAmount = finalPrice;
-    const finalAmount = totalAmount;
-
     const newOrder = new CustomImageOrder({
-      userInfo: {
-        user: userId,
-        userType,
-      },
+      userInfo: { user: userId, userType },
       orderItems: [
         {
           ...item,
@@ -109,7 +120,7 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
       invoiceId,
       invoiceNumber,
       shippingAddress,
-      totalAmount,
+      totalAmount: finalPrice,
       finalAmount,
       discount,
     });
@@ -127,11 +138,10 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  const Model = userType === 'User' ? User : Photographer
+  const Model = userType === "User" ? User : Photographer;
   const user = await Model.findById(userId);
 
   const itemNames = [];
-
   for (let item of orderItems) {
     if (item.frameInfo?.frame) {
       const frame = await Frame.findById(item.frameInfo.frame).select("name");
@@ -160,17 +170,11 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     const order = await CustomImageOrder.findById(ord._id).populate(
       "userInfo.user"
     );
-
     if (!order) {
       console.error(`Order not found for ID: ${ord._id}`);
       continue;
     }
-
-    if (order.printStatus === "no-print") {
-      continue;
-    }
-
-    // console.log("Fetched Order:", order);
+    if (order.printStatus === "no-print") continue;
     await registerCustomDeliveryFromOrder(order);
   }
 

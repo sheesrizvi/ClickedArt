@@ -68,6 +68,17 @@ const layoutContentSchema = new mongoose.Schema({
       tags: [{ type: String }],
     },
   ],
+  banners: {
+    userApp: {
+      type: String,
+    },
+    artistApp: {
+      type: String,
+    },
+    monetisation: { type: String },
+    customOrders: [{ type: String }],
+    membership: { type: String },
+  },
 });
 
 const LayoutContent = mongoose.model("LayoutContent", layoutContentSchema);

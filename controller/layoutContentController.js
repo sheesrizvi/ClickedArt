@@ -3,23 +3,23 @@ const LayoutContent = require('../models/layoutContentModel.js');
 const axios = require('axios')
 
 const addLayoutContent = asyncHandler(async (req, res) => {
-    const { logo, heroSectionPhotos, footerDetails, testimonials, support } = req.body;
+    const { logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges } = req.body;
 
     const existingContent = await LayoutContent.findOne();
     if (existingContent) {
         return res.status(400).json({ error: 'Layout content already exists' });
     }
    
-    const content = await LayoutContent.create({ logo, heroSectionPhotos, footerDetails, testimonials, support });
+    const content = await LayoutContent.create({ logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges });
     res.status(201).send({ message: 'Content created successfully', content });
 });
 
 const updateLayoutContent = asyncHandler(async (req, res) => {
-    const { logo, heroSectionPhotos, footerDetails, testimonials, support } = req.body;
+    const { logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges } = req.body;
 
     const content = await LayoutContent.findOneAndUpdate(
         {},
-        { logo, heroSectionPhotos, footerDetails, testimonials, support },
+        { logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges },
         { new: true, upsert: true }
     );
     res.status(200).send({ message: 'Content updated successfully', content });

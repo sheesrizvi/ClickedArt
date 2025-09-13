@@ -91,16 +91,6 @@ const createOrder = asyncHandler(async (req, res) => {
   let invoiceNumber = nextCounter.toString().padStart(4, "0");
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
-  // const groupedOrders = orderItems.reduce((acc, item) => {
-
-  //   const photographerId = item.imageInfo?.photographer || 'print';
-  //   if (!acc[photographerId]) {
-  //     acc[photographerId] = [];
-  //   }
-  //   acc[photographerId].push(item);
-  //   return acc;
-  // }, {});
-
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
       const photographerId = item.imageInfo.photographer || "unknown";
@@ -120,33 +110,41 @@ const createOrder = asyncHandler(async (req, res) => {
 
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
-    const totalAmount = items.reduce(
-      (sum, item) => sum + (item.finalPrice || 0),
-      0
-    );
-
+    let totalAmount = 0;
     let discountForEachOrder = 0;
 
+    const updatedItems = [];
     for (let item of items) {
-      discountForEachOrder +=
+      let finalPrice = item.finalPrice || 0;
+      let itemDiscount = 
         (item.imageInfo?.discount || 0) +
         (item.frameInfo?.discount || 0) +
         (item.paperInfo?.discount || 0);
-    }
 
-    const updatedItems = items.map((item) => {
-      const finalPrice = item.finalPrice || 0;
+      // Apply Photographer discount from Paper model if userType is Photographer
+      if (type === "Photographer" && item.paperInfo?.paper) {
+        const paper = await Paper.findById(item.paperInfo.paper).select("photographerDiscount");
+        if (paper?.photographerDiscount) {
+          const photographerDiscountAmount = (finalPrice * paper.photographerDiscount) / 100;
+          itemDiscount += photographerDiscountAmount;
+          finalPrice -= photographerDiscountAmount; // subtract before GST
+        }
+      }
+
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
       const totalGST = sgst + cgst || 0;
 
-      return {
+      updatedItems.push({
         ...item,
         sgst,
         cgst,
         totalGST,
-      };
-    });
+      });
+
+      totalAmount += finalPrice;
+      discountForEachOrder += itemDiscount;
+    }
 
     const order = new Order({
       userInfo: {
@@ -175,14 +173,12 @@ const createOrder = asyncHandler(async (req, res) => {
   }
 
   await incrementCounter(financialYear);
+
   if (coupon) {
     const couponData = await Coupon.findOne({ code: coupon });
     if (couponData) {
       couponData.usageCount += 1;
-      couponData.users.push({
-        user: userId,
-        userType: type,
-      });
+      couponData.users.push({ user: userId, userType: type });
       await couponData.save();
     }
   }
@@ -212,9 +208,7 @@ const createOrder = asyncHandler(async (req, res) => {
   for (let item of orderItems) {
     if (item.imageInfo && item.imageInfo.image) {
       const image = await ImageVault.findById(item.imageInfo.image);
-      if (image && image.title) {
-        itemNames.push(image.title);
-      }
+      if (image && image.title) itemNames.push(image.title);
 
       if (image && image._id) {
         const downloads = await Order.countDocuments({
@@ -223,25 +217,19 @@ const createOrder = asyncHandler(async (req, res) => {
 
         await ImageAnalytics.findOneAndUpdate(
           { image: image._id },
-          {
-            downloads,
-          }
+          { downloads }
         );
       }
     }
 
     if (item.frameInfo && item.frameInfo.frame) {
       const frame = await Frame.findById(item.frameInfo.frame).select("name");
-      if (frame && frame.name) {
-        itemNames.push(frame.name);
-      }
+      if (frame && frame.name) itemNames.push(frame.name);
     }
 
     if (item.paperInfo && item.paperInfo.paper) {
       const paper = await Paper.findById(item.paperInfo.paper).select("name");
-      if (paper && paper.name) {
-        itemNames.push(paper.name);
-      }
+      if (paper && paper.name) itemNames.push(paper.name);
     }
   }
 
@@ -257,18 +245,14 @@ const createOrder = asyncHandler(async (req, res) => {
   );
 
   for (const ord of orders) {
-    const order = await Order.findOne({ _id: ord._id }).populate(
-      "userInfo.user"
-    );
+    const order = await Order.findOne({ _id: ord._id }).populate("userInfo.user");
 
     if (!order) {
       console.error(`Order not found for ID: ${ord._id}`);
       continue;
     }
 
-    if (order.printStatus === "no-print") {
-      continue;
-    }
+    if (order.printStatus === "no-print") continue;
 
     console.log("Fetched Order:", order);
     await registerDeliveryFromOrder(order);
@@ -276,6 +260,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   res.status(201).send(orders);
 });
+
 
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
@@ -651,7 +636,8 @@ const calculateCartPrice = async (req, res) => {
     let totalPaperPrice = 0;
     let totalFramePrice = 0;
     let totalFinalPrice = 0;
-    let maxDeliveryCharge = 0; // 👈 track highest
+    let maxDeliveryCharge = 0;
+    let totalPhotographerDiscount = 0;
 
     const frameIds = items
       ?.filter((item) => item.frameId)
@@ -672,7 +658,8 @@ const calculateCartPrice = async (req, res) => {
       if (!image && !isCustom) continue;
 
       const ownImage =
-        photographerId && image.photographer?.toString() === photographerId;
+        photographerId &&
+        (isCustom || image.photographer?.toString() === photographerId);
 
       const imagePrice = isCustom
         ? 0
@@ -704,7 +691,7 @@ const calculateCartPrice = async (req, res) => {
 
           if (content?.charges?.delivery) {
             const itemDeliveryCharge = width * height * 1; // ₹1 per sq.in.
-            maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge); // 👈 pick max
+            maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
           }
         }
       }
@@ -724,6 +711,8 @@ const calculateCartPrice = async (req, res) => {
       totalFinalPrice += paperPrice
         ? (paperPrice + framePrice) * (1 - discount / 100)
         : imagePrice + paperPrice + framePrice;
+
+      totalPhotographerDiscount += discount * (paperPrice + framePrice) * 0.01;
     }
 
     res.json({
@@ -731,6 +720,7 @@ const calculateCartPrice = async (req, res) => {
       totalPaperPrice,
       totalFramePrice,
       totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
+      totalPhotographerDiscount: Number(totalPhotographerDiscount.toFixed(2)),
       totalDeliveryCharge: maxDeliveryCharge,
       platformFeeAllowed: !!content?.charges?.platform,
     });
