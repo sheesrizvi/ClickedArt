@@ -72,6 +72,8 @@ const createOrder = asyncHandler(async (req, res) => {
     gst,
     printStatus,
     link,
+    deliveryCharge,
+    platformFees
   } = req.body;
 
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
@@ -144,6 +146,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
       totalAmount += finalPrice;
       discountForEachOrder += itemDiscount;
+
     }
 
     const order = new Order({
@@ -166,6 +169,8 @@ const createOrder = asyncHandler(async (req, res) => {
         : "no-print",
       invoiceNumber,
       invoiceNumber,
+      deliveryCharge: updatedItems.every((item) => item.subTotal > 0) ? deliveryCharge : false,
+      platformFees 
     });
 
     const savedOrder = await order.save();

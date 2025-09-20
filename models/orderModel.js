@@ -151,6 +151,12 @@ const orderSchema = new mongoose.Schema(
       },
       pickupId: {
         type: Number
+      },
+      deliveryCharge: {
+        type: Boolean
+      },
+      platformFees: {
+        type: Boolean
       }
   },
   {
