@@ -733,6 +733,7 @@ const calculateCartItemsPrice = async (
 
 
 const paymentHandler = asyncHandler(async (req, res) => {
+  try {
   const { 
       userId,
       items,
@@ -742,7 +743,7 @@ const paymentHandler = asyncHandler(async (req, res) => {
       isCustomDiscount = false, 
      } = req.body
 
-  if (!userId) {
+  if (!userId || !items || items.length === 0) {
     res.status(400).json({ message: "Total amount and user ID are required." });
     return 
   }
@@ -772,6 +773,11 @@ const paymentHandler = asyncHandler(async (req, res) => {
   });
 
   return res.send({ result })
+  } catch(e) {
+    console.log(e)
+    throw new Error("Server error")
+  }
+
 });
 
 const getPendingOrders = asyncHandler(async (req, res) => {
