@@ -804,10 +804,10 @@ const calculateCartPrice = async (req, res) => {
     const coupon = await Coupon.findOne({  code: couponCode })
     let couponDiscount = 0
     let maxDiscount
+    let couponDiscountPercentage
     if(coupon) {
         couponDiscountPercentage = coupon.discountPercentage
         maxDiscount = coupon.maxDiscountAmount
-
     }
 
 
@@ -866,10 +866,8 @@ const calculateCartPrice = async (req, res) => {
         }
       }
 
-      let couponDisco = paperPrice * (couponDiscountPercentage/100)
-      if(couponDisco > maxDiscount) {
-        couponDisco = maxDiscount
-      }
+      
+   
 
     
       if(imagePrice > 0) {
@@ -881,7 +879,19 @@ const calculateCartPrice = async (req, res) => {
           totalPhotographerDiscount += discount * (paperPrice + framePrice) * 0.01;
           paperPrice = paperPrice - totalPhotographerDiscount
         }
-        paperPrice  = paperPrice - couponDisco 
+
+        let couponDisco
+        if(couponCode) {
+        couponDisco = paperPrice * (couponDiscountPercentage/100)
+        }
+
+        if(couponCode && couponDisco) {
+          if(couponDisco> maxDiscount) {
+            couponDisco = maxDiscount
+          }
+          paperPrice  = paperPrice - couponDisco 
+        }
+       
       }
   
 
