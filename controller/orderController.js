@@ -871,7 +871,20 @@ const calculateCartPrice = async (req, res) => {
         couponDisco = maxDiscount
       }
 
-      paperPrice  = paperPrice - couponDisco
+    
+      if(imagePrice > 0) {
+        imagePrice = imagePrice - couponDisco
+      } 
+      
+      if (paperPrice > 0) {
+        if(photographerId) {
+          totalPhotographerDiscount += discount * (paperPrice + framePrice) * 0.01;
+          paperPrice = paperPrice - totalPhotographerDiscount
+        }
+        paperPrice  = paperPrice - couponDisco 
+      }
+  
+
 
       totalImagePrice += imagePrice;
       totalPaperPrice += paperPrice;
@@ -883,14 +896,13 @@ const calculateCartPrice = async (req, res) => {
         ? (paperPrice + framePrice) * (1 - discount / 100)
         : imagePrice + paperPrice + framePrice;
 
-      totalPhotographerDiscount += discount * (paperPrice + framePrice) * 0.01;
     }
 
   
   
    
    
-
+    
     const layoutContent = await LayoutContent.findOne({  })
     let gstCharge = totalFinalPrice * (18/100)
     totalFinalPrice = gstCharge + totalFinalPrice
