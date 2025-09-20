@@ -589,17 +589,16 @@ const payment = asyncHandler(async (req, res) => {
 const paymentHandler = asyncHandler(async (total, userId) => {
 
 
-  // if (!total || !userId) {
-  //   res.status(400).json({ message: "Total amount and user ID are required." });
-  //   return;
-  // }
+  if (!total || !userId) {
+    res.status(400).json({ message: "Total amount and user ID are required." });
+    return false
+  }
 
   const user =
     (await User.findById(userId)) || (await Photographer.findById(userId));
 
   if (!user) {
-    res.status(404).json({ message: "User not found." });
-    return;
+    return false
   }
 
   const instance = new Razorpay({
@@ -921,6 +920,9 @@ const calculateCartPrice = async (req, res) => {
 
     const result =  await paymentHandler(totalFinalPrice, userId)
 
+    if(!result) {
+      return res.status(400).send({ message: "UserId is required" })
+    }
 
     res.json({
       result,
