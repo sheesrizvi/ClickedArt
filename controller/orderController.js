@@ -589,10 +589,10 @@ const payment = asyncHandler(async (req, res) => {
 const paymentHandler = asyncHandler(async (total, userId) => {
 
 
-  if (!total || !userId) {
-    res.status(400).json({ message: "Total amount and user ID are required." });
-    return;
-  }
+  // if (!total || !userId) {
+  //   res.status(400).json({ message: "Total amount and user ID are required." });
+  //   return;
+  // }
 
   const user =
     (await User.findById(userId)) || (await Photographer.findById(userId));
