@@ -1193,7 +1193,7 @@ const calculateCartPrice = async (req, res) => {
       if (paperPrice > 0) {
         if (photographerId) {
           const photographerDiscountAmount =
-            discount * (paperPrice + framePrice) * 0.01;
+            discount * paperPrice * 0.01;
           totalPhotographerDiscount += photographerDiscountAmount;
           paperPrice -= photographerDiscountAmount;
         }
