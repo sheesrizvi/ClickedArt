@@ -585,13 +585,13 @@ const payment = asyncHandler(async (req, res) => {
   res.status(200).json({ result });
 });
 
+
 const calculateCartItemsPrice = async (
       items,
       couponCode,
       photographerId,
-      isCustom = false,
-      isCustomDiscount = false
-    ) => {
+      isCustom,
+      isCustomDiscount) => {
   try {
 
     let totalImagePrice = 0;
@@ -614,14 +614,15 @@ const calculateCartItemsPrice = async (
 
     const content = await LayoutContent.findOne();
 
-    const coupon = await Coupon.findOne({  code: couponCode })
-    let maxDiscount
-    let couponDiscountPercentage
-    if(coupon) {
-        couponDiscountPercentage = coupon.discountPercentage
-        maxDiscount = coupon.maxDiscountAmount
-    }
+    const coupon = await Coupon.findOne({ code: couponCode });
 
+    let couponDiscountPercentage = 0;
+    let maxDiscount = 0;
+
+    if (coupon) {
+      couponDiscountPercentage = coupon.discountPercentage || 0;
+      maxDiscount = coupon.maxDiscountAmount || 0;
+    }
 
     for (let item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
@@ -629,13 +630,9 @@ const calculateCartItemsPrice = async (
       const image = await ImageVault.findById(imageId);
       if (!image && !isCustom) continue;
 
-      // const ownImage =
-      //   photographerId &&
-      //   (isCustom || image.photographer?.toString() === photographerId);
+      const ownImage = paperId || imageId ? true : false;
 
-      const ownImage = paperId || imageId ? true : false
-      
-      const imagePrice = isCustom
+      let imagePrice = isCustom
         ? 0
         : resolution === "small"
         ? image.price.small
@@ -678,56 +675,72 @@ const calculateCartItemsPrice = async (
         }
       }
 
-    
-      if(imagePrice && !paperPrice) {
-        const discountForThisImage = imagePrice * (couponDiscountPercentage / 100);
-        totalCouponDiscount += Math.min(discountForThisImage, maxDiscount || discountForThisImage);
+      if (imagePrice && !paperPrice) {
+        const discountForThisImage =
+          imagePrice * (couponDiscountPercentage / 100);
+        totalCouponDiscount += Math.min(
+          discountForThisImage,
+          maxDiscount || discountForThisImage
+        );
         imagePrice -= discountForThisImage;
       }
-    
 
       if (paperPrice > 0) {
-        if(photographerId) {
-          const photographerDiscountAmount = discount * (paperPrice + framePrice) * 0.01;
+        if (photographerId) {
+          const photographerDiscountAmount =
+            discount * paperPrice * 0.01;
           totalPhotographerDiscount += photographerDiscountAmount;
           paperPrice -= photographerDiscountAmount;
         }
-        const discountForThisPaper = paperPrice * (couponDiscountPercentage / 100);
-        totalCouponDiscount += Math.min(discountForThisPaper, maxDiscount || discountForThisPaper);
-        paperPrice -= discountForThisPaper
+        const discountForThisPaper =
+          paperPrice * (couponDiscountPercentage / 100);
+        totalCouponDiscount += Math.min(
+          discountForThisPaper,
+          maxDiscount || discountForThisPaper
+        );
+        paperPrice -= discountForThisPaper;
       }
-  
 
+      if (!Number.isFinite(imagePrice)) imagePrice = 0;
+      if (!Number.isFinite(paperPrice)) paperPrice = 0;
+      if (!Number.isFinite(framePrice)) framePrice = 0;
 
       totalImagePrice += imagePrice;
       totalPaperPrice += paperPrice;
       totalFramePrice += framePrice;
 
-
-
       totalFinalPrice += paperPrice
         ? (paperPrice + framePrice) * (1 - discount / 100)
         : imagePrice + paperPrice + framePrice;
-
     }
 
-    const layoutContent = await LayoutContent.findOne({  })
-    let gstCharge = totalFinalPrice * (18/100)
-    totalFinalPrice = gstCharge + totalFinalPrice
+    const layoutContent = await LayoutContent.findOne({});
+    let gstCharge = totalFinalPrice * (18 / 100);
+    totalFinalPrice = gstCharge + totalFinalPrice;
 
-    const { platform } = layoutContent.charges
+    const { platform } = layoutContent.charges;
 
-    if(platform) {
-      let platformFess = totalFinalPrice * 0.02
-      totalFinalPrice = totalFinalPrice + platformFess
+    if (platform) {
+      let platformFess = totalFinalPrice * 0.02;
+      totalFinalPrice = totalFinalPrice + platformFess;
     }
 
-    return totalFinalPrice
-    
+
+    return Number(totalFinalPrice.toFixed(2))
+
+    // res.json({
+    //   totalImagePrice,
+    //   totalPaperPrice,
+    //   totalFramePrice,
+    //   couponDiscount: totalCouponDiscount,
+    //   totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
+    //   totalPhotographerDiscount: Number(totalPhotographerDiscount.toFixed(2)),
+    //   totalDeliveryCharge: maxDeliveryCharge,
+    //   platformFeeAllowed: !!content?.charges?.platform,
+    // });
   } catch (error) {
-
-     console.log("error", error)
-     throw new Error('Server error')
+    console.error(error);
+    res.status(500).json({ message: "Server error." });
   }
 };
 
