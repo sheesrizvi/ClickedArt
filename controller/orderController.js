@@ -740,7 +740,7 @@ const paymentHandler = asyncHandler(async (req, res) => {
       isCustomDiscount = false, 
      } = req.body
 
-  if (!total || !userId) {
+  if (!userId) {
     res.status(400).json({ message: "Total amount and user ID are required." });
     return 
   }
