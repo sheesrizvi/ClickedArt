@@ -787,6 +787,7 @@ const calculateCartPrice = async (req, res) => {
     let totalFinalPrice = 0;
     let maxDeliveryCharge = 0;
     let totalPhotographerDiscount = 0;
+    let totalCouponDiscount = 0;
 
     const frameIds = items
       ?.filter((item) => item.frameId)
@@ -865,27 +866,23 @@ const calculateCartPrice = async (req, res) => {
         }
       }
 
-      
-   
-      if(imagePrice > 0 && couponDiscount && couponCode) {
-        couponDiscount = imagePrice * (couponDiscountPercentage/100)
-        imagePrice = imagePrice - couponDiscount
-      } 
-      
+    
+      if(imagePrice && !paperPrice) {
+        const discountForThisImage = imagePrice * (couponDiscountPercentage / 100);
+        totalCouponDiscount += Math.min(discountForThisImage, maxDiscount || discountForThisImage);
+        imagePrice -= discountForThisImage;
+      }
+    
+
       if (paperPrice > 0) {
         if(photographerId) {
-          totalPhotographerDiscount += discount * (paperPrice + framePrice) * 0.01;
-          paperPrice = paperPrice - totalPhotographerDiscount
+          const photographerDiscountAmount = discount * (paperPrice + framePrice) * 0.01;
+          totalPhotographerDiscount += photographerDiscountAmount;
+          paperPrice -= photographerDiscountAmount;
         }
-
-      
-        if(couponCode && couponDiscount) {
-          if(couponDiscount > maxDiscount) {
-            couponDiscount = maxDiscount
-          }
-          paperPrice  = paperPrice - couponDiscount 
-        }
-       
+        const discountForThisPaper = paperPrice * (couponDiscountPercentage / 100);
+        totalCouponDiscount += Math.min(discountForThisPaper, maxDiscount || discountForThisPaper);
+        paperPrice -= discountForThisPaper
       }
   
 
@@ -918,18 +915,17 @@ const calculateCartPrice = async (req, res) => {
       totalFinalPrice = totalFinalPrice + platformFess
     }
 
-    const result =  await paymentHandler(totalFinalPrice, userId)
+    // const result =  await paymentHandler(totalFinalPrice, userId)
 
-    if(!result) {
-      return res.status(400).send({ message: "UserId is required" })
-    }
+    // if(!result) {
+    //   return res.status(400).send({ message: "UserId is required" })
+    // }
 
     res.json({
-      result,
       totalImagePrice,
       totalPaperPrice,
       totalFramePrice,
-      couponDiscount,
+      couponDiscount: totalCouponDiscount,
       totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
       totalPhotographerDiscount: Number(totalPhotographerDiscount.toFixed(2)),
       totalDeliveryCharge: maxDeliveryCharge,
