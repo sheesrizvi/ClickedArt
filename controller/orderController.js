@@ -725,6 +725,8 @@ const calculateCartItemsPrice = async (
     return totalFinalPrice
     
   } catch (error) {
+
+     console.log("error", error)
      throw new Error('Server error')
   }
 };
