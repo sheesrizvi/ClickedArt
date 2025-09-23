@@ -636,6 +636,7 @@ const calculateCartItemsPrice = async (
     let totalFinalPrice = 0;
     let maxDeliveryCharge = 0;
     let totalPhotographerDiscount = 0;
+    let rawCouponDiscount = 0; // collect total discount before capping
     let totalCouponDiscount = 0;
 
     const frameIds = items
@@ -660,7 +661,6 @@ const calculateCartItemsPrice = async (
       let paperPrice = 0;
       let framePrice = 0;
       let photographerDiscountAmount = 0;
-      let couponDiscountAmount = 0;
 
       const image = await ImageVault.findById(imageId);
       if (!image && !isCustom) continue;
@@ -674,13 +674,8 @@ const calculateCartItemsPrice = async (
             ? image.price.medium
             : image.price.original;
 
-        couponDiscountAmount = Math.min(
-          imagePrice * (couponDiscountPercentage / 100),
-          maxDiscount
-        );
-        totalCouponDiscount += couponDiscountAmount;
-
-        totalFinalPrice += imagePrice - couponDiscountAmount;
+        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
+        totalFinalPrice += imagePrice;
       }
 
       // PAPER ORDER
@@ -701,12 +696,9 @@ const calculateCartItemsPrice = async (
             totalPhotographerDiscount += photographerDiscountAmount;
           }
 
-          couponDiscountAmount = Math.min(
+          rawCouponDiscount +=
             (paperPrice - photographerDiscountAmount) *
-              (couponDiscountPercentage / 100),
-            maxDiscount
-          );
-          totalCouponDiscount += couponDiscountAmount;
+            (couponDiscountPercentage / 100);
 
           if (frameId) {
             const frame = frames.find((f) => f._id.toString() === frameId);
@@ -720,13 +712,14 @@ const calculateCartItemsPrice = async (
           }
 
           totalFinalPrice +=
-            paperPrice +
-            framePrice -
-            photographerDiscountAmount -
-            couponDiscountAmount;
+            paperPrice + framePrice - photographerDiscountAmount;
         }
       }
     }
+
+    // ✅ Apply coupon discount ONCE (after loop)
+    totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
+    totalFinalPrice -= totalCouponDiscount;
 
     // Add delivery
     totalFinalPrice += maxDeliveryCharge;
@@ -1122,7 +1115,7 @@ const calculateCartPrice = async (req, res) => {
     let totalFinalPrice = 0;
     let maxDeliveryCharge = 0;
     let totalPhotographerDiscount = 0;
-    let totalCouponDiscount = 0;
+    let rawCouponDiscount = 0; // temporary (before applying max cap)
     let totalPlatformFee = 0;
 
     const frameIds = items
@@ -1147,7 +1140,6 @@ const calculateCartPrice = async (req, res) => {
       let paperPrice = 0;
       let framePrice = 0;
       let photographerDiscount = 0;
-      let couponDiscount = 0;
 
       const image = await ImageVault.findById(imageId);
 
@@ -1155,7 +1147,6 @@ const calculateCartPrice = async (req, res) => {
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
         if (paper) {
-          // Calculate paper price
           const customDimension = paper.customDimensions.find(
             (dim) => dim.width === width && dim.height === height
           );
@@ -1170,13 +1161,10 @@ const calculateCartPrice = async (req, res) => {
             totalPhotographerDiscount += photographerDiscount;
           }
 
-          // Coupon discount
-          couponDiscount = Math.min(
+          // Raw coupon discount (no max yet)
+          rawCouponDiscount +=
             (paperPrice - photographerDiscount) *
-              (couponDiscountPercentage / 100),
-            maxDiscount
-          );
-          totalCouponDiscount += couponDiscount;
+            (couponDiscountPercentage / 100);
 
           // Frame price
           if (frameId) {
@@ -1191,12 +1179,10 @@ const calculateCartPrice = async (req, res) => {
             maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
           }
 
-          // Add to totals
           totalPaperPrice += paperPrice;
           totalFramePrice += framePrice;
-          totalFinalPrice +=
-            paperPrice + framePrice - photographerDiscount - couponDiscount;
           subtotal += paperPrice + framePrice;
+          totalFinalPrice += paperPrice + framePrice - photographerDiscount;
         }
       }
       // IMAGE ONLY
@@ -1208,19 +1194,19 @@ const calculateCartPrice = async (req, res) => {
             ? image.price.medium
             : image.price.original;
 
-        couponDiscount = Math.min(
-          imagePrice * (couponDiscountPercentage / 100),
-          maxDiscount
-        );
-        totalCouponDiscount += couponDiscount;
+        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
+
         totalImagePrice += imagePrice;
         subtotal += imagePrice;
-        totalFinalPrice += imagePrice - couponDiscount;
+        totalFinalPrice += imagePrice;
       }
 
-      // Safety for NaN
       totalFinalPrice = Number(totalFinalPrice.toFixed(2));
     }
+
+    // Apply coupon discount ONCE across the order
+    const totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
+    totalFinalPrice -= totalCouponDiscount;
 
     // Add delivery charge
     totalFinalPrice += maxDeliveryCharge;
