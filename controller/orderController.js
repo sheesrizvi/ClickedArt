@@ -126,17 +126,17 @@ const createOrder = asyncHandler(async (req, res) => {
         (item.paperInfo?.discount || 0);
 
       // Apply Photographer discount from Paper model if userType is Photographer
-      if (type === "Photographer" && item.paperInfo?.paper) {
-        const paper = await Paper.findById(item.paperInfo.paper).select(
-          "photographerDiscount"
-        );
-        if (paper?.photographerDiscount) {
-          const photographerDiscountAmount =
-            (finalPrice * paper.photographerDiscount) / 100;
-          itemDiscount += photographerDiscountAmount;
-          finalPrice -= photographerDiscountAmount; // subtract before GST
-        }
-      }
+      // if (type === "Photographer" && item.paperInfo?.paper) {
+      //   const paper = await Paper.findById(item.paperInfo.paper).select(
+      //     "photographerDiscount"
+      //   );
+      //   if (paper?.photographerDiscount) {
+      //     const photographerDiscountAmount =
+      //       (finalPrice * paper.photographerDiscount) / 100;
+      //     itemDiscount += photographerDiscountAmount;
+      //     finalPrice -= photographerDiscountAmount; // subtract before GST
+      //   }
+      // }
 
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
