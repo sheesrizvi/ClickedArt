@@ -63,7 +63,7 @@ const createOrder = asyncHandler(async (req, res) => {
     orderItems,
     paymentMethod,
     shippingAddress,
-    discount: couponDiscount,
+    discount,
     finalAmount,
     orderStatus,
     invoiceId,
@@ -77,13 +77,12 @@ const createOrder = asyncHandler(async (req, res) => {
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
+  const orderExist = await Order.findOne({ "userInfo.user": userId });
+
   const layoutContent = await LayoutContent.findOne({});
   const deliveryCharge = layoutContent?.charges?.delivery || false;
   const platformFees = layoutContent?.charges?.platform || false;
 
-  const orderExist = await Order.findOne({ "userInfo.user": userId });
-
-  // Financial year & invoice number
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -96,11 +95,12 @@ const createOrder = asyncHandler(async (req, res) => {
   let invoiceNumber = nextCounter.toString().padStart(4, "0");
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
-  // Group orders by photographer for images and by print for paper
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
       const photographerId = item.imageInfo.photographer || "unknown";
-      if (!acc[photographerId]) acc[photographerId] = [];
+      if (!acc[photographerId]) {
+        acc[photographerId] = [];
+      }
       acc[photographerId].push(item);
     } else if (item.subTotal > 0) {
       const printKey = `print-${acc.nextPrintId || 1}`;
@@ -115,69 +115,42 @@ const createOrder = asyncHandler(async (req, res) => {
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
     let totalAmount = 0;
-    let totalDiscount = 0;
+    let discountForEachOrder = 0;
 
     const updatedItems = [];
     for (let item of items) {
-      const paperPrice = item.paperInfo?.price || 0;
-      const imagePrice = item.imageInfo?.price || 0;
-      const framePrice = item.frameInfo?.price || 0;
+      let finalPrice = item.finalPrice || 0;
+      let itemDiscount =
+        (item.imageInfo?.discount || 0) +
+        (item.frameInfo?.discount || 0) +
+        (item.paperInfo?.discount || 0);
 
-      let itemDiscount = 0;
-      let finalPrice = 0;
-
-      // Apply photographer discount ONLY on paper
-      if (type === "Photographer" && paperPrice > 0 && item.paperInfo?.paper) {
+      // Apply Photographer discount from Paper model if userType is Photographer
+      if (type === "Photographer" && item.paperInfo?.paper) {
         const paper = await Paper.findById(item.paperInfo.paper).select(
           "photographerDiscount"
         );
         if (paper?.photographerDiscount) {
           const photographerDiscountAmount =
-            (paperPrice * paper.photographerDiscount) / 100;
+            (finalPrice * paper.photographerDiscount) / 100;
           itemDiscount += photographerDiscountAmount;
-          finalPrice += paperPrice - photographerDiscountAmount;
-        } else {
-          finalPrice += paperPrice;
-        }
-      } else {
-        finalPrice += paperPrice;
-      }
-
-      // Add image price (no discount)
-      finalPrice += imagePrice;
-
-      // Add frame price (no discount)
-      finalPrice += framePrice;
-
-      // Apply coupon discount ONLY on paper or image
-      if (couponDiscount) {
-        if (paperPrice > 0) {
-          const couponAmount = (paperPrice * couponDiscount) / 100;
-          itemDiscount += couponAmount;
-          finalPrice -= couponAmount;
-        } else if (imagePrice > 0) {
-          const couponAmount = (imagePrice * couponDiscount) / 100;
-          itemDiscount += couponAmount;
-          finalPrice -= couponAmount;
+          finalPrice -= photographerDiscountAmount; // subtract before GST
         }
       }
 
-      // GST calculation
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
-      const totalGST = sgst + cgst;
+      const totalGST = sgst + cgst || 0;
 
       updatedItems.push({
         ...item,
         sgst,
         cgst,
         totalGST,
-        finalPrice,
-        discount: itemDiscount,
       });
 
       totalAmount += finalPrice;
-      totalDiscount += itemDiscount;
+      discountForEachOrder += itemDiscount;
     }
 
     const order = new Order({
@@ -188,7 +161,7 @@ const createOrder = asyncHandler(async (req, res) => {
       orderItems: updatedItems,
       paymentMethod,
       shippingAddress,
-      discount: totalDiscount,
+      discount: discountForEachOrder,
       totalAmount,
       orderStatus,
       invoiceId,
@@ -198,6 +171,7 @@ const createOrder = asyncHandler(async (req, res) => {
       printStatus: updatedItems.every((item) => item.subTotal > 0)
         ? "processing"
         : "no-print",
+      invoiceNumber,
       invoiceNumber,
       deliveryCharge: updatedItems.every((item) => item.subTotal > 0)
         ? deliveryCharge
@@ -211,7 +185,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   await incrementCounter(financialYear);
 
-  // Update coupon usage
   if (coupon) {
     const couponData = await Coupon.findOne({ code: coupon });
     if (couponData) {
@@ -221,7 +194,6 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  // Referral commission
   const Model = type === "User" ? User : Photographer;
   const user = await Model.findOne({ _id: userId });
 
@@ -239,7 +211,6 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  // Prepare email data
   const customerName = `${user.firstName} ${user.lastName}`;
   const customerEmail = user.email;
   const orderDate = moment().format("dddd, MMMM Do YYYY");
@@ -262,14 +233,14 @@ const createOrder = asyncHandler(async (req, res) => {
       }
     }
 
-    if (item.paperInfo && item.paperInfo.paper) {
-      const paper = await Paper.findById(item.paperInfo.paper).select("name");
-      if (paper && paper.name) itemNames.push(paper.name);
-    }
-
     if (item.frameInfo && item.frameInfo.frame) {
       const frame = await Frame.findById(item.frameInfo.frame).select("name");
       if (frame && frame.name) itemNames.push(frame.name);
+    }
+
+    if (item.paperInfo && item.paperInfo.paper) {
+      const paper = await Paper.findById(item.paperInfo.paper).select("name");
+      if (paper && paper.name) itemNames.push(paper.name);
     }
   }
 
@@ -284,15 +255,16 @@ const createOrder = asyncHandler(async (req, res) => {
     s3Links
   );
 
-  // Register delivery for print orders
   for (const ord of orders) {
     const order = await Order.findOne({ _id: ord._id }).populate(
       "userInfo.user"
     );
+
     if (!order) {
       console.error(`Order not found for ID: ${ord._id}`);
       continue;
     }
+
     if (order.printStatus === "no-print") continue;
 
     console.log("Fetched Order:", order);
