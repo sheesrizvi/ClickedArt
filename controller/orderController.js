@@ -63,7 +63,7 @@ const createOrder = asyncHandler(async (req, res) => {
     orderItems,
     paymentMethod,
     shippingAddress,
-    discount,
+    discount: couponDiscount,
     finalAmount,
     orderStatus,
     invoiceId,
@@ -72,15 +72,18 @@ const createOrder = asyncHandler(async (req, res) => {
     gst,
     printStatus,
     link,
-    deliveryCharge,
-    platformFees
   } = req.body;
 
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
+  const layoutContent = await LayoutContent.findOne({});
+  const deliveryCharge = layoutContent?.charges?.delivery || false;
+  const platformFees = layoutContent?.charges?.platform || false;
+
   const orderExist = await Order.findOne({ "userInfo.user": userId });
 
+  // Financial year & invoice number
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonth = today.getMonth();
@@ -93,12 +96,11 @@ const createOrder = asyncHandler(async (req, res) => {
   let invoiceNumber = nextCounter.toString().padStart(4, "0");
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
+  // Group orders by photographer for images and by print for paper
   const groupedOrders = orderItems.reduce((acc, item) => {
     if (item.imageInfo?.price > 0) {
       const photographerId = item.imageInfo.photographer || "unknown";
-      if (!acc[photographerId]) {
-        acc[photographerId] = [];
-      }
+      if (!acc[photographerId]) acc[photographerId] = [];
       acc[photographerId].push(item);
     } else if (item.subTotal > 0) {
       const printKey = `print-${acc.nextPrintId || 1}`;
@@ -113,40 +115,69 @@ const createOrder = asyncHandler(async (req, res) => {
   const orders = [];
   for (const [key, items] of Object.entries(groupedOrders)) {
     let totalAmount = 0;
-    let discountForEachOrder = 0;
+    let totalDiscount = 0;
 
     const updatedItems = [];
     for (let item of items) {
-      let finalPrice = item.finalPrice || 0;
-      let itemDiscount = 
-        (item.imageInfo?.discount || 0) +
-        (item.frameInfo?.discount || 0) +
-        (item.paperInfo?.discount || 0);
+      const paperPrice = item.paperInfo?.price || 0;
+      const imagePrice = item.imageInfo?.price || 0;
+      const framePrice = item.frameInfo?.price || 0;
 
-      // Apply Photographer discount from Paper model if userType is Photographer
-      if (type === "Photographer" && item.paperInfo?.paper) {
-        const paper = await Paper.findById(item.paperInfo.paper).select("photographerDiscount");
+      let itemDiscount = 0;
+      let finalPrice = 0;
+
+      // Apply photographer discount ONLY on paper
+      if (type === "Photographer" && paperPrice > 0 && item.paperInfo?.paper) {
+        const paper = await Paper.findById(item.paperInfo.paper).select(
+          "photographerDiscount"
+        );
         if (paper?.photographerDiscount) {
-          const photographerDiscountAmount = (finalPrice * paper.photographerDiscount) / 100;
+          const photographerDiscountAmount =
+            (paperPrice * paper.photographerDiscount) / 100;
           itemDiscount += photographerDiscountAmount;
-          finalPrice -= photographerDiscountAmount; // subtract before GST
+          finalPrice += paperPrice - photographerDiscountAmount;
+        } else {
+          finalPrice += paperPrice;
+        }
+      } else {
+        finalPrice += paperPrice;
+      }
+
+      // Add image price (no discount)
+      finalPrice += imagePrice;
+
+      // Add frame price (no discount)
+      finalPrice += framePrice;
+
+      // Apply coupon discount ONLY on paper or image
+      if (couponDiscount) {
+        if (paperPrice > 0) {
+          const couponAmount = (paperPrice * couponDiscount) / 100;
+          itemDiscount += couponAmount;
+          finalPrice -= couponAmount;
+        } else if (imagePrice > 0) {
+          const couponAmount = (imagePrice * couponDiscount) / 100;
+          itemDiscount += couponAmount;
+          finalPrice -= couponAmount;
         }
       }
 
+      // GST calculation
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
-      const totalGST = sgst + cgst || 0;
+      const totalGST = sgst + cgst;
 
       updatedItems.push({
         ...item,
         sgst,
         cgst,
         totalGST,
+        finalPrice,
+        discount: itemDiscount,
       });
 
       totalAmount += finalPrice;
-      discountForEachOrder += itemDiscount;
-
+      totalDiscount += itemDiscount;
     }
 
     const order = new Order({
@@ -157,7 +188,7 @@ const createOrder = asyncHandler(async (req, res) => {
       orderItems: updatedItems,
       paymentMethod,
       shippingAddress,
-      discount: discountForEachOrder,
+      discount: totalDiscount,
       totalAmount,
       orderStatus,
       invoiceId,
@@ -168,9 +199,10 @@ const createOrder = asyncHandler(async (req, res) => {
         ? "processing"
         : "no-print",
       invoiceNumber,
-      invoiceNumber,
-      deliveryCharge: updatedItems.every((item) => item.subTotal > 0) ? deliveryCharge : false,
-      platformFees 
+      deliveryCharge: updatedItems.every((item) => item.subTotal > 0)
+        ? deliveryCharge
+        : false,
+      platformFees,
     });
 
     const savedOrder = await order.save();
@@ -179,6 +211,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
   await incrementCounter(financialYear);
 
+  // Update coupon usage
   if (coupon) {
     const couponData = await Coupon.findOne({ code: coupon });
     if (couponData) {
@@ -188,6 +221,7 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  // Referral commission
   const Model = type === "User" ? User : Photographer;
   const user = await Model.findOne({ _id: userId });
 
@@ -205,6 +239,7 @@ const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  // Prepare email data
   const customerName = `${user.firstName} ${user.lastName}`;
   const customerEmail = user.email;
   const orderDate = moment().format("dddd, MMMM Do YYYY");
@@ -227,14 +262,14 @@ const createOrder = asyncHandler(async (req, res) => {
       }
     }
 
-    if (item.frameInfo && item.frameInfo.frame) {
-      const frame = await Frame.findById(item.frameInfo.frame).select("name");
-      if (frame && frame.name) itemNames.push(frame.name);
-    }
-
     if (item.paperInfo && item.paperInfo.paper) {
       const paper = await Paper.findById(item.paperInfo.paper).select("name");
       if (paper && paper.name) itemNames.push(paper.name);
+    }
+
+    if (item.frameInfo && item.frameInfo.frame) {
+      const frame = await Frame.findById(item.frameInfo.frame).select("name");
+      if (frame && frame.name) itemNames.push(frame.name);
     }
   }
 
@@ -249,14 +284,15 @@ const createOrder = asyncHandler(async (req, res) => {
     s3Links
   );
 
+  // Register delivery for print orders
   for (const ord of orders) {
-    const order = await Order.findOne({ _id: ord._id }).populate("userInfo.user");
-
+    const order = await Order.findOne({ _id: ord._id }).populate(
+      "userInfo.user"
+    );
     if (!order) {
       console.error(`Order not found for ID: ${ord._id}`);
       continue;
     }
-
     if (order.printStatus === "no-print") continue;
 
     console.log("Fetched Order:", order);
@@ -265,7 +301,6 @@ const createOrder = asyncHandler(async (req, res) => {
 
   res.status(201).send(orders);
 });
-
 
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
@@ -590,7 +625,6 @@ const payment = asyncHandler(async (req, res) => {
   res.status(200).json({ result });
 });
 
-
 const calculateCartItemsPrice = async (
   items,
   couponCode,
@@ -604,8 +638,12 @@ const calculateCartItemsPrice = async (
     let totalPhotographerDiscount = 0;
     let totalCouponDiscount = 0;
 
-    const frameIds = items?.filter((item) => item.frameId).map((item) => item.frameId);
-    const paperIds = items?.filter((item) => item.paperId).map((item) => item.paperId);
+    const frameIds = items
+      ?.filter((item) => item.frameId)
+      .map((item) => item.frameId);
+    const paperIds = items
+      ?.filter((item) => item.paperId)
+      .map((item) => item.paperId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
@@ -629,13 +667,17 @@ const calculateCartItemsPrice = async (
 
       // IMAGE ONLY (no paper)
       if (!paperId && image && !isCustom) {
-        imagePrice = resolution === "small"
-          ? image.price.small
-          : resolution === "medium"
-          ? image.price.medium
-          : image.price.original;
+        imagePrice =
+          resolution === "small"
+            ? image.price.small
+            : resolution === "medium"
+            ? image.price.medium
+            : image.price.original;
 
-        couponDiscountAmount = Math.min(imagePrice * (couponDiscountPercentage / 100), maxDiscount);
+        couponDiscountAmount = Math.min(
+          imagePrice * (couponDiscountPercentage / 100),
+          maxDiscount
+        );
         totalCouponDiscount += couponDiscountAmount;
 
         totalFinalPrice += imagePrice - couponDiscountAmount;
@@ -645,24 +687,31 @@ const calculateCartItemsPrice = async (
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
         if (paper) {
-          paperPrice = paper.customDimensions?.find(dim => dim.width === width && dim.height === height)
-            ? paper.customDimensions.find(dim => dim.width === width && dim.height === height).price
+          paperPrice = paper.customDimensions?.find(
+            (dim) => dim.width === width && dim.height === height
+          )
+            ? paper.customDimensions.find(
+                (dim) => dim.width === width && dim.height === height
+              ).price
             : width * height * paper.basePricePerSquareInch;
 
           if (photographerId) {
-            photographerDiscountAmount = paperPrice * ((paper.photographerDiscount || 0) / 100);
+            photographerDiscountAmount =
+              paperPrice * ((paper.photographerDiscount || 0) / 100);
             totalPhotographerDiscount += photographerDiscountAmount;
           }
 
           couponDiscountAmount = Math.min(
-            (paperPrice - photographerDiscountAmount) * (couponDiscountPercentage / 100),
+            (paperPrice - photographerDiscountAmount) *
+              (couponDiscountPercentage / 100),
             maxDiscount
           );
           totalCouponDiscount += couponDiscountAmount;
 
           if (frameId) {
-            const frame = frames.find(f => f._id.toString() === frameId);
-            if (frame) framePrice = width * height * frame.basePricePerLinearInch;
+            const frame = frames.find((f) => f._id.toString() === frameId);
+            if (frame)
+              framePrice = width * height * frame.basePricePerLinearInch;
           }
 
           if (layoutContent?.charges?.delivery) {
@@ -670,7 +719,11 @@ const calculateCartItemsPrice = async (
             maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
           }
 
-          totalFinalPrice += paperPrice + framePrice - photographerDiscountAmount - couponDiscountAmount;
+          totalFinalPrice +=
+            paperPrice +
+            framePrice -
+            photographerDiscountAmount -
+            couponDiscountAmount;
         }
       }
     }
@@ -693,53 +746,59 @@ const calculateCartItemsPrice = async (
   }
 };
 
-
 const paymentHandler = asyncHandler(async (req, res) => {
   try {
-  const { 
+    const {
       userId,
       items,
       couponCode,
       photographerId,
       isCustom = false,
-      isCustomDiscount = false, 
-     } = req.body
+      isCustomDiscount = false,
+    } = req.body;
 
-  if (!userId || !items || items.length === 0) {
-    res.status(400).json({ message: "Total amount and user ID are required." });
-    return 
+    if (!userId || !items || items.length === 0) {
+      res
+        .status(400)
+        .json({ message: "Total amount and user ID are required." });
+      return;
+    }
+
+    const user =
+      (await User.findById(userId)) || (await Photographer.findById(userId));
+
+    if (!user) {
+      return res.status(400).send({ message: "User not found" });
+    }
+
+    const total = await calculateCartItemsPrice(
+      items,
+      couponCode,
+      photographerId,
+      isCustom,
+      isCustomDiscount
+    );
+
+    const instance = new Razorpay({
+      key_id: process.env.RAZOR_PAY_ID,
+      key_secret: process.env.RAZOR_PAY_SECRET,
+    });
+
+    const result = await instance.orders.create({
+      amount: Math.round(total * 100), // Convert amount to paise
+      currency: "INR",
+      receipt: `receipt_${userId}`,
+      notes: {
+        userId: user._id,
+        key: process.env.RAZOR_PAY_ID,
+      },
+    });
+
+    return res.send({ result });
+  } catch (e) {
+    console.log(e);
+    throw new Error("Server error");
   }
-
-  const user =
-    (await User.findById(userId)) || (await Photographer.findById(userId));
-
-  if (!user) {
-    return res.status(400).send({ message: "User not found" })
-  }
-
- const total = await calculateCartItemsPrice(items, couponCode, photographerId, isCustom, isCustomDiscount)
-
-  const instance = new Razorpay({
-    key_id: process.env.RAZOR_PAY_ID,
-    key_secret: process.env.RAZOR_PAY_SECRET,
-  });
-
-  const result = await instance.orders.create({
-    amount: Math.round(total * 100), // Convert amount to paise
-    currency: "INR",
-    receipt: `receipt_${userId}`,
-    notes: {
-      userId: user._id,
-      key: process.env.RAZOR_PAY_ID,
-    },
-  });
-
-  return res.send({ result })
-  } catch(e) {
-    console.log(e)
-    throw new Error("Server error")
-  }
-
 });
 
 const getPendingOrders = asyncHandler(async (req, res) => {
@@ -876,7 +935,6 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //     const coupon = await Coupon.findOne({  code: couponCode })
 //     const couponDiscount = coupon.discount
 
-
 //     res.json({
 //       totalImagePrice,
 //       totalPaperPrice,
@@ -932,7 +990,6 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //         maxDiscount = coupon.maxDiscountAmount
 //     }
 
-
 //     for (let item of items) {
 //       const { imageId, paperId, frameId, width, height, resolution } = item;
 
@@ -944,7 +1001,7 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //       //   (isCustom || image.photographer?.toString() === photographerId);
 
 //       const ownImage = paperId || imageId ? true : false
-      
+
 //       const imagePrice = isCustom
 //         ? 0
 //         : resolution === "small"
@@ -988,13 +1045,11 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //         }
 //       }
 
-    
 //       if(imagePrice && !paperPrice) {
 //         const discountForThisImage = imagePrice * (couponDiscountPercentage / 100);
 //         totalCouponDiscount += Math.min(discountForThisImage, maxDiscount || discountForThisImage);
 //         imagePrice -= discountForThisImage;
 //       }
-    
 
 //       if (paperPrice > 0) {
 //         if(photographerId) {
@@ -1006,14 +1061,10 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //         totalCouponDiscount += Math.min(discountForThisPaper, maxDiscount || discountForThisPaper);
 //         paperPrice -= discountForThisPaper
 //       }
-  
-
 
 //       totalImagePrice += imagePrice;
 //       totalPaperPrice += paperPrice;
 //       totalFramePrice += framePrice;
-
-
 
 //       totalFinalPrice += paperPrice
 //         ? (paperPrice + framePrice) * (1 - discount / 100)
@@ -1021,11 +1072,6 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 
 //     }
 
-  
-  
-   
-   
-    
 //     const layoutContent = await LayoutContent.findOne({  })
 //     let gstCharge = totalFinalPrice * (18/100)
 //     totalFinalPrice = gstCharge + totalFinalPrice
@@ -1061,7 +1107,13 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 
 const calculateCartPrice = async (req, res) => {
   try {
-    const { items, couponCode, photographerId, isCustom = false, isCustomDiscount = false } = req.body;
+    const {
+      items,
+      couponCode,
+      photographerId,
+      isCustom = false,
+      isCustomDiscount = false,
+    } = req.body;
 
     let totalImagePrice = 0;
     let totalPaperPrice = 0;
@@ -1071,9 +1123,14 @@ const calculateCartPrice = async (req, res) => {
     let maxDeliveryCharge = 0;
     let totalPhotographerDiscount = 0;
     let totalCouponDiscount = 0;
+    let totalPlatformFee = 0;
 
-    const frameIds = items?.filter(item => item.frameId).map(item => item.frameId);
-    const paperIds = items?.filter(item => item.paperId).map(item => item.paperId);
+    const frameIds = items
+      ?.filter((item) => item.frameId)
+      .map((item) => item.frameId);
+    const paperIds = items
+      ?.filter((item) => item.paperId)
+      .map((item) => item.paperId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
@@ -1096,26 +1153,36 @@ const calculateCartPrice = async (req, res) => {
 
       // PAPER BASED
       if (paperId) {
-        const paper = papers.find(p => p._id.toString() === paperId);
+        const paper = papers.find((p) => p._id.toString() === paperId);
         if (paper) {
           // Calculate paper price
-          const customDimension = paper.customDimensions.find(dim => dim.width === width && dim.height === height);
-          paperPrice = customDimension ? customDimension.price : width * height * paper.basePricePerSquareInch;
+          const customDimension = paper.customDimensions.find(
+            (dim) => dim.width === width && dim.height === height
+          );
+          paperPrice = customDimension
+            ? customDimension.price
+            : width * height * paper.basePricePerSquareInch;
 
           // Photographer discount
           if (photographerId) {
-            photographerDiscount = paperPrice * ((paper.photographerDiscount || 0) / 100);
+            photographerDiscount =
+              paperPrice * ((paper.photographerDiscount || 0) / 100);
             totalPhotographerDiscount += photographerDiscount;
           }
 
           // Coupon discount
-          couponDiscount = Math.min((paperPrice - photographerDiscount) * (couponDiscountPercentage / 100), maxDiscount);
+          couponDiscount = Math.min(
+            (paperPrice - photographerDiscount) *
+              (couponDiscountPercentage / 100),
+            maxDiscount
+          );
           totalCouponDiscount += couponDiscount;
 
           // Frame price
           if (frameId) {
-            const frame = frames.find(f => f._id.toString() === frameId);
-            if (frame) framePrice = width * height * frame.basePricePerLinearInch;
+            const frame = frames.find((f) => f._id.toString() === frameId);
+            if (frame)
+              framePrice = width * height * frame.basePricePerLinearInch;
           }
 
           // Delivery
@@ -1127,21 +1194,28 @@ const calculateCartPrice = async (req, res) => {
           // Add to totals
           totalPaperPrice += paperPrice;
           totalFramePrice += framePrice;
-          totalFinalPrice += (paperPrice + framePrice - photographerDiscount - couponDiscount);
-          subtotal += (paperPrice + framePrice);
+          totalFinalPrice +=
+            paperPrice + framePrice - photographerDiscount - couponDiscount;
+          subtotal += paperPrice + framePrice;
         }
-      } 
+      }
       // IMAGE ONLY
       else if (image && !isCustom) {
-        imagePrice = resolution === "small" ? image.price.small
-                  : resolution === "medium" ? image.price.medium
-                  : image.price.original;
+        imagePrice =
+          resolution === "small"
+            ? image.price.small
+            : resolution === "medium"
+            ? image.price.medium
+            : image.price.original;
 
-        couponDiscount = Math.min(imagePrice * (couponDiscountPercentage / 100), maxDiscount);
+        couponDiscount = Math.min(
+          imagePrice * (couponDiscountPercentage / 100),
+          maxDiscount
+        );
         totalCouponDiscount += couponDiscount;
         totalImagePrice += imagePrice;
         subtotal += imagePrice;
-        totalFinalPrice += (imagePrice - couponDiscount);
+        totalFinalPrice += imagePrice - couponDiscount;
       }
 
       // Safety for NaN
@@ -1157,7 +1231,8 @@ const calculateCartPrice = async (req, res) => {
 
     // Platform fee 2%
     if (layoutContent?.charges?.platform) {
-      totalFinalPrice += totalFinalPrice * 0.02;
+      totalPlatformFee = totalFinalPrice * 0.02;
+      totalFinalPrice += totalPlatformFee;
     }
 
     res.json({
@@ -1170,7 +1245,7 @@ const calculateCartPrice = async (req, res) => {
       totalDeliveryCharge: maxDeliveryCharge,
       gstCharge: Number(gstCharge.toFixed(2)),
       totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
-      platformFeeAllowed: !!layoutContent?.charges?.platform,
+      totalPlatformFee: Number(totalPlatformFee.toFixed(2)),
     });
   } catch (error) {
     console.error(error);
@@ -1243,5 +1318,5 @@ module.exports = {
   deleteOrder,
   getFailedOrders,
   updateReadyToShipStatus,
-  paymentHandler
+  paymentHandler,
 };

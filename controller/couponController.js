@@ -129,20 +129,20 @@ const applyCoupon = asyncHandler(async (req, res) => {
     })
 
     if(!coupon) {
-        return res.status(400).send({message: 'coupon not found or inactive'})
+        return res.status(400).send({message: 'This coupon is invalid, expired, or has reached its usage limit.'})
     }
 
     const userExist = coupon.users.find((userInfo)  => userInfo.user.toString() === userId.toString() )
 
     if(userExist) {
-        return res.status(400).send({message: 'Coupon already used by user or user id not provided'})
+        return res.status(400).send({message: 'You have already used this coupon.'})
     }
     
     // if(coupon.applicableTo.toLowerCase() !== type.toLowerCase()) {
     //     return res.status(400).send({ message: 'Coupon not applicable for this user type' })
     // }
     
-    res.status(200).send({message: 'Coupon is active and not used by user',  coupon})
+    res.status(200).send({message: 'Coupon applied successfully.',  coupon})
 })
 
 module.exports = {
