@@ -153,6 +153,10 @@ const createOrder = asyncHandler(async (req, res) => {
       discountForEachOrder += itemDiscount;
     }
 
+    const hasPaper = updatedItems.some(
+      (item) => item.paperInfo && item.paperInfo.paper
+    );
+
     const order = new Order({
       userInfo: {
         user: userId,
@@ -168,9 +172,7 @@ const createOrder = asyncHandler(async (req, res) => {
       finalAmount,
       isPaid,
       gst,
-      printStatus: updatedItems.every((item) => item.subTotal > 0)
-        ? "processing"
-        : "no-print",
+      printStatus: hasPaper ? "processing" : "no-print",
       invoiceNumber,
       invoiceNumber,
       deliveryCharge: updatedItems.every((item) => item.subTotal > 0)

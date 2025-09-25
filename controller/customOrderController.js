@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Order = require("../models/orderModel");
 const Photographer = require("../models/photographerModel");
+const LayoutContent = require("../models/layoutContentModel");
 const UserType = require("../models/typeModel");
 const asyncHandler = require("express-async-handler");
 const ImageVault = require("../models/imagebase/imageVaultModel");
@@ -58,9 +59,11 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     coupon,
     finalAmount,
     orderStatus = "pending",
-    deliveryCharge,
-    platformFees
   } = req.body;
+
+  const layoutContent = await LayoutContent.findOne({});
+  const deliveryCharge = layoutContent?.charges?.delivery || false;
+  const platformFees = layoutContent?.charges?.platform || false;
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -76,22 +79,20 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     let finalPrice = item.finalPrice || item.subTotal || 0;
     let discount = 0;
 
-    if (userType === "Photographer" && item.paperInfo?.paper) {
-      const paper = await Paper.findById(item.paperInfo.paper).select(
-        "photographerDiscount"
-      );
-      if (paper?.photographerDiscount) {
-        const photographerDiscount =
-          (finalPrice * paper.photographerDiscount) / 100;
-        discount += photographerDiscount;
-        finalPrice -= photographerDiscount;
-      }
-    }
+    // if (userType === "Photographer" && item.paperInfo?.paper) {
+    //   const paper = await Paper.findById(item.paperInfo.paper).select(
+    //     "photographerDiscount"
+    //   );
+    //   if (paper?.photographerDiscount) {
+    //     const photographerDiscount =
+    //       (finalPrice * paper.photographerDiscount) / 100;
+    //     discount += photographerDiscount;
+    //     finalPrice -= photographerDiscount;
+    //   }
+    // }
 
     discount +=
-      (item.frameInfo?.discount || 0) +
-      (item.paperInfo?.discount || 0) +
-      (item.imageInfo?.discount || 0);
+      (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
 
     const sgst = finalPrice * 0.09;
     const cgst = finalPrice * 0.09;
@@ -126,7 +127,7 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
       finalAmount,
       discount,
       deliveryCharge,
-      platformFees
+      platformFees,
     });
 
     const savedOrder = await newOrder.save();
