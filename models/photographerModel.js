@@ -205,6 +205,10 @@ const photographerSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    platform: {
+      type: String,
+      default: null,
+    },
     pushToken: { type: String, default: null },
     artistOfTheMonth: {
       type: Boolean,

@@ -211,7 +211,7 @@ exports.sendNotificationToAll = async (req, res) => {
 };
 
 exports.updatePushToken = async (req, res) => {
-  const { pushToken } = req.body;
+  const { pushToken, platform = "android" } = req.body;
   const userId = req.user.id;
 
   if (!pushToken) {
@@ -221,21 +221,21 @@ exports.updatePushToken = async (req, res) => {
   try {
     let updatedUser = await User.findByIdAndUpdate(
       userId,
-      { pushToken },
+      { pushToken, platform },
       { new: true }
     );
 
     if (!updatedUser) {
       updatedUser = await Photographer.findByIdAndUpdate(
         userId,
-        { pushToken },
+        { pushToken, platform },
         { new: true }
       );
     }
 
     if (!updatedUser) return res.status(404).json({ error: "User not found" });
 
-    res.json({ success: true, pushToken });
+    res.json({ success: true, pushToken, platform });
   } catch (err) {
     console.error("[PushToken]", err);
     res.status(500).json({ error: "Failed to update push token" });
@@ -247,13 +247,13 @@ exports.deletePushToken = async (req, res) => {
   try {
     let updatedUser = await User.findByIdAndUpdate(
       userId,
-      { pushToken: null },
+      { pushToken: null, platform: null },
       { new: true }
     );
     if (!updatedUser) {
       updatedUser = await Photographer.findByIdAndUpdate(
         userId,
-        { pushToken: null },
+        { pushToken: null, platform: null },
         { new: true }
       );
     }
@@ -267,11 +267,15 @@ exports.deletePushToken = async (req, res) => {
 };
 
 exports.saveAnonymousToken = async (req, res) => {
-  const { token, source = "UserApp" } = req.body;
+  const { token, source = "UserApp", platform = "android" } = req.body;
   if (!token) return res.status(400).json({ error: "Token required" });
 
   try {
-    await PushToken.updateOne({ token }, { token, source }, { upsert: true });
+    await PushToken.updateOne(
+      { token },
+      { token, source, platform },
+      { upsert: true }
+    );
     res.json({ success: true });
   } catch (err) {
     console.error("Save anonymous token error:", err);
@@ -481,11 +485,9 @@ exports.sendNotificationToPhotographerApp = async (req, res) => {
     res.json({ success: true, sent: responses.length });
   } catch (err) {
     console.error("[PhotographerApp Notification Error]", err);
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: "Failed to send PhotographerApp notifications",
-      });
+    res.status(500).json({
+      success: false,
+      error: "Failed to send PhotographerApp notifications",
+    });
   }
 };

@@ -103,6 +103,10 @@ const userSchema = new mongoose.Schema(
     deleted: {
       default: Boolean,
     },
+    platform: {
+      type: String,
+      default: null,
+    },
     pushToken: { type: String, default: null },
   },
   {

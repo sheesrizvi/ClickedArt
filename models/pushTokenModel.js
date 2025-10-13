@@ -7,6 +7,10 @@ const pushTokenSchema = new mongoose.Schema({
     enum: ["UserApp", "PhotographerApp", "Web", "Other"],
     required: true,
   },
+  platform: {
+    type: String,
+    required: true,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
