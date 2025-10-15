@@ -336,7 +336,9 @@ const photographerLogin = asyncHandler(async (req, res) => {
       const token = await photographer.generateAccessToken();
 
       if (!photographer.active) {
-        throw new Error("Sorry, Your Profile is Inactive for Now");
+        throw new Error(
+          "Sorry, Your Profile is Deleted or Inactive. Please contact support."
+        );
       }
 
       photographer.lastLogin = new Date();
@@ -1016,7 +1018,10 @@ const getEventCertificates = asyncHandler(async (req, res) => {
   if (!photographer) {
     return res.status(404).send({ message: "Photographer not found" });
   }
-  if (!photographer.eventCertificates || photographer.eventCertificates.length === 0) {
+  if (
+    !photographer.eventCertificates ||
+    photographer.eventCertificates.length === 0
+  ) {
     return res.status(404).send({ message: "No event certificates found" });
   }
   res.status(200).send({
