@@ -337,7 +337,7 @@ const photographerLogin = asyncHandler(async (req, res) => {
 
       if (!photographer.active) {
         throw new Error(
-          "Sorry, Your Profile is Deleted or Inactive. Please contact support."
+          "Sorry, Your Profile is Deleted. Please contact support."
         );
       }
 
