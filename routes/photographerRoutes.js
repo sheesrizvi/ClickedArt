@@ -29,6 +29,7 @@ const {
   removeEventCertificate,
   getEventCertificates,
   getAllEventCertificates,
+  getInactivePhotographers,
 } = require("../controller/photographerController");
 const { IsPhotographer, isAdmin } = require("../middleware/authMiddleware");
 // const { resendOTP } = require('../controller/userController')
@@ -72,6 +73,7 @@ router.get(
   "/get-inactive-photographers-by-last-login",
   getInactivePhotographersByLastLogin
 );
+router.get("/get-inactive-photographers", getInactivePhotographers);
 router.post("/make-artist-of-the-month", isAdmin, makeArtistOfTheMonth);
 router.get("/get-artist-of-the-month", getArtistOfTheMonth);
 router.post("/remove-artist-of-the-month", isAdmin, removeArtistOfTheMonth);

@@ -341,6 +341,7 @@ const photographerLogin = asyncHandler(async (req, res) => {
         );
       }
 
+      photographer.lastActive = new Date();
       photographer.lastLogin = new Date();
       await photographer.save();
 
@@ -951,6 +952,31 @@ const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
   res.json({ inactivePhotographers, pageCount });
 });
 
+const getInactivePhotographers = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const inactivePhotographers = await Photographer.find({
+    lastActive: { $lt: oneWeekAgo },
+  })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(Number(pageSize));
+
+  if (!inactivePhotographers || inactivePhotographers.length === 0) {
+    return res.status(400).send({ message: "No Inactive Photographers Found" });
+  }
+
+  const totalDocuments = await Photographer.countDocuments({
+    lastActive: { $lt: oneWeekAgo },
+  });
+
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.json({ inactivePhotographers, pageCount });
+});
+
 const getCertificateByEventName = asyncHandler(async (req, res) => {
   const { photographerId, eventName } = req.query;
   const photographer = await Photographer.findById(photographerId);
@@ -1069,6 +1095,7 @@ module.exports = {
   getPendingImagesByPhotographer,
   getAllNotFeaturedPhotographers,
   getInactivePhotographersByLastLogin,
+  getInactivePhotographers,
   makeArtistOfTheMonth,
   getArtistOfTheMonth,
   removeArtistOfTheMonth,
