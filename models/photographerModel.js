@@ -202,6 +202,9 @@ const photographerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    lastActive: {
+      type: Date,
+    },
     lastLogin: {
       type: Date,
     },

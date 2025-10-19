@@ -246,7 +246,7 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "User not found" });
   }
   user.firstName = firstName || user.firstName;
-  user.lastName = lastName || user.lastName;
+  user.lastName = lastName ?? user.lastName;
 
   if (password && oldPassword) {
     const isMatch = await user.isPasswordCorrect(oldPassword);
