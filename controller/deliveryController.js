@@ -739,8 +739,10 @@ const raisePickupRequestScheduler = async () => {
     currentDate.setDate(currentDate.getDate() + 1);
     const pickup_date = currentDate.toISOString().split('T')[0];
     const pickup_time = "11:00:00";
-    const pickup_location = 'FORTENETSKILLS SURFACE'
-
+   // const pickup_location = 'FORTENETSKILLS SURFACE'
+    const pickup_location = 'ClickedArt'
+    console.log('pickup_date', pickup_date)
+    
     // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
     const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
@@ -804,8 +806,8 @@ const raisePickupRequestSchedulerCustom = async () => {
     currentDate.setDate(currentDate.getDate() + 1);
     const pickup_date = currentDate.toISOString().split('T')[0];
     const pickup_time = "11:00:00";
-    const pickup_location = 'FORTENETSKILLS SURFACE'
-
+   // const pickup_location = 'FORTENETSKILLS SURFACE'
+    const pickup_location = 'ClickedArt'
    // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
     const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;

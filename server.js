@@ -156,10 +156,12 @@ cron.schedule("55 23 * * *", () => {
   raisePickupRequestScheduler();
 });
 
-cron.schedule("55 23 * * *", () => {
-  console.log("Running the raise pickup request scheduler check");
-  raisePickupRequestSchedulerCustom();
-});
+
+// cron.schedule("5 12 * * *", () => {
+//   console.log("Running the raise pickup request scheduler check");
+//   raisePickupRequestSchedulerCustom();
+// });
+
 
 app.use(notFound);
 app.use(errorHandler);
