@@ -38,7 +38,15 @@ const checkPincodeAvailablity = asyncHandler(async (req, res) => {
       return res.status(500).send({ error: 'Authorization token is missing' });
     }
 
-    const result = await axios.get('https://staging-express.delhivery.com/c/api/pin-codes/json', {
+    // const result = await axios.get('https://staging-express.delhivery.com/c/api/pin-codes/json', {
+    //   params: { filter_codes: pincode },
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Token ${token}`,
+    //   },
+    // });
+
+    const result = await axios.get('https://track.delhivery.com/c/api/pin-codes/json', {
       params: { filter_codes: pincode },
       headers: {
         'Content-Type': 'application/json',
@@ -374,9 +382,17 @@ const registerDeliveryFromOrder = asyncHandler(async (order) => {
           address_type: '',
         },
       ],
-      pickup_location: {
-        name: 'FORTENETSKILLS SURFACE',
-        add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+      // pickup_location: {
+      //   name: 'FORTENETSKILLS SURFACE',
+      //   add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+      //   city: 'Lucknow',
+      //   pin_code: 226010,
+      //   country: 'India',
+      //   phone: '7054001058',
+      // },
+       pickup_location: {
+        name: 'ClickedArt',
+        add: 'First Floor, Hope Villa, 624/new-1, near Wave Mall, Vibhuti Khand, Gomti Nagar',
         city: 'Lucknow',
         pin_code: 226010,
         country: 'India',
@@ -387,7 +403,8 @@ const registerDeliveryFromOrder = asyncHandler(async (order) => {
 
   const config = {
     method: 'post',
-    url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+  //  url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+    url: 'https://track.delhivery.com/api/cmu/create.json',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Token ${token}`,
@@ -454,20 +471,29 @@ const registerCustomDeliveryFromOrder = asyncHandler(async (order) => {
           address_type: '',
         },
       ],
-      pickup_location: {
-        name: 'FORTENETSKILLS SURFACE',
-        add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+      // pickup_location: {
+      //   name: 'FORTENETSKILLS SURFACE',
+      //   add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+      //   city: 'Lucknow',
+      //   pin_code: 226010,
+      //   country: 'India',
+      //   phone: '7054001058',
+      // },
+       pickup_location: {
+        name: 'ClickedArt',
+        add: 'First Floor, Hope Villa, 624/new-1, near Wave Mall, Vibhuti Khand, Gomti Nagar',
         city: 'Lucknow',
         pin_code: 226010,
         country: 'India',
         phone: '7054001058',
-      },
+      }
     })
   );
 
   const config = {
     method: 'post',
-    url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+    // url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+    url: 'https://track.delhivery.com/api/cmu/create.json',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Token ${token}`,
@@ -500,7 +526,9 @@ const getPackageDetails = asyncHandler(async (req, res) => {
    
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN; 
 
-    const url = `https://staging-express.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
+    // const url = `https://staging-express.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
+
+     const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
 
     const config = {
       method: 'get',
@@ -618,7 +646,9 @@ const raisePickupRequest = async (req, res) => {
   try {
     const { pickup_location = 'FORTENETSKILLS SURFACE', expected_package_count, pickup_date, pickup_time } = req.body;
 
-    const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
+
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
     const payload = {
@@ -711,7 +741,8 @@ const raisePickupRequestScheduler = async () => {
     const pickup_time = "11:00:00";
     const pickup_location = 'FORTENETSKILLS SURFACE'
 
-    const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
     const payload = {
@@ -775,7 +806,8 @@ const raisePickupRequestSchedulerCustom = async () => {
     const pickup_time = "11:00:00";
     const pickup_location = 'FORTENETSKILLS SURFACE'
 
-    const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+   // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
     const payload = {
@@ -813,6 +845,34 @@ const raisePickupRequestSchedulerCustom = async () => {
   }
 };
 
+const cancelOrderThroughWaybill = asyncHandler(async (req, res) => {
+  const { waybill } = req.query
+  const options = {
+  method: 'POST',
+ // url: 'https://staging-express.delhivery.com/api/p/edit',
+  url: 'https://track.delhivery.com/api/p/edit',
+  headers: {
+    Authorization: `Token ${process.env.DEHLIVERYONE_LIVE_TOKEN}`,
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  },
+  data: {waybill , cancellation: 'true'}
+};
+
+axios
+	.request(options)
+	.then((result) => {
+    return res.status(200).send({
+      data: result.data,
+      message: "Cancellation Success"
+    })
+  })
+	.catch((err) => {
+    console.log('err', err)
+    return res.status(400).send({ message: "Cancellation Request failed" })
+  })
+})
+
 module.exports = {
   checkPincodeAvailablity,
   registerDelivery,
@@ -824,5 +884,6 @@ module.exports = {
   generateShippingLabel,
   raisePickupRequestScheduler,
   registerCustomDeliveryFromOrder,
-  raisePickupRequestSchedulerCustom
+  raisePickupRequestSchedulerCustom,
+  cancelOrderThroughWaybill
 }

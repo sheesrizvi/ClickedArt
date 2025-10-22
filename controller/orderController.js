@@ -1263,6 +1263,9 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
     .send({ message: "Ready To Ship Status Updated Successfully" });
 });
 
+
+
+
 module.exports = {
   createOrder,
   getAllOrders,
@@ -1278,5 +1281,5 @@ module.exports = {
   deleteOrder,
   getFailedOrders,
   updateReadyToShipStatus,
-  paymentHandler,
+  paymentHandler
 };
