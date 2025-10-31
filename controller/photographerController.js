@@ -952,6 +952,28 @@ const getInactivePhotographersByLastLogin = asyncHandler(async (req, res) => {
   res.json({ inactivePhotographers, pageCount });
 });
 
+const getActivePhotographers = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const activePhotographers = await Photographer.find({
+    lastActive: { $gte: oneWeekAgo },
+  })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(Number(pageSize));
+  if (!activePhotographers || activePhotographers.length === 0) {
+    return res.status(400).send({ message: "No Active Photographers Found" });
+  }
+  const totalDocuments = await Photographer.countDocuments({
+    lastActive: { $gte: oneWeekAgo },
+  });
+
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.json({ activePhotographers, pageCount });
+});
+
 const getInactivePhotographers = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
@@ -1095,6 +1117,7 @@ module.exports = {
   getPendingImagesByPhotographer,
   getAllNotFeaturedPhotographers,
   getInactivePhotographersByLastLogin,
+  getActivePhotographers,
   getInactivePhotographers,
   makeArtistOfTheMonth,
   getArtistOfTheMonth,

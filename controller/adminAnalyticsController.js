@@ -601,6 +601,7 @@ const getAllPrintOrders = asyncHandler(async (req, res) => {
           },
         ],
       })
+      .populate("userInfo.user")
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * pageSize)
       .limit(pageSize),
