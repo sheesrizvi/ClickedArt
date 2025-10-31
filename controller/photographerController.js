@@ -440,8 +440,7 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
 
 const getAllPhotographersForAdmin = asyncHandler(async (req, res) => {
   try {
-    const pageNumber = parseInt(req.query.pageNumber) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 20;
+    const { pageNumber = 1, pageSize = 20 } = req.query;
 
     const [photographers, totalDocuments] = await Promise.all([
       Photographer.find({ active: true })
