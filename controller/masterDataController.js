@@ -141,90 +141,124 @@ const masterDataController = asyncHandler(async (req, res) => {
 });
 
 const documentCountsForAdmin = asyncHandler(async (req, res) => {
-  const totalUsers = await User.countDocuments({ isActive: true });
-  const totalPhotos = await ImageVault.countDocuments({ isActive: true });
-  const totalPhotographers = await Photographer.countDocuments({
-    active: true,
-  });
+  try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const inactivePhotographers = await Photographer.countDocuments({
-    lastActive: { $lt: oneWeekAgo },
-  });
-  const pendingPhotosIn = await ImageVault.find({
-    exclusiveLicenseStatus: { $in: ["pending"] },
-    isActive: false,
-  });
-
-  const pendingPhotos = await ImageVault.countDocuments({
-    exclusiveLicenseStatus: { $in: ["pending"] },
-    isActive: false,
-  });
-
-  const totalCategories = await Category.countDocuments({});
-  const pendingPhotographers = await Photographer.countDocuments({
-    photographerStatus: "pending",
-    active: false,
-  });
-  const totalblogs = await Blog.countDocuments({ isActive: true });
-  const pendingBlogs = await Blog.countDocuments({ isActive: false });
-  const totalStories = await Story.countDocuments({});
-  const totalFrame = await Frame.countDocuments({});
-  const totalPapers = await Paper.countDocuments({});
-  const totalOrders = await Order.countDocuments({});
-  const totalDigitalOrders = await Order.countDocuments({
-    printStatus: "no-print",
-  });
-  const totalPrintOrders = await Order.countDocuments({
-    printStatus: { $ne: "no-print" },
-  });
-  const totalCustomOrders = await CustomImageOrder.countDocuments({});
-  const pendingOrders = await Order.countDocuments({
-    printStatus: { $nin: ["delivered", "no-print"] },
-  });
-
-  const pendingCustomOrders = await CustomImageOrder.countDocuments({
-    printStatus: { $nin: ["delivered", "no-print"] },
-  });
-  const pendingMonetizations = await Monetization.countDocuments({
-    status: "pending",
-  });
-
-  const plans = await Plan.find({});
-
-  const activeUsersCount = await Promise.all(
-    plans.map(async (plan) => {
-      const count = await Subscription.countDocuments({
-        planId: plan._id,
-        isActive: true,
+    const safeCount = (promise) =>
+      promise.catch((err) => {
+        console.error("Count query failed:", err.message);
+        return 0;
       });
-      return { planName: plan.name, activeUsers: count };
-    })
-  );
 
-  res.status(200).send({
-    totalUsers,
-    totalPhotos,
-    totalPhotographers,
-    pendingPhotos,
-    totalCategories,
-    pendingPhotographers,
-    totalblogs,
-    totalStories,
-    totalFrame,
-    totalPapers,
-    totalOrders,
-    totalDigitalOrders,
-    totalPrintOrders,
-    totalCustomOrders,
-    pendingOrders,
-    pendingCustomOrders,
-    pendingMonetizations,
-    pendingBlogs,
-    planActiveUsersCount: activeUsersCount,
-    inactivePhotographers,
-  });
+    const [
+      totalUsers,
+      totalPhotos,
+      totalPhotographers,
+      inactivePhotographers,
+      activePhotographers,
+      pendingPhotos,
+      totalCategories,
+      pendingPhotographers,
+      totalBlogs,
+      pendingBlogs,
+      totalStories,
+      totalFrames,
+      totalPapers,
+      totalOrders,
+      totalDigitalOrders,
+      totalPrintOrders,
+      totalCustomOrders,
+      pendingOrders,
+      pendingCustomOrders,
+      pendingMonetizations,
+      plans,
+    ] = await Promise.all([
+      safeCount(User.countDocuments({ isActive: true })),
+      safeCount(ImageVault.countDocuments({ isActive: true })),
+      safeCount(Photographer.countDocuments({ active: true })),
+      safeCount(
+        Photographer.countDocuments({ lastActive: { $lt: oneWeekAgo } })
+      ),
+      safeCount(
+        Photographer.countDocuments({ lastActive: { $gte: oneWeekAgo } })
+      ),
+      safeCount(
+        ImageVault.countDocuments({
+          exclusiveLicenseStatus: "pending",
+          isActive: false,
+        })
+      ),
+      safeCount(Category.countDocuments()),
+      safeCount(
+        Photographer.countDocuments({
+          photographerStatus: "pending",
+          active: false,
+        })
+      ),
+      safeCount(Blog.countDocuments({ isActive: true })),
+      safeCount(Blog.countDocuments({ isActive: false })),
+      safeCount(Story.countDocuments()),
+      safeCount(Frame.countDocuments()),
+      safeCount(Paper.countDocuments()),
+      safeCount(Order.countDocuments()),
+      safeCount(Order.countDocuments({ printStatus: "no-print" })),
+      safeCount(Order.countDocuments({ printStatus: { $ne: "no-print" } })),
+      safeCount(CustomImageOrder.countDocuments()),
+      safeCount(
+        Order.countDocuments({
+          printStatus: { $nin: ["delivered", "no-print"] },
+        })
+      ),
+      safeCount(
+        CustomImageOrder.countDocuments({
+          printStatus: { $nin: ["delivered", "no-print"] },
+        })
+      ),
+      safeCount(Monetization.countDocuments({ status: "pending" })),
+      Plan.find({}).catch((err) => {
+        console.error("Plan fetch failed:", err.message);
+        return [];
+      }),
+    ]);
+
+    const planActiveUsersCount = await Promise.all(
+      plans.map(async (plan) => {
+        const activeUsers = await Subscription.countDocuments({
+          planId: plan._id,
+          isActive: true,
+        }).catch(() => 0);
+        return { planName: plan.name, activeUsers };
+      })
+    );
+
+    return res.status(200).json({
+      totalUsers,
+      totalPhotos,
+      totalPhotographers,
+      inactivePhotographers,
+      activePhotographers,
+      pendingPhotos,
+      totalCategories,
+      pendingPhotographers,
+      totalBlogs,
+      pendingBlogs,
+      totalStories,
+      totalFrames,
+      totalPapers,
+      totalOrders,
+      totalDigitalOrders,
+      totalPrintOrders,
+      totalCustomOrders,
+      pendingOrders,
+      pendingCustomOrders,
+      pendingMonetizations,
+      planActiveUsersCount,
+    });
+  } catch (error) {
+    console.error("Admin dashboard counts error:", error);
+    return res.status(500).json({ message: "Failed to fetch dashboard data" });
+  }
 });
 
 module.exports = {

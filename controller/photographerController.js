@@ -424,7 +424,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 const getAllPhotographers = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  let photographers = await Photographer.find({ active: true })
+  const photographers = await Photographer.find({ active: true })
     .sort({ firstName: 1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
@@ -435,34 +435,81 @@ const getAllPhotographers = asyncHandler(async (req, res) => {
   const totalDocuments = await Photographer.countDocuments({ active: true });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  photographers = await Promise.all(
-    photographers.map(async (photographer) => {
-      const subscription = await Subscription.findOne({
-        "userInfo.user": photographer._id,
-        isActive: true,
-      }).populate("planId");
-
-      const activeSubscription = subscription?.planId?.name || "Basic";
-      const activeUploadingImgCount = await ImageVault.countDocuments({
-        photographer,
-        isActive: true,
-      });
-      const pendingImagesCount = await ImageVault.countDocuments({
-        photographer,
-        exclusiveLicenseStatus: { $in: ["pending", "review"] },
-        isActive: false,
-      });
-
-      return {
-        ...photographer.toObject(),
-        activeSubscription,
-        activeUploadingImgCount,
-        pendingImagesCount,
-      };
-    })
-  );
-
   res.status(200).send({ photographers, pageCount });
+});
+
+const getAllPhotographersForAdmin = asyncHandler(async (req, res) => {
+  try {
+    const pageNumber = parseInt(req.query.pageNumber) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 20;
+
+    const [photographers, totalDocuments] = await Promise.all([
+      Photographer.find({ active: true })
+        .sort({ firstName: 1 })
+        .skip((pageNumber - 1) * pageSize)
+        .limit(pageSize)
+        .lean(),
+      Photographer.countDocuments({ active: true }),
+    ]);
+
+    if (!photographers.length)
+      return res.status(404).json({ message: "No photographers found" });
+
+    const photographerIds = photographers.map((p) => p._id);
+    const pageCount = Math.ceil(totalDocuments / pageSize);
+
+    const [subscriptions, activeImages, pendingImages] = await Promise.all([
+      Subscription.find({
+        "userInfo.user": { $in: photographerIds },
+        isActive: true,
+      })
+        .populate("planId")
+        .lean(),
+
+      ImageVault.aggregate([
+        { $match: { photographer: { $in: photographerIds }, isActive: true } },
+        { $group: { _id: "$photographer", count: { $sum: 1 } } },
+      ]),
+
+      ImageVault.aggregate([
+        {
+          $match: {
+            photographer: { $in: photographerIds },
+            exclusiveLicenseStatus: { $in: ["pending", "review"] },
+            isActive: false,
+          },
+        },
+        { $group: { _id: "$photographer", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const subscriptionMap = new Map(
+      subscriptions.map((s) => [
+        s.userInfo.user.toString(),
+        s.planId?.name || "Basic",
+      ])
+    );
+    const activeImageMap = new Map(
+      activeImages.map((i) => [i._id.toString(), i.count])
+    );
+    const pendingImageMap = new Map(
+      pendingImages.map((i) => [i._id.toString(), i.count])
+    );
+
+    const enrichedPhotographers = photographers.map((p) => ({
+      ...p,
+      activeSubscription: subscriptionMap.get(p._id.toString()) || "Basic",
+      activeUploadingImgCount: activeImageMap.get(p._id.toString()) || 0,
+      pendingImagesCount: pendingImageMap.get(p._id.toString()) || 0,
+    }));
+
+    return res
+      .status(200)
+      .json({ photographers: enrichedPhotographers, pageCount });
+  } catch (error) {
+    console.error("Error fetching photographers:", error);
+    return res.status(500).json({ message: "Failed to fetch photographers" });
+  }
 });
 
 const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
@@ -1099,6 +1146,7 @@ module.exports = {
   handlePhotographerStatusUpdate,
   resetPassword,
   getAllPhotographers,
+  getAllPhotographersForAdmin,
   getPhotographerById,
   getAllPendingPhotographersForAdmin,
   updatePhotographer,
