@@ -511,6 +511,49 @@ const getAllPhotographersForAdmin = asyncHandler(async (req, res) => {
   }
 });
 
+const getPhotographersWithMostPhotoViews = asyncHandler(async (req, res) => {
+  // view count is in ImageAnalytics model which has reference to ImageVault model which has reference to Photographer
+  const topPhotographers = await ImageVault.aggregate([
+    {
+      $lookup: {
+        from: "imageanalytics",
+        localField: "_id",
+        foreignField: "image",
+        as: "analytics",
+      },
+    },
+    { $unwind: "$analytics" },
+    {
+      $group: {
+        _id: "$photographer",
+        totalViews: { $sum: "$analytics.views" },
+      },
+    },
+    { $sort: { totalViews: -1 } },
+    { $limit: 10 },
+    {
+      $lookup: {
+        from: "photographers",
+        localField: "_id",
+        foreignField: "_id",
+        as: "photographerDetails",
+      },
+    },
+    { $unwind: "$photographerDetails" },
+    {
+      $project: {
+        _id: 0,
+        photographerId: "$photographerDetails._id",
+        firstName: "$photographerDetails.firstName",
+        lastName: "$photographerDetails.lastName",
+        profileImage: "$photographerDetails.profileImage",
+        totalViews: 1,
+      },
+    },
+  ]);
+  res.status(200).json({ topPhotographers });
+});
+
 const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
@@ -1006,7 +1049,8 @@ const getActivePhotographers = asyncHandler(async (req, res) => {
   const activePhotographers = await Photographer.find({
     lastActive: { $gte: oneWeekAgo },
   })
-    .skip((pageNumber - 1) * pageSize)
+    .lean()
+    .skip((pageNumber - 1) * Number(pageSize))
     .limit(Number(pageSize));
   if (!activePhotographers || activePhotographers.length === 0) {
     return res.status(400).send({ message: "No Active Photographers Found" });
@@ -1016,6 +1060,16 @@ const getActivePhotographers = asyncHandler(async (req, res) => {
   });
 
   const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  await Promise.all(
+    activePhotographers.map(async (photographer) => {
+      const imagesCount = await ImageVault.countDocuments({
+        photographer: photographer._id,
+        isActive: true,
+      });
+      photographer.imagesCount = imagesCount;
+    })
+  );
 
   res.json({ activePhotographers, pageCount });
 });
@@ -1029,7 +1083,8 @@ const getInactivePhotographers = asyncHandler(async (req, res) => {
   const inactivePhotographers = await Photographer.find({
     lastActive: { $lt: oneWeekAgo },
   })
-    .skip((pageNumber - 1) * pageSize)
+    .lean()
+    .skip((pageNumber - 1) * Number(pageSize))
     .limit(Number(pageSize));
 
   if (!inactivePhotographers || inactivePhotographers.length === 0) {
@@ -1041,6 +1096,16 @@ const getInactivePhotographers = asyncHandler(async (req, res) => {
   });
 
   const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  await Promise.all(
+    inactivePhotographers.map(async (photographer) => {
+      const imagesCount = await ImageVault.countDocuments({
+        photographer: photographer._id,
+        isActive: true,
+      });
+      photographer.imagesCount = imagesCount;
+    })
+  );
 
   res.json({ inactivePhotographers, pageCount });
 });
@@ -1148,6 +1213,7 @@ module.exports = {
   getAllPhotographersForAdmin,
   getPhotographerById,
   getAllPendingPhotographersForAdmin,
+  getPhotographersWithMostPhotoViews,
   updatePhotographer,
   updatePhotographerRank,
   toggleFeaturedPhotographer,

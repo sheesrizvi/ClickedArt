@@ -32,6 +32,7 @@ const {
   getInactivePhotographers,
   getActivePhotographers,
   getAllPhotographersForAdmin,
+  getPhotographersWithMostPhotoViews,
 } = require("../controller/photographerController");
 const { IsPhotographer, isAdmin } = require("../middleware/authMiddleware");
 // const { resendOTP } = require('../controller/userController')
@@ -43,6 +44,10 @@ router.post("/update-profile", updatePhotographer);
 router.post("/reset-password", resetPassword);
 router.get("/get-all-photographers", getAllPhotographers);
 router.get("/get-all-photographers-for-admin", getAllPhotographersForAdmin);
+router.get(
+  "/get-photographers-with-most-photo-views",
+  getPhotographersWithMostPhotoViews
+);
 router.get(
   "/get-all-not-featured-photographers",
   getAllNotFeaturedPhotographers
