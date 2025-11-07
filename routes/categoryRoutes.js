@@ -10,7 +10,7 @@ router.post('/update-category', isAdmin, updateCategory)
 router.delete('/delete-category', isAdmin, deleteCategory)
 router.get('/get-by-id', getCategoryById)
 router.get('/get', getAllCategory)
-router.get('/get-categories-by-highest-image-count', getCategoriesByHighestImageCount)
+router.get('/get-top-categories', getCategoriesByHighestImageCount)
 router.get('/search-category', searchCategories)
 
 module.exports = router
