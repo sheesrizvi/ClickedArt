@@ -91,6 +91,32 @@ const getAllCategory = asyncHandler(async (req, res) => {
   res.status(200).send({ categories, pageCount });
 });
 
+const getCategoriesByHighestImageCount = asyncHandler(async (req, res) => {
+  const categories = await Category.aggregate([
+    {
+      $lookup: {
+        from: "imagevaults",
+        localField: "_id",
+        foreignField: "category",
+        as: "images",
+      },
+    },
+    {
+      $addFields: {
+        imageCount: { $size: "$images" },
+      },
+    },
+    { $sort: { imageCount: -1 } },
+    {
+      $project: {
+        images: 0,
+      },
+    },
+    { $limit: 10 },
+  ]);
+  res.status(200).send({ categories });
+});
+
 // const searchCategories = async (req, res) => {
 //   const { Query, pageNumber = 1, pageSize = 20 } = req.query;
 
@@ -253,5 +279,6 @@ module.exports = {
   deleteCategory,
   getCategoryById,
   getAllCategory,
+  getCategoriesByHighestImageCount,
   searchCategories,
 };
