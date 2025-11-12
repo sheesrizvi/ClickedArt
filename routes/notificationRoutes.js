@@ -13,6 +13,7 @@ const {
   markNotificationAsRead,
   getAllNotifications,
   deleteNotification,
+  deleteWeekOldNotifications,
 } = require("../controller/notificationController");
 const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
 
@@ -31,5 +32,11 @@ router.get("/my", verifyToken, getMyNotifications);
 router.put("/read/:id", verifyToken, markNotificationAsRead);
 router.get("/all", verifyToken, isAdmin, getAllNotifications);
 router.delete("/:id", verifyToken, isAdmin, deleteNotification);
+router.delete(
+  "/cleanup/week-old",
+  verifyToken,
+  isAdmin,
+  deleteWeekOldNotifications
+);
 
 module.exports = router;

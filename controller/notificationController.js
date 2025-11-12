@@ -370,6 +370,33 @@ exports.deleteNotification = async (req, res) => {
   }
 };
 
+exports.deleteWeekOldNotifications = async (req, res) => {
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  try {
+    const result = await Notification.deleteMany({
+      createdAt: { $lt: oneWeekAgo },
+    });
+
+    console.log(
+      `[Cleanup] Deleted ${result.deletedCount} notifications older than one week.`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Deleted ${result.deletedCount} notifications older than one week.`,
+    });
+  } catch (error) {
+    console.error("[Cleanup] Failed to delete old notifications:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete week-old notifications",
+      error: error.message,
+    });
+  }
+};
+
 exports.sendNotificationToUserApp = async (req, res) => {
   const {
     title,
