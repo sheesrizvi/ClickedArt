@@ -153,6 +153,7 @@ exports.sendNotificationToAll = async (req, res) => {
     title,
     body,
     data,
+    platform,
     type = "system",
     actorInfo,
     entityInfo,
@@ -162,34 +163,67 @@ exports.sendNotificationToAll = async (req, res) => {
   const safeData = buildSafeData(data, title, body);
 
   try {
+    // Registered users + photographers
     const userDocs = await User.find({ pushToken: { $ne: null } });
     const photographerDocs = await Photographer.find({
       pushToken: { $ne: null },
     });
-    const anonTokens = await PushToken.find({}, "token");
 
-    const allTokens = [
-      ...userDocs.map((u) => u.pushToken),
-      ...photographerDocs.map((p) => p.pushToken),
-      ...anonTokens.map((a) => a.token),
+    // Anonymous tokens (all sources)
+    const anonTokens = await PushToken.find({}, "token platform");
+
+    // Separate by platform
+    const androidTokens = [
+      ...userDocs
+        .filter((u) => u.platform === "android")
+        .map((u) => u.pushToken),
+      ...photographerDocs
+        .filter((p) => p.platform === "android")
+        .map((p) => p.pushToken),
+      ...anonTokens.filter((t) => t.platform === "android").map((t) => t.token),
     ];
 
-    const uniqueTokens = [...new Set(allTokens)];
+    const iosTokens = [
+      ...userDocs.filter((u) => u.platform === "ios").map((u) => u.pushToken),
+      ...photographerDocs
+        .filter((p) => p.platform === "ios")
+        .map((p) => p.pushToken),
+      ...anonTokens.filter((t) => t.platform === "ios").map((t) => t.token),
+    ];
 
-    const messaging = admin.messaging();
+    let targetTokens = [];
+
+    // Filter by platform
+    if (platform === "android") {
+      targetTokens = androidTokens;
+    } else if (platform === "ios") {
+      targetTokens = iosTokens;
+    } else {
+      targetTokens = [...androidTokens, ...iosTokens]; // ALL
+    }
+
+    const uniqueTokens = [...new Set(targetTokens)];
+
+    if (uniqueTokens.length === 0) {
+      return res.json({
+        success: true,
+        sent: 0,
+        message: "No tokens found for selected platform",
+      });
+    }
+
     const messages = uniqueTokens.map((token) => ({
       token,
-      android: {
-        priority: "high",
-      },
+      android: { priority: "high" },
       data: safeData,
     }));
 
+    const messaging = getMessaging();
     const responses = await Promise.allSettled(
       messages.map((m) => messaging.send(m))
     );
 
-    // Save only registered users' notifications to DB
+    // Save notification only for registered users + photographers
     await saveNotification({
       userDocs: [...userDocs, ...photographerDocs],
       title,
@@ -201,12 +235,17 @@ exports.sendNotificationToAll = async (req, res) => {
       image,
     });
 
-    res.json({ success: true, sent: responses.length });
+    res.json({
+      success: true,
+      sent: responses.length,
+      platform: platform || "all",
+    });
   } catch (err) {
-    console.error("Broadcast error:", err);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to send notifications" });
+    console.error("[Broadcast Error]", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to send all-app notifications",
+    });
   }
 };
 
@@ -402,6 +441,7 @@ exports.sendNotificationToUserApp = async (req, res) => {
     title,
     body,
     data,
+    platform,
     type = "system",
     actorInfo,
     entityInfo,
@@ -411,21 +451,56 @@ exports.sendNotificationToUserApp = async (req, res) => {
   const safeData = buildSafeData(data, title, body);
 
   try {
+    // Fetch registered users
     const userDocs = await User.find({ pushToken: { $ne: null } });
-    const anonUserTokens = await PushToken.find({ source: "UserApp" }, "token");
 
-    const tokens = [
-      ...userDocs.map((u) => u.pushToken),
-      ...anonUserTokens.map((t) => t.token),
+    // Fetch anonymous tokens
+    const anonUserTokens = await PushToken.find(
+      { source: "UserApp" },
+      "token platform"
+    );
+
+    // Separate by platform
+    const androidTokens = [
+      ...userDocs
+        .filter((u) => u.platform === "android")
+        .map((u) => u.pushToken),
+      ...anonUserTokens
+        .filter((t) => t.platform === "android")
+        .map((t) => t.token),
     ];
 
-    const uniqueTokens = [...new Set(tokens)];
+    const iosTokens = [
+      ...userDocs.filter((u) => u.platform === "ios").map((u) => u.pushToken),
+      ...anonUserTokens.filter((t) => t.platform === "ios").map((t) => t.token),
+    ];
 
+    let targetTokens = [];
+
+    // Filter based on "platform" prop
+    if (platform === "android") {
+      targetTokens = androidTokens;
+    } else if (platform === "ios") {
+      targetTokens = iosTokens;
+    } else {
+      // No platform → send to ALL
+      targetTokens = [...androidTokens, ...iosTokens];
+    }
+
+    const uniqueTokens = [...new Set(targetTokens)];
+
+    if (uniqueTokens.length === 0) {
+      return res.json({
+        success: true,
+        sent: 0,
+        message: "No tokens for selected platform",
+      });
+    }
+
+    // Build FCM message
     const messages = uniqueTokens.map((token) => ({
       token,
-      android: {
-        priority: "high",
-      },
+      android: { priority: "high" },
       data: safeData,
     }));
 
@@ -446,12 +521,16 @@ exports.sendNotificationToUserApp = async (req, res) => {
       image,
     });
 
-    res.json({ success: true, sent: responses.length });
+    res.json({
+      success: true,
+      sent: responses.length,
+      platform: platform || "all",
+    });
   } catch (err) {
     console.error("[UserApp Notification Error]", err);
     res
       .status(500)
-      .json({ success: false, error: "Failed to send UserApp notifications" });
+      .json({ success: false, error: "Failed to send notifications" });
   }
 };
 
@@ -460,6 +539,7 @@ exports.sendNotificationToPhotographerApp = async (req, res) => {
     title,
     body,
     data,
+    platform,
     type = "system",
     actorInfo,
     entityInfo,
@@ -469,20 +549,56 @@ exports.sendNotificationToPhotographerApp = async (req, res) => {
   const safeData = buildSafeData(data, title, body);
 
   try {
+    // Registered photographers
     const photographerDocs = await Photographer.find({
       pushToken: { $ne: null },
     });
+
+    // Anonymous tokens
     const anonPhotographerTokens = await PushToken.find(
       { source: "PhotographerApp" },
-      "token"
+      "token platform"
     );
 
-    const tokens = [
-      ...photographerDocs.map((p) => p.pushToken),
-      ...anonPhotographerTokens.map((t) => t.token),
+    // Separate by platform
+    const androidTokens = [
+      ...photographerDocs
+        .filter((p) => p.platform === "android")
+        .map((p) => p.pushToken),
+      ...anonPhotographerTokens
+        .filter((t) => t.platform === "android")
+        .map((t) => t.token),
     ];
 
-    const uniqueTokens = [...new Set(tokens)];
+    const iosTokens = [
+      ...photographerDocs
+        .filter((p) => p.platform === "ios")
+        .map((p) => p.pushToken),
+      ...anonPhotographerTokens
+        .filter((t) => t.platform === "ios")
+        .map((t) => t.token),
+    ];
+
+    let targetTokens = [];
+
+    // Filter by platform if provided
+    if (platform === "android") {
+      targetTokens = androidTokens;
+    } else if (platform === "ios") {
+      targetTokens = iosTokens;
+    } else {
+      targetTokens = [...androidTokens, ...iosTokens]; // send to ALL
+    }
+
+    const uniqueTokens = [...new Set(targetTokens)];
+
+    if (uniqueTokens.length === 0) {
+      return res.json({
+        success: true,
+        sent: 0,
+        message: "No tokens found for selected platform",
+      });
+    }
 
     const messages = uniqueTokens.map((token) => ({
       token,
@@ -509,7 +625,11 @@ exports.sendNotificationToPhotographerApp = async (req, res) => {
       image,
     });
 
-    res.json({ success: true, sent: responses.length });
+    res.json({
+      success: true,
+      sent: responses.length,
+      platform: platform || "all",
+    });
   } catch (err) {
     console.error("[PhotographerApp Notification Error]", err);
     res.status(500).json({
