@@ -65,9 +65,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
   }
 
   if (price > 25000) {
-    return res
-      .status(400)
-      .send({ message: "Price cannot be more than 25000" });
+    return res.status(400).send({ message: "Price cannot be more than 25000" });
   }
 
   if (category.length < 1 || category.length > 5) {
@@ -185,14 +183,12 @@ const updateImageInVault = asyncHandler(async (req, res) => {
       .send({ message: "You can select min 1 and max 5 categories" });
   }
 
-    if (price === undefined || price === null) {
+  if (price === undefined || price === null) {
     return res.status(400).send({ message: "Price is required" });
   }
 
   if (price > 25000) {
-    return res
-      .status(400)
-      .send({ message: "Price cannot be more than 25000" });
+    return res.status(400).send({ message: "Price cannot be more than 25000" });
   }
 
   const photo = await ImageVault.findOne({ _id: id, photographer });
@@ -510,6 +506,8 @@ const approveImage = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Image not found." });
   }
 
+  const imageUrl = image.imageLinks?.thumbnail || null;
+
   if (status === "rejected" && rejectionReason) {
     image.rejectionReason = rejectionReason || null;
     image.isActive = false;
@@ -535,6 +533,21 @@ const approveImage = asyncHandler(async (req, res) => {
           reasons
         );
       }
+    }
+    try {
+      await sendNotificationToUser({
+        userId: image.photographer._id,
+        userType: "Photographer",
+        title: "Image Rejected",
+        body: `Your image "${imageTitle}" has been Rejected. Please check you email for more details.`,
+        type: "image",
+        data: {
+          url: `clickedartartist://profile`,
+          image: imageUrl,
+        },
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
     }
   } else if (status === "approved") {
     const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`;
@@ -564,6 +577,7 @@ const approveImage = asyncHandler(async (req, res) => {
         type: "image",
         data: {
           url: `clickedartartist://profile`,
+          image: imageUrl,
         },
       });
     } catch (error) {

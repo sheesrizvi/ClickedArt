@@ -172,8 +172,14 @@ const orderSchema = new mongoose.Schema(
     deliveryCharge: {
       type: Boolean,
     },
+    deliveryChargeAmount: {
+      type: Number,
+    },
     platformFees: {
       type: Boolean,
+    },
+    platformFeesAmount: {
+      type: Number,
     },
   },
   {

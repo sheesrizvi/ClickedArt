@@ -24,6 +24,7 @@ const {
 const {
   sendNotificationToUser,
 } = require("../middleware/notificationUtils.js");
+const { default: axios } = require("axios");
 
 const getCounter = async (financialYear) => {
   const counterDoc = await BuyerCounter.findOne({ financialYear }).sort({
@@ -604,7 +605,8 @@ const calculateCartItemsPrice = async (
   couponCode,
   photographerId,
   isCustom = false,
-  isCustomDiscount = false
+  isCustomDiscount = false,
+  deliveryPincode
 ) => {
   try {
     let totalFinalPrice = 0;
@@ -681,7 +683,13 @@ const calculateCartItemsPrice = async (
           }
 
           if (layoutContent?.charges?.delivery) {
-            const itemDeliveryCharge = width * height * 1;
+            const itemDeliveryCharge = await calculateDelhiveryCharge(
+              width,
+              height,
+              !!frameId,
+              deliveryPincode
+            );
+
             maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
           }
 
@@ -691,11 +699,14 @@ const calculateCartItemsPrice = async (
       }
     }
 
-    // ✅ Apply coupon discount ONCE (after loop)
     totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
     totalFinalPrice -= totalCouponDiscount;
 
-    // Add delivery
+    if (totalFinalPrice >= 3000) {
+      maxDeliveryCharge = 0;
+    }
+
+    // Add delivery (using Delhivery final charge OR free)
     totalFinalPrice += maxDeliveryCharge;
 
     // GST 18%
@@ -722,6 +733,7 @@ const paymentHandler = asyncHandler(async (req, res) => {
       photographerId,
       isCustom = false,
       isCustomDiscount = false,
+      deliveryPincode,
     } = req.body;
 
     if (!userId || !items || items.length === 0) {
@@ -743,7 +755,8 @@ const paymentHandler = asyncHandler(async (req, res) => {
       couponCode,
       photographerId,
       isCustom,
-      isCustomDiscount
+      isCustomDiscount,
+      deliveryPincode
     );
 
     const instance = new Razorpay({
@@ -1072,6 +1085,41 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //   }
 // };
 
+const inchToCm = 2.54;
+
+async function calculateDelhiveryCharge(width, height, hasFrame, d_pin) {
+  let length_cm, height_cm, depth_cm;
+
+  if (hasFrame) {
+    length_cm = (width + 4) * inchToCm;
+    height_cm = (height + 4) * inchToCm;
+    depth_cm = 8; // cm fixed for framed print
+  } else {
+    const biggestSide = Math.max(width, height);
+    length_cm = (biggestSide + 4) * inchToCm;
+    height_cm = 10; // roll diameter increased to 10cm
+    depth_cm = 10;
+  }
+
+  const volumetricWeight = (length_cm * height_cm * depth_cm) / 5000; // kg
+  const cgm = Math.ceil(volumetricWeight * 1000); // grams
+
+  const apiUrl = `https://track.delhivery.com/api/kinko/v1/invoice/charges/.json?md=S&ss=Delivered&d_pin=${d_pin}&o_pin=226028&cgm=${cgm}&pt=Pre-paid`;
+
+  try {
+    const response = await axios.get(apiUrl, {
+      headers: {
+        Authorization: `Token ${process.env.DEHLIVERYONE_LIVE_TOKEN}`,
+      },
+    });
+
+    return response.data?.[0]?.total_amount || 0;
+  } catch (err) {
+    console.log("Delhivery error:", err?.response?.data || err);
+    return 0;
+  }
+}
+
 const calculateCartPrice = async (req, res) => {
   try {
     const {
@@ -1080,6 +1128,7 @@ const calculateCartPrice = async (req, res) => {
       photographerId,
       isCustom = false,
       isCustomDiscount = false,
+      deliveryPincode,
     } = req.body;
 
     let totalImagePrice = 0;
@@ -1087,14 +1136,16 @@ const calculateCartPrice = async (req, res) => {
     let totalFramePrice = 0;
     let subtotal = 0;
     let totalFinalPrice = 0;
-    let maxDeliveryCharge = 0;
+
+    let totalDeliveryCharge = 0; // SUM OF ALL ITEM DELIVERY CHARGES
     let totalPhotographerDiscount = 0;
-    let rawCouponDiscount = 0; // temporary (before applying max cap)
+    let rawCouponDiscount = 0;
     let totalPlatformFee = 0;
 
     const frameIds = items
       ?.filter((item) => item.frameId)
       .map((item) => item.frameId);
+
     const paperIds = items
       ?.filter((item) => item.paperId)
       .map((item) => item.paperId);
@@ -1117,13 +1168,15 @@ const calculateCartPrice = async (req, res) => {
 
       const image = await ImageVault.findById(imageId);
 
-      // PAPER BASED
+      // 📌 PAPER BASED ORDER
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
+
         if (paper) {
           const customDimension = paper.customDimensions.find(
             (dim) => dim.width === width && dim.height === height
           );
+
           paperPrice = customDimension
             ? customDimension.price
             : width * height * paper.basePricePerSquareInch;
@@ -1135,7 +1188,7 @@ const calculateCartPrice = async (req, res) => {
             totalPhotographerDiscount += photographerDiscount;
           }
 
-          // Raw coupon discount (no max yet)
+          // Raw coupon discount (before max cap)
           rawCouponDiscount +=
             (paperPrice - photographerDiscount) *
             (couponDiscountPercentage / 100);
@@ -1143,14 +1196,21 @@ const calculateCartPrice = async (req, res) => {
           // Frame price
           if (frameId) {
             const frame = frames.find((f) => f._id.toString() === frameId);
-            if (frame)
+            if (frame) {
               framePrice = width * height * frame.basePricePerLinearInch;
+            }
           }
 
-          // Delivery
+          // 📦 SHIPPING (calculated per-item)
           if (layoutContent?.charges?.delivery) {
-            const itemDeliveryCharge = width * height * 1; // ₹1 per sq.in.
-            maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
+            const itemDeliveryCharge = await calculateDelhiveryCharge(
+              width,
+              height,
+              !!frameId,
+              deliveryPincode
+            );
+
+            totalDeliveryCharge += itemDeliveryCharge; // sum (NOT max)
           }
 
           totalPaperPrice += paperPrice;
@@ -1159,7 +1219,8 @@ const calculateCartPrice = async (req, res) => {
           totalFinalPrice += paperPrice + framePrice - photographerDiscount;
         }
       }
-      // IMAGE ONLY
+
+      // 📌 IMAGE ONLY ORDER
       else if (image && !isCustom) {
         imagePrice =
           resolution === "small"
@@ -1174,18 +1235,28 @@ const calculateCartPrice = async (req, res) => {
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
       }
-
-      totalFinalPrice = Number(totalFinalPrice.toFixed(2));
     }
 
-    // Apply coupon discount ONCE across the order
+    // ------------------------------------------
+    // 🎟 FINAL COUPON DISCOUNT (APPLIED ONCE)
+    // ------------------------------------------
     const totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
     totalFinalPrice -= totalCouponDiscount;
 
-    // Add delivery charge
-    totalFinalPrice += maxDeliveryCharge;
+    // ------------------------------------------
+    // 🚚 FREE DELIVERY RULE — ABOVE ₹3000
+    // ------------------------------------------
+    const orderValueBeforeGSTAndPlatform =
+      subtotal - totalPhotographerDiscount - totalCouponDiscount;
 
-    // Add GST 18%
+    if (orderValueBeforeGSTAndPlatform >= 3000) {
+      totalDeliveryCharge = 0; // FREE DELIVERY
+    }
+
+    // ADD DELIVERY
+    totalFinalPrice += totalDeliveryCharge;
+
+    // GST 18%
     const gstCharge = totalFinalPrice * 0.18;
     totalFinalPrice += gstCharge;
 
@@ -1202,7 +1273,7 @@ const calculateCartPrice = async (req, res) => {
       totalFramePrice: Number(totalFramePrice.toFixed(2)),
       totalPhotographerDiscount: Number(totalPhotographerDiscount.toFixed(2)),
       totalCouponDiscount: Number(totalCouponDiscount.toFixed(2)),
-      totalDeliveryCharge: maxDeliveryCharge,
+      totalDeliveryCharge: Number(totalDeliveryCharge.toFixed(2)),
       gstCharge: Number(gstCharge.toFixed(2)),
       totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
       totalPlatformFee: Number(totalPlatformFee.toFixed(2)),
@@ -1212,6 +1283,7 @@ const calculateCartPrice = async (req, res) => {
     res.status(500).json({ message: "Server error." });
   }
 };
+
 
 const updatePrintStatus = asyncHandler(async (req, res) => {
   const { orderId, printStatus } = req.body;
@@ -1263,9 +1335,6 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
     .send({ message: "Ready To Ship Status Updated Successfully" });
 });
 
-
-
-
 module.exports = {
   createOrder,
   getAllOrders,
@@ -1281,5 +1350,5 @@ module.exports = {
   deleteOrder,
   getFailedOrders,
   updateReadyToShipStatus,
-  paymentHandler
+  paymentHandler,
 };
