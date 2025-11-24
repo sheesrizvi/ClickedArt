@@ -58,6 +58,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     invoiceId,
     coupon,
     finalAmount,
+    deliveryChargeAmount,
+    platformFeesAmount,
     orderStatus = "pending",
   } = req.body;
 
@@ -128,6 +130,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
       discount,
       deliveryCharge,
       platformFees,
+      deliveryChargeAmount: deliveryCharge ? deliveryChargeAmount : 0,
+      platformFeesAmount: platformFees ? platformFeesAmount : 0,
     });
 
     const savedOrder = await newOrder.save();

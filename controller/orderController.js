@@ -119,6 +119,7 @@ const createOrder = asyncHandler(async (req, res) => {
     let discountForEachOrder = 0;
 
     const updatedItems = [];
+    let totalDeliveryCharge = 0;
     for (let item of items) {
       let finalPrice = item.finalPrice || 0;
       let itemDiscount =
@@ -142,6 +143,15 @@ const createOrder = asyncHandler(async (req, res) => {
       const sgst = finalPrice * 0.09;
       const cgst = finalPrice * 0.09;
       const totalGST = sgst + cgst || 0;
+
+      if (deliveryCharge) {
+        totalDeliveryCharge += await calculateDelhiveryCharge(
+          item.paperInfo.size.width,
+          item.paperInfo.size.height,
+          !!item.frameInfo?.frame,
+          shippingAddress.pincode
+        );
+      }
 
       updatedItems.push({
         ...item,
@@ -180,6 +190,17 @@ const createOrder = asyncHandler(async (req, res) => {
         ? deliveryCharge
         : false,
       platformFees,
+      platformFeesAmount: platformFees
+        ? Number(
+            (
+              (totalAmount +
+                (deliveryCharge ? totalDeliveryCharge : 0) +
+                (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
+              0.02
+            ).toFixed(2)
+          )
+        : 0,
+      deliveryChargeAmount: deliveryCharge ? totalDeliveryCharge : 0,
     });
 
     const savedOrder = await order.save();
@@ -610,14 +631,14 @@ const calculateCartItemsPrice = async (
 ) => {
   try {
     let totalFinalPrice = 0;
-    let maxDeliveryCharge = 0;
+    let totalDeliveryCharge = 0;
     let totalPhotographerDiscount = 0;
-    let rawCouponDiscount = 0; // collect total discount before capping
-    let totalCouponDiscount = 0;
+    let rawCouponDiscount = 0;
 
     const frameIds = items
       ?.filter((item) => item.frameId)
       .map((item) => item.frameId);
+
     const paperIds = items
       ?.filter((item) => item.paperId)
       .map((item) => item.paperId);
@@ -630,6 +651,8 @@ const calculateCartItemsPrice = async (
     const couponDiscountPercentage = coupon?.discountPercentage || 0;
     const maxDiscount = coupon?.maxDiscountAmount || 0;
 
+    let subtotal = 0;
+
     for (let item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
 
@@ -639,9 +662,7 @@ const calculateCartItemsPrice = async (
       let photographerDiscountAmount = 0;
 
       const image = await ImageVault.findById(imageId);
-      if (!image && !isCustom) continue;
 
-      // IMAGE ONLY (no paper)
       if (!paperId && image && !isCustom) {
         imagePrice =
           resolution === "small"
@@ -651,19 +672,19 @@ const calculateCartItemsPrice = async (
             : image.price.original;
 
         rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
+        subtotal += imagePrice;
         totalFinalPrice += imagePrice;
       }
 
-      // PAPER ORDER
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
         if (paper) {
-          paperPrice = paper.customDimensions?.find(
+          const customDimension = paper.customDimensions.find(
             (dim) => dim.width === width && dim.height === height
-          )
-            ? paper.customDimensions.find(
-                (dim) => dim.width === width && dim.height === height
-              ).price
+          );
+
+          paperPrice = customDimension
+            ? customDimension.price
             : width * height * paper.basePricePerSquareInch;
 
           if (photographerId) {
@@ -690,31 +711,34 @@ const calculateCartItemsPrice = async (
               deliveryPincode
             );
 
-            maxDeliveryCharge = Math.max(maxDeliveryCharge, itemDeliveryCharge);
+            totalDeliveryCharge += itemDeliveryCharge;
           }
 
+          subtotal += paperPrice + framePrice;
           totalFinalPrice +=
             paperPrice + framePrice - photographerDiscountAmount;
         }
       }
     }
 
-    totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
+    const totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
     totalFinalPrice -= totalCouponDiscount;
 
-    if (totalFinalPrice >= 3000) {
-      maxDeliveryCharge = 0;
+    const orderValueBeforeGSTAndPlatform =
+      subtotal - totalPhotographerDiscount - totalCouponDiscount;
+
+    if (orderValueBeforeGSTAndPlatform >= 3000) {
+      totalDeliveryCharge = 0;
     }
 
-    // Add delivery (using Delhivery final charge OR free)
-    totalFinalPrice += maxDeliveryCharge;
+    totalFinalPrice += totalDeliveryCharge;
 
-    // GST 18%
-    totalFinalPrice += totalFinalPrice * 0.18;
+    const gstCharge = totalFinalPrice * 0.18;
+    totalFinalPrice += gstCharge;
 
-    // Platform fee 2%
     if (layoutContent?.charges?.platform) {
-      totalFinalPrice += totalFinalPrice * 0.02;
+      const platformFee = totalFinalPrice * 0.02;
+      totalFinalPrice += platformFee;
     }
 
     return Number(totalFinalPrice.toFixed(2));
@@ -1283,7 +1307,6 @@ const calculateCartPrice = async (req, res) => {
     res.status(500).json({ message: "Server error." });
   }
 };
-
 
 const updatePrintStatus = asyncHandler(async (req, res) => {
   const { orderId, printStatus } = req.body;
