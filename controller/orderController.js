@@ -97,13 +97,14 @@ const createOrder = asyncHandler(async (req, res) => {
   invoiceNumber = `CAB/${financialYear}/${invoiceNumber}`;
 
   const groupedOrders = orderItems.reduce((acc, item) => {
-    if (item.imageInfo?.price > 0) {
-      const photographerId = item.imageInfo.photographer || "unknown";
-      if (!acc[photographerId]) {
-        acc[photographerId] = [];
-      }
+    const originalValue =
+      item.initialSubTotal || item.imageInfo?.initialPrice || 0;
+    const photographerId = item.imageInfo?.photographer;
+
+    if (photographerId && originalValue >= 0) {
+      if (!acc[photographerId]) acc[photographerId] = [];
       acc[photographerId].push(item);
-    } else if (item.subTotal > 0) {
+    } else if (originalValue >= 0) {
       const printKey = `print-${acc.nextPrintId || 1}`;
       acc[printKey] = [item];
       acc.nextPrintId = (acc.nextPrintId || 1) + 1;
@@ -144,7 +145,9 @@ const createOrder = asyncHandler(async (req, res) => {
       const cgst = finalPrice * 0.09;
       const totalGST = sgst + cgst || 0;
 
-      if (deliveryCharge) {
+      if (!item.paperInfo || !item.paperInfo.size) {
+        totalDeliveryCharge += 0;
+      } else if (deliveryCharge) {
         totalDeliveryCharge += await calculateDelhiveryCharge(
           item.paperInfo.size.width,
           item.paperInfo.size.height,
