@@ -178,10 +178,16 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       safeCount(ImageVault.countDocuments({ isActive: true })),
       safeCount(Photographer.countDocuments({ active: true })),
       safeCount(
-        Photographer.countDocuments({ lastActive: { $lt: oneWeekAgo } })
+        Photographer.countDocuments({
+          active: true,
+          lastActive: { $lt: oneWeekAgo },
+        })
       ),
       safeCount(
-        Photographer.countDocuments({ lastActive: { $gte: oneWeekAgo } })
+        Photographer.countDocuments({
+          active: true,
+          lastActive: { $gte: oneWeekAgo },
+        })
       ),
       safeCount(
         ImageVault.countDocuments({
