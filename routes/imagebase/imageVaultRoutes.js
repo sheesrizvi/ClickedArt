@@ -28,6 +28,7 @@ const {
         removeEventFromImage,
         selectImageForEvent,
         getSelectImagesForEvent,
+        getYearRewindOfPhotographer,
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -66,5 +67,6 @@ router.post('/add-event-to-image', IsAdminOrPhotographer, addEventToImage)
 router.post('/remove-event-from-image', IsAdminOrPhotographer, removeEventFromImage)
 router.post('/select-image-for-event', IsAdminOrPhotographer, selectImageForEvent)
 router.get('/get-selected-images-of-events', getSelectImagesForEvent)
+router.get('/get-year-rewind-of-photographer', getYearRewindOfPhotographer)
 
 module.exports = router

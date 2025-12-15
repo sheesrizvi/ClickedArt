@@ -451,65 +451,99 @@ exports.sendNotificationToUserApp = async (req, res) => {
   const safeData = buildSafeData(data, title, body);
 
   try {
-    // Fetch registered users
-    const userDocs = await User.find({ pushToken: { $ne: null } });
+    // 1. Fetch registered users with tokens
+    const userDocs = await User.find({
+      pushToken: { $ne: null },
+    });
 
-    // Fetch anonymous tokens
-    const anonUserTokens = await PushToken.find(
+    // 2. Fetch anonymous UserApp tokens
+    const anonTokens = await PushToken.find(
       { source: "UserApp" },
       "token platform"
     );
 
-    // Separate by platform
+    // 3. Split users by platform
+    const androidUsers = userDocs.filter((u) => u.platform === "android");
+    const iosUsers = userDocs.filter((u) => u.platform === "ios");
+    const unknownPlatformUsers = userDocs.filter((u) => !u.platform);
+
+    // 4. Build platform-wise token lists
     const androidTokens = [
-      ...userDocs
-        .filter((u) => u.platform === "android")
-        .map((u) => u.pushToken),
-      ...anonUserTokens
-        .filter((t) => t.platform === "android")
-        .map((t) => t.token),
+      ...androidUsers.map((u) => u.pushToken),
+      ...unknownPlatformUsers.map((u) => u.pushToken),
+      ...anonTokens.filter((t) => t.platform === "android").map((t) => t.token),
     ];
 
     const iosTokens = [
-      ...userDocs.filter((u) => u.platform === "ios").map((u) => u.pushToken),
-      ...anonUserTokens.filter((t) => t.platform === "ios").map((t) => t.token),
+      ...iosUsers.map((u) => u.pushToken),
+      ...unknownPlatformUsers.map((u) => u.pushToken),
+      ...anonTokens.filter((t) => t.platform === "ios").map((t) => t.token),
     ];
 
+    // 5. Apply platform filter
     let targetTokens = [];
-
-    // Filter based on "platform" prop
     if (platform === "android") {
       targetTokens = androidTokens;
     } else if (platform === "ios") {
       targetTokens = iosTokens;
     } else {
-      // No platform → send to ALL
       targetTokens = [...androidTokens, ...iosTokens];
     }
 
+    // 6. Remove duplicates
     const uniqueTokens = [...new Set(targetTokens)];
 
-    if (uniqueTokens.length === 0) {
+    if (!uniqueTokens.length) {
       return res.json({
         success: true,
         sent: 0,
-        message: "No tokens for selected platform",
+        message: "No UserApp tokens found",
       });
     }
 
-    // Build FCM message
-    const messages = uniqueTokens.map((token) => ({
-      token,
-      android: { priority: "high" },
-      data: safeData,
-    }));
-
+    // 7. Send notifications + collect failures
     const messaging = getMessaging();
-    const responses = await Promise.allSettled(
-      messages.map((m) => messaging.send(m))
+    const results = await Promise.allSettled(
+      uniqueTokens.map((token) =>
+        messaging.send({
+          token,
+          android: { priority: "high" },
+          data: safeData,
+        })
+      )
     );
 
-    // Save notification only for registered users
+    // 8. Auto-cleanup invalid tokens
+    const invalidTokens = [];
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const code = result.reason?.errorInfo?.code;
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token"
+        ) {
+          invalidTokens.push(uniqueTokens[index]);
+        }
+      }
+    });
+
+    if (invalidTokens.length) {
+      // Remove from Users
+      await User.updateMany(
+        { pushToken: { $in: invalidTokens } },
+        { $set: { pushToken: null, platform: null } }
+      );
+
+      // Remove from PushToken collection
+      await PushToken.deleteMany({ token: { $in: invalidTokens } });
+
+      console.log(
+        `[FCM Cleanup] Removed ${invalidTokens.length} invalid UserApp tokens`
+      );
+    }
+
+    // 9. Save notifications ONLY for registered users
     await saveNotification({
       userDocs,
       title,
@@ -523,14 +557,16 @@ exports.sendNotificationToUserApp = async (req, res) => {
 
     res.json({
       success: true,
-      sent: responses.length,
+      sent: results.length,
+      cleaned: invalidTokens.length,
       platform: platform || "all",
     });
   } catch (err) {
     console.error("[UserApp Notification Error]", err);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to send notifications" });
+    res.status(500).json({
+      success: false,
+      error: "Failed to send UserApp notifications",
+    });
   }
 };
 

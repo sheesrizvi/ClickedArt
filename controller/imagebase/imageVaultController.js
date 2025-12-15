@@ -925,37 +925,12 @@ const searchImages = asyncHandler(async (req, res) => {
     order = "desc",
     Query = "",
   } = req.query;
+
+  pageNumber = Number(pageNumber);
+  pageSize = Number(pageSize);
   const searchQuery = Query;
+  const sortOrder = order === "asc" ? 1 : -1;
 
-  pageNumber = parseInt(pageNumber);
-  pageSize = parseInt(pageSize);
-
-  const [{ totalDocuments = 0 } = {}] = await ImageVault.aggregate([
-    {
-      $search: {
-        index: "imagesearchindex",
-        compound: {
-          should: ["title", "description", "story", "keywords"].map(
-            (field) => ({
-              text: {
-                query: searchQuery,
-                path: field,
-                fuzzy: { maxEdits: 2, prefixLength: 2 },
-              },
-            })
-          ),
-        },
-      },
-    },
-    { $match: { isActive: true } },
-    { $addFields: { relevanceScore: { $meta: "searchScore" } } },
-    { $match: { relevanceScore: { $gte: 1 } } },
-    { $count: "totalDocuments" },
-  ]);
-
-  const pageCount = Math.ceil(totalDocuments / pageSize);
-
-  let sortOrder = order === "asc" ? 1 : -1;
   let sortCriteria = {
     createdAt: -1,
     "imageAnalytics.views": -1,
@@ -974,7 +949,7 @@ const searchImages = asyncHandler(async (req, res) => {
     sortCriteria = { "imageAnalytics.downloads": sortOrder };
   }
 
-  const searchPipeline = [
+  const pipeline = [
     {
       $search: {
         index: "imagesearchindex",
@@ -994,58 +969,73 @@ const searchImages = asyncHandler(async (req, res) => {
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: "searchScore" } } },
     { $match: { relevanceScore: { $gte: 1 } } },
-    { $sort: { relevanceScore: -1 } },
-    { $skip: (pageNumber - 1) * pageSize },
-    { $limit: parseInt(pageSize) },
+
     {
-      $lookup: {
-        from: "imageanalytics",
-        localField: "_id",
-        foreignField: "image",
-        as: "imageAnalytics",
+      $facet: {
+        meta: [{ $count: "totalDocuments" }],
+        data: [
+          { $sort: { relevanceScore: -1 } },
+          { $skip: (pageNumber - 1) * pageSize },
+          { $limit: pageSize },
+
+          {
+            $lookup: {
+              from: "imageanalytics",
+              localField: "_id",
+              foreignField: "image",
+              as: "imageAnalytics",
+            },
+          },
+          {
+            $unwind: {
+              path: "$imageAnalytics",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $lookup: {
+              from: "photographers",
+              localField: "photographer",
+              foreignField: "_id",
+              as: "photographer",
+            },
+          },
+          {
+            $unwind: {
+              path: "$photographer",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "category",
+              foreignField: "_id",
+              as: "category",
+            },
+          },
+          { $sort: sortCriteria },
+        ],
       },
     },
-    {
-      $unwind: { path: "$imageAnalytics", preserveNullAndEmptyArrays: true },
-    },
-    {
-      $lookup: {
-        from: "photographers",
-        localField: "photographer",
-        foreignField: "_id",
-        as: "photographer",
-      },
-    },
-    { $unwind: { path: "$photographer", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "category",
-      },
-    },
-    { $sort: sortCriteria },
   ];
 
-  let images = await ImageVault.aggregate(searchPipeline);
-  images = await Promise.all(
-    images.map(async (image) => {
-      const imageObject = image;
-      imageObject.imageLinks = {
-        thumbnail: imageObject.imageLinks?.thumbnail || null,
-      };
+  const [{ data = [], meta = [] } = {}] = await ImageVault.aggregate(pipeline);
 
-      return {
-        ...imageObject,
-      };
-    })
-  );
-  const sortedImages = images
-    .sort((a, b) => b.relevanceScore - a.relevanceScore)
-    .map((image) => image);
+  const totalDocuments = meta[0]?.totalDocuments || 0;
+  const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  res.status(200).send({ photos: sortedImages, pageCount });
+  const photos = data.map((image) => ({
+    ...image,
+    imageLinks: {
+      thumbnail: image.imageLinks?.thumbnail || null,
+    },
+  }));
+
+  res.status(200).send({
+    photos,
+    pageCount,
+  });
 });
 
 const updateImageViewCount = asyncHandler(async (req, res) => {
@@ -1567,6 +1557,157 @@ const getSelectImagesForEvent = asyncHandler(async (req, res) => {
   res.status(200).send({ images });
 });
 
+const getYearRewindOfPhotographer = asyncHandler(async (req, res) => {
+  let { username, year } = req.query;
+
+  if (!username || !year) {
+    return res.status(400).send({ message: "username and year are required" });
+  }
+
+  // normalize username
+  username = username.trim().toLowerCase();
+
+  const photographer = await Photographer.findOne({
+    username: { $regex: new RegExp(`^${username}$`, "i") },
+  }).select("_id firstName lastName username");
+
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+
+  const photographerId = photographer._id;
+
+  const startDate = new Date(`${year}-01-01T00:00:00Z`);
+  const endDate = new Date(`${year}-12-31T23:59:59Z`);
+
+  const result = await ImageVault.aggregate([
+    {
+      $match: {
+        photographer: photographerId,
+        isActive: true,
+        createdAt: { $gte: startDate, $lte: endDate },
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $lookup: {
+        from: "imageanalytics",
+        localField: "_id",
+        foreignField: "image",
+        as: "analytics",
+      },
+    },
+    {
+      $addFields: {
+        views: { $ifNull: [{ $arrayElemAt: ["$analytics.views", 0] }, 0] },
+        month: { $month: "$createdAt" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalPhotosUploaded: { $sum: 1 },
+        totalViews: { $sum: "$views" },
+        mostViewed: {
+          $max: {
+            views: "$views",
+            doc: "$$ROOT",
+          },
+        },
+        monthCount: { $push: "$month" },
+        categoryList: { $push: "$category" },
+        uploadedPhotos: {
+          $push: {
+            thumbnail: "$imageLinks.thumbnail",
+            createdAt: "$createdAt",
+          },
+        },
+      },
+    },
+  ]);
+
+  if (!result || result.length === 0) {
+    return res.status(200).send({
+      totalPhotosUploaded: 0,
+      photoWithMostViews: null,
+      totalViews: 0,
+      mostUsedTheme: null,
+      mostActiveMonth: null,
+      uploadedPhotos: [],
+    });
+  }
+
+  const data = result[0];
+
+  const uploadedPhotos =
+    data.uploadedPhotos
+      ?.filter((p) => p.thumbnail)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((p) => p.thumbnail) || [];
+
+  const monthCountMap = {};
+  data.monthCount.forEach((m) => {
+    monthCountMap[m] = (monthCountMap[m] || 0) + 1;
+  });
+
+  const mostActiveMonth =
+    Object.keys(monthCountMap).reduce((a, b) =>
+      monthCountMap[a] > monthCountMap[b] ? a : b
+    ) || null;
+
+  const themeMap = {};
+  const coverMap = {};
+
+  data.categoryList.flat().forEach((cat) => {
+    if (!cat?.name) return;
+    themeMap[cat.name] = (themeMap[cat.name] || 0) + 1;
+    if (!coverMap[cat.name]) coverMap[cat.name] = cat.coverImage || null;
+  });
+
+  const mostUsedThemeName =
+    Object.keys(themeMap).reduce((a, b) =>
+      themeMap[a] > themeMap[b] ? a : b
+    ) || null;
+
+  const mostUsedTheme = mostUsedThemeName
+    ? {
+        name: mostUsedThemeName,
+        coverImage: coverMap[mostUsedThemeName],
+        count: themeMap[mostUsedThemeName],
+      }
+    : null;
+
+  let formattedTopPhoto = null;
+  if (data.mostViewed?.doc) {
+    const top = data.mostViewed.doc;
+    formattedTopPhoto = {
+      ...top,
+      category: top.category?.map((c) => c.name) || [],
+      views: data.mostViewed.views,
+    };
+  }
+
+  res.status(200).send({
+    photographer: {
+      name: (photographer.firstName || "") + " " + (photographer.lastName || ""),
+      username: photographer.username,
+    },
+    totalPhotosUploaded: data.totalPhotosUploaded,
+    photoWithMostViews: formattedTopPhoto,
+    totalViews: data.totalViews,
+    mostUsedTheme,
+    mostActiveMonth: mostActiveMonth ? Number(mostActiveMonth) : null,
+    uploadedPhotos,
+  });
+});
+
 module.exports = {
   addImageInVault,
   updateImageInVault,
@@ -1596,4 +1737,5 @@ module.exports = {
   removeEventFromImage,
   selectImageForEvent,
   getSelectImagesForEvent,
+  getYearRewindOfPhotographer,
 };
