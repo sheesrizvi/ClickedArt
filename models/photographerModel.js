@@ -25,6 +25,7 @@ const photographerSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+      select: false,
     },
     dob: {
       type: Date,
@@ -67,6 +68,10 @@ const photographerSchema = new mongoose.Schema(
     },
     username: {
       type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
     },
     portfolioLink: {
       type: String,
@@ -100,8 +105,6 @@ const photographerSchema = new mongoose.Schema(
     },
     companyName: {
       type: String,
-      required: true,
-      default: this.name,
     },
     companyEmail: {
       type: String,
@@ -137,9 +140,6 @@ const photographerSchema = new mongoose.Schema(
         accountLink: { type: String },
       },
     ],
-    pushToken: {
-      type: String,
-    },
     active: {
       type: Boolean,
       default: true,
@@ -188,9 +188,8 @@ const photographerSchema = new mongoose.Schema(
       pincode: { type: String },
       state: { type: String },
     },
-    otp: {
-      type: String,
-    },
+    otp: String,
+    otpExpiresAt: Date,
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -241,6 +240,13 @@ photographerSchema.pre("save", async function (next) {
   }
 });
 
+photographerSchema.index({
+  firstName: "text",
+  lastName: "text",
+  username: "text",
+  bio: "text",
+});
+
 photographerSchema.methods.isPasswordCorrect = async function (password) {
   const isMatch = await bcrypt.compare(password, this.password);
   return isMatch;
@@ -248,7 +254,13 @@ photographerSchema.methods.isPasswordCorrect = async function (password) {
 
 photographerSchema.methods.generateAccessToken = async function () {
   return await jwt.sign(
-    { id: this._id, email: this.email, name: this.name, type: this.type },
+    {
+      id: this._id,
+      type: this.type,
+      email: this.email,
+      firstName: this.firstName,
+      lastName: this.lastName,
+    },
     process.env.SECRET_KEY
   );
 };

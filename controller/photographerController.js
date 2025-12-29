@@ -783,30 +783,48 @@ const searchPhotographers = async (req, res) => {
     {
       $search: {
         index: "photographerindex",
-        text: {
-          query: Query,
-          path: ["firstName", "lastName", "username", "email", "bio"],
-          fuzzy: {
-            maxEdits: 2,
-            prefixLength: 3,
-          },
+        compound: {
+          should: [
+            {
+              autocomplete: {
+                query: Query,
+                path: "username",
+                fuzzy: { maxEdits: 1 },
+                score: { boost: { value: 10 } },
+              },
+            },
+            {
+              autocomplete: {
+                query: Query,
+                path: "firstName",
+                fuzzy: { maxEdits: 1 },
+                score: { boost: { value: 5 } },
+              },
+            },
+            {
+              autocomplete: {
+                query: Query,
+                path: "lastName",
+                fuzzy: { maxEdits: 1 },
+                score: { boost: { value: 5 } },
+              },
+            },
+          ],
+          minimumShouldMatch: 1,
         },
       },
     },
     {
-      $match: {
-        active: true,
+      $addFields: {
+        score: { $meta: "searchScore" },
       },
     },
     {
-      $sort: { firstName: 1 },
+      $match: {
+        score: { $gte: 5 },
+      },
     },
-    {
-      $skip: (pageNumber - 1) * pageSize,
-    },
-    {
-      $limit: pageSize,
-    },
+    { $limit: pageSize },
   ]);
 
   const totalDocuments = await Photographer.aggregate([

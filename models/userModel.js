@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
+      select: false,
     },
     mobile: {
       type: Number,
@@ -46,6 +47,10 @@ const userSchema = new mongoose.Schema(
     },
     username: {
       type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
     },
     accountType: {
       type: String,
@@ -86,12 +91,8 @@ const userSchema = new mongoose.Schema(
     anniversary: {
       type: Date,
     },
-    pushToken: {
-      type: String,
-    },
-    otp: {
-      type: String,
-    },
+    otp: String,
+    otpExpiresAt: Date,
     isActive: {
       type: Boolean,
       default: false,
@@ -100,7 +101,8 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     deleted: {
-      default: Boolean,
+      type: Boolean,
+      default: false,
     },
     platform: {
       type: String,
@@ -113,7 +115,12 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.index({ name: "text", username: "text", email: "text" });
+userSchema.index({
+  firstName: "text",
+  lastName: "text",
+  username: "text",
+  email: "text",
+});
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
@@ -134,7 +141,13 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 
 userSchema.methods.generateAccessToken = async function () {
   return await jwt.sign(
-    { id: this._id, type: this.type, email: this.email, name: this.name },
+    {
+      id: this._id,
+      type: this.type,
+      email: this.email,
+      firstName: this.firstName,
+      lastName: this.lastName,
+    },
     process.env.SECRET_KEY
   );
 };
