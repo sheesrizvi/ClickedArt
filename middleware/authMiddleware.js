@@ -34,10 +34,13 @@ const getUserProfileByToken = asyncHandler(async (req, res, next) => {
   const type = decoded?.type;
   const Model = type === "User" ? User : Photographer;
   const user = await Model.findOne({ _id: decoded?.id });
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
   if (type === "Photographer") {
     user.lastActive = new Date();
+    await user.save();
   }
-  await user.save();
 
   res.status(200).send({ user });
 });
