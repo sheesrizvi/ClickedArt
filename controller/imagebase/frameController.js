@@ -20,10 +20,17 @@ const createFrame = asyncHandler(async (req, res) => {
     material,
     style,
     thickness,
-    basePricePerLinearInch,
+    initialBasePrice,
+    userDiscount = 0,
+    photographerDiscount = 0,
     isActive,
     customDimensions,
   } = req.body;
+
+  if (!initialBasePrice || initialBasePrice <= 0) {
+    res.status(400);
+    throw new Error("Initial base price is required.");
+  }
 
   const existingFrame = await Frame.findOne({ name });
   if (existingFrame) {
@@ -31,13 +38,25 @@ const createFrame = asyncHandler(async (req, res) => {
     throw new Error("Frame with this name already exists.");
   }
 
+  const basePricePerLinearInch = Number(
+    (initialBasePrice * (1 - userDiscount / 100)).toFixed(2)
+  );
+
+  const photographerFinalPrice = Number(
+    (basePricePerLinearInch * (1 - photographerDiscount / 100)).toFixed(2)
+  );
+
   const frame = await Frame.create({
     name,
     image,
     material,
     style,
     thickness,
+    initialBasePrice,
+    userDiscount,
     basePricePerLinearInch,
+    photographerDiscount,
+    photographerFinalPrice,
     isActive,
     customDimensions,
   });
@@ -77,7 +96,9 @@ const updateFrame = asyncHandler(async (req, res) => {
     material,
     style,
     thickness,
-    basePricePerLinearInch,
+    initialBasePrice,
+    userDiscount,
+    photographerDiscount,
     isActive,
     customDimensions,
   } = req.body;
@@ -88,17 +109,37 @@ const updateFrame = asyncHandler(async (req, res) => {
     throw new Error("Frame not found.");
   }
 
-  frame.name = name || frame.name;
-  frame.image = image || frame.image;
-  frame.material = material || frame.material;
-  frame.style = style || frame.style;
-  frame.thickness = thickness || frame.thickness;
-  frame.basePricePerLinearInch =
-    basePricePerLinearInch || frame.basePricePerLinearInch;
-  frame.isActive = isActive !== undefined ? isActive : frame.isActive;
-  if (customDimensions) {
-    frame.customDimensions = customDimensions;
+  if (name !== undefined) frame.name = name;
+  if (image !== undefined) frame.image = image;
+  if (material !== undefined) frame.material = material;
+  if (style !== undefined) frame.style = style;
+  if (thickness !== undefined) frame.thickness = thickness;
+  if (isActive !== undefined) frame.isActive = isActive;
+  if (customDimensions !== undefined) frame.customDimensions = customDimensions;
+
+  // old frames created before initialBasePrice existed
+  if (frame.initialBasePrice === undefined && initialBasePrice === undefined) {
+    frame.initialBasePrice = frame.basePricePerLinearInch;
   }
+
+  if (initialBasePrice !== undefined) frame.initialBasePrice = initialBasePrice;
+
+  if (userDiscount !== undefined) frame.userDiscount = userDiscount;
+
+  if (photographerDiscount !== undefined)
+    frame.photographerDiscount = photographerDiscount;
+
+  const baseAfterUserDiscount =
+    frame.initialBasePrice * (1 - (frame.userDiscount || 0) / 100);
+
+  frame.basePricePerLinearInch = Number(baseAfterUserDiscount.toFixed(2));
+
+  frame.photographerFinalPrice = Number(
+    (
+      frame.basePricePerLinearInch *
+      (1 - (frame.photographerDiscount || 0) / 100)
+    ).toFixed(2)
+  );
 
   const updatedFrame = await frame.save();
   res.status(200).json({ updatedFrame });

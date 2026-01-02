@@ -633,18 +633,15 @@ const calculateCartItemsPrice = async (
   deliveryPincode
 ) => {
   try {
+    let subtotal = 0;
     let totalFinalPrice = 0;
-    let totalDeliveryCharge = 0;
+
     let totalPhotographerDiscount = 0;
     let rawCouponDiscount = 0;
+    let totalDeliveryCharge = 0;
 
-    const frameIds = items
-      ?.filter((item) => item.frameId)
-      .map((item) => item.frameId);
-
-    const paperIds = items
-      ?.filter((item) => item.paperId)
-      .map((item) => item.paperId);
+    const frameIds = items.filter((i) => i.frameId).map((i) => i.frameId);
+    const paperIds = items.filter((i) => i.paperId).map((i) => i.paperId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
@@ -654,83 +651,112 @@ const calculateCartItemsPrice = async (
     const couponDiscountPercentage = coupon?.discountPercentage || 0;
     const maxDiscount = coupon?.maxDiscountAmount || 0;
 
-    let subtotal = 0;
-
-    for (let item of items) {
+    for (const item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
+      const area = (width || 0) * (height || 0);
 
-      let imagePrice = 0;
-      let paperPrice = 0;
-      let framePrice = 0;
-      let photographerDiscountAmount = 0;
+      if (!paperId && imageId && !isCustom) {
+        const image = await ImageVault.findById(imageId);
 
-      const image = await ImageVault.findById(imageId);
-
-      if (!paperId && image && !isCustom) {
-        imagePrice =
+        const imagePrice =
           resolution === "small"
             ? image.price.small
             : resolution === "medium"
             ? image.price.medium
             : image.price.original;
 
-        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
+
+        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
+
+        continue;
       }
+
+      let paperInitialPrice = 0;
+      let paperBasePrice = 0;
+      let paperFinalPrice = 0;
 
       if (paperId) {
         const paper = papers.find((p) => p._id.toString() === paperId);
-        if (paper) {
-          const customDimension = paper.customDimensions.find(
-            (dim) => dim.width === width && dim.height === height
-          );
+        if (!paper) continue;
 
-          paperPrice = customDimension
-            ? customDimension.price
-            : width * height * paper.basePricePerSquareInch;
+        const customDim = paper.customDimensions.find(
+          (d) => d.width === width && d.height === height
+        );
 
-          if (photographerId) {
-            photographerDiscountAmount =
-              paperPrice * ((paper.photographerDiscount || 0) / 100);
-            totalPhotographerDiscount += photographerDiscountAmount;
-          }
+        paperInitialPrice = area * paper.initialBasePrice;
 
-          rawCouponDiscount +=
-            (paperPrice - photographerDiscountAmount) *
-            (couponDiscountPercentage / 100);
+        paperBasePrice = customDim
+          ? customDim.price
+          : area * paper.basePricePerSquareInch;
 
-          if (frameId) {
-            const frame = frames.find((f) => f._id.toString() === frameId);
-            if (frame)
-              framePrice = width * height * frame.basePricePerLinearInch;
-          }
+        // USER DISCOUNT (implicit)
+        totalPhotographerDiscount += paperInitialPrice - paperBasePrice;
 
-          if (layoutContent?.charges?.delivery) {
-            const itemDeliveryCharge = await calculateDelhiveryCharge(
-              width,
-              height,
-              !!frameId,
-              deliveryPincode
-            );
+        paperFinalPrice = paperBasePrice;
 
-            totalDeliveryCharge += itemDeliveryCharge;
-          }
+        // PHOTOGRAPHER DISCOUNT
+        if (photographerId && paper.photographerDiscount) {
+          const discount = paperBasePrice * (paper.photographerDiscount / 100);
 
-          subtotal += paperPrice + framePrice;
-          totalFinalPrice +=
-            paperPrice + framePrice - photographerDiscountAmount;
+          paperFinalPrice -= discount;
+          totalPhotographerDiscount += discount;
         }
+
+        subtotal += paperInitialPrice;
+      }
+
+      let frameInitialPrice = 0;
+      let frameBasePrice = 0;
+      let frameFinalPrice = 0;
+
+      if (frameId) {
+        const frame = frames.find((f) => f._id.toString() === frameId);
+        if (frame) {
+          frameInitialPrice = area * frame.initialBasePrice;
+          frameBasePrice = area * frame.basePricePerLinearInch;
+
+          // USER DISCOUNT (implicit)
+          totalPhotographerDiscount += frameInitialPrice - frameBasePrice;
+
+          frameFinalPrice = frameBasePrice;
+
+          // PHOTOGRAPHER DISCOUNT
+          if (photographerId && frame.photographerDiscount) {
+            const discount =
+              frameBasePrice * (frame.photographerDiscount / 100);
+
+            frameFinalPrice -= discount;
+            totalPhotographerDiscount += discount;
+          }
+
+          subtotal += frameInitialPrice;
+        }
+      }
+
+      totalFinalPrice += paperFinalPrice + frameFinalPrice;
+
+      rawCouponDiscount +=
+        (paperFinalPrice + frameFinalPrice) * (couponDiscountPercentage / 100);
+
+      if (layoutContent?.charges?.delivery) {
+        totalDeliveryCharge += await calculateDelhiveryCharge(
+          width,
+          height,
+          !!frameId,
+          deliveryPincode
+        );
       }
     }
 
     const totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
     totalFinalPrice -= totalCouponDiscount;
 
-    const orderValueBeforeGSTAndPlatform =
+    const netBeforeCharges =
       subtotal - totalPhotographerDiscount - totalCouponDiscount;
 
-    if (orderValueBeforeGSTAndPlatform >= 3000) {
+    if (netBeforeCharges >= 3000) {
       totalDeliveryCharge = 0;
     }
 
@@ -740,8 +766,7 @@ const calculateCartItemsPrice = async (
     totalFinalPrice += gstCharge;
 
     if (layoutContent?.charges?.platform) {
-      const platformFee = totalFinalPrice * 0.02;
-      totalFinalPrice += platformFee;
+      totalFinalPrice += totalFinalPrice * 0.02;
     }
 
     return Number(totalFinalPrice.toFixed(2));
@@ -1154,28 +1179,23 @@ const calculateCartPrice = async (req, res) => {
       couponCode,
       photographerId,
       isCustom = false,
-      isCustomDiscount = false,
       deliveryPincode,
     } = req.body;
+
+    let subtotal = 0;
+    let totalFinalPrice = 0;
 
     let totalImagePrice = 0;
     let totalPaperPrice = 0;
     let totalFramePrice = 0;
-    let subtotal = 0;
-    let totalFinalPrice = 0;
 
-    let totalDeliveryCharge = 0; // SUM OF ALL ITEM DELIVERY CHARGES
     let totalPhotographerDiscount = 0;
     let rawCouponDiscount = 0;
+    let totalDeliveryCharge = 0;
     let totalPlatformFee = 0;
 
-    const frameIds = items
-      ?.filter((item) => item.frameId)
-      .map((item) => item.frameId);
-
-    const paperIds = items
-      ?.filter((item) => item.paperId)
-      .map((item) => item.paperId);
+    const frameIds = items.filter((i) => i.frameId).map((i) => i.frameId);
+    const paperIds = items.filter((i) => i.paperId).map((i) => i.paperId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
@@ -1185,109 +1205,116 @@ const calculateCartPrice = async (req, res) => {
     const couponDiscountPercentage = coupon?.discountPercentage || 0;
     const maxDiscount = coupon?.maxDiscountAmount || 0;
 
-    for (let item of items) {
+    for (const item of items) {
       const { imageId, paperId, frameId, width, height, resolution } = item;
+      const area = (width || 0) * (height || 0);
 
-      let imagePrice = 0;
-      let paperPrice = 0;
-      let framePrice = 0;
-      let photographerDiscount = 0;
+      if (!paperId && imageId && !isCustom) {
+        const image = await ImageVault.findById(imageId);
 
-      const image = await ImageVault.findById(imageId);
-
-      // 📌 PAPER BASED ORDER
-      if (paperId) {
-        const paper = papers.find((p) => p._id.toString() === paperId);
-
-        if (paper) {
-          const customDimension = paper.customDimensions.find(
-            (dim) => dim.width === width && dim.height === height
-          );
-
-          paperPrice = customDimension
-            ? customDimension.price
-            : width * height * paper.basePricePerSquareInch;
-
-          // Photographer discount
-          if (photographerId) {
-            photographerDiscount =
-              paperPrice * ((paper.photographerDiscount || 0) / 100);
-            totalPhotographerDiscount += photographerDiscount;
-          }
-
-          // Raw coupon discount (before max cap)
-          rawCouponDiscount +=
-            (paperPrice - photographerDiscount) *
-            (couponDiscountPercentage / 100);
-
-          // Frame price
-          if (frameId) {
-            const frame = frames.find((f) => f._id.toString() === frameId);
-            if (frame) {
-              framePrice = width * height * frame.basePricePerLinearInch;
-            }
-          }
-
-          // 📦 SHIPPING (calculated per-item)
-          if (layoutContent?.charges?.delivery) {
-            const itemDeliveryCharge = await calculateDelhiveryCharge(
-              width,
-              height,
-              !!frameId,
-              deliveryPincode
-            );
-
-            totalDeliveryCharge += itemDeliveryCharge; // sum (NOT max)
-          }
-
-          totalPaperPrice += paperPrice;
-          totalFramePrice += framePrice;
-          subtotal += paperPrice + framePrice;
-          totalFinalPrice += paperPrice + framePrice - photographerDiscount;
-        }
-      }
-
-      // 📌 IMAGE ONLY ORDER
-      else if (image && !isCustom) {
-        imagePrice =
+        const imagePrice =
           resolution === "small"
             ? image.price.small
             : resolution === "medium"
             ? image.price.medium
             : image.price.original;
 
-        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
-
-        totalImagePrice += imagePrice;
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
+        totalImagePrice += imagePrice;
+
+        rawCouponDiscount += imagePrice * (couponDiscountPercentage / 100);
+
+        continue;
+      }
+      let paperInitialPrice = 0;
+      let paperBasePrice = 0;
+      let paperFinalPrice = 0;
+
+      if (paperId) {
+        const paper = papers.find((p) => p._id.toString() === paperId);
+        if (!paper) continue;
+
+        const customDim = paper.customDimensions.find(
+          (d) => d.width === width && d.height === height
+        );
+        paperInitialPrice = area * paper.initialBasePrice;
+
+        paperBasePrice = customDim
+          ? customDim.price
+          : area * paper.basePricePerSquareInch;
+        totalPhotographerDiscount += paperInitialPrice - paperBasePrice;
+
+        paperFinalPrice = paperBasePrice;
+        if (photographerId && paper.photographerDiscount) {
+          const discount = paperBasePrice * (paper.photographerDiscount / 100);
+
+          paperFinalPrice -= discount;
+          totalPhotographerDiscount += discount;
+        }
+
+        subtotal += paperInitialPrice;
+        totalPaperPrice += paperFinalPrice;
+      }
+
+      let frameInitialPrice = 0;
+      let frameBasePrice = 0;
+      let frameFinalPrice = 0;
+
+      if (frameId) {
+        const frame = frames.find((f) => f._id.toString() === frameId);
+        if (frame) {
+          frameInitialPrice = area * frame.initialBasePrice;
+
+          frameBasePrice = area * frame.basePricePerLinearInch;
+
+          totalPhotographerDiscount += frameInitialPrice - frameBasePrice;
+
+          frameFinalPrice = frameBasePrice;
+
+          if (photographerId && frame.photographerDiscount) {
+            const discount =
+              frameBasePrice * (frame.photographerDiscount / 100);
+
+            frameFinalPrice -= discount;
+            totalPhotographerDiscount += discount;
+          }
+
+          subtotal += frameInitialPrice;
+          totalFramePrice += frameFinalPrice;
+        }
+      }
+
+      totalFinalPrice += paperFinalPrice + frameFinalPrice;
+
+      rawCouponDiscount +=
+        (paperFinalPrice + frameFinalPrice) * (couponDiscountPercentage / 100);
+
+      if (layoutContent?.charges?.delivery) {
+        totalDeliveryCharge += await calculateDelhiveryCharge(
+          width,
+          height,
+          !!frameId,
+          deliveryPincode
+        );
       }
     }
 
-    // ------------------------------------------
-    // 🎟 FINAL COUPON DISCOUNT (APPLIED ONCE)
-    // ------------------------------------------
     const totalCouponDiscount = Math.min(rawCouponDiscount, maxDiscount);
     totalFinalPrice -= totalCouponDiscount;
 
-    // ------------------------------------------
-    // 🚚 FREE DELIVERY RULE — ABOVE ₹3000
-    // ------------------------------------------
-    const orderValueBeforeGSTAndPlatform =
+    const netBeforeCharges =
       subtotal - totalPhotographerDiscount - totalCouponDiscount;
 
-    if (orderValueBeforeGSTAndPlatform >= 3000) {
-      totalDeliveryCharge = 0; // FREE DELIVERY
+    if (netBeforeCharges >= 3000) {
+      totalDeliveryCharge = 0;
     }
 
-    // ADD DELIVERY
     totalFinalPrice += totalDeliveryCharge;
 
-    // GST 18%
     const gstCharge = totalFinalPrice * 0.18;
     totalFinalPrice += gstCharge;
 
-    // Platform fee 2%
     if (layoutContent?.charges?.platform) {
       totalPlatformFee = totalFinalPrice * 0.02;
       totalFinalPrice += totalPlatformFee;
@@ -1302,8 +1329,8 @@ const calculateCartPrice = async (req, res) => {
       totalCouponDiscount: Number(totalCouponDiscount.toFixed(2)),
       totalDeliveryCharge: Number(totalDeliveryCharge.toFixed(2)),
       gstCharge: Number(gstCharge.toFixed(2)),
-      totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
       totalPlatformFee: Number(totalPlatformFee.toFixed(2)),
+      totalFinalPrice: Number(totalFinalPrice.toFixed(2)),
     });
   } catch (error) {
     console.error(error);
