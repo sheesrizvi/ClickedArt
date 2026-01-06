@@ -65,18 +65,13 @@ const createFrame = asyncHandler(async (req, res) => {
 });
 
 const getFrames = asyncHandler(async (req, res) => {
-  const { pageNumber = 1, pageSize = 20 } = req.query;
-  const frames = await Frame.find({})
-    .skip((pageNumber - 1) * pageSize)
-    .limit(pageSize);
+  const frames = await Frame.find({});
 
   if (!frames || frames.length === 0) {
     return res.status(400).send({ message: "Frames not found" });
   }
 
-  const totalDocuments = await Frame.countDocuments({});
-  const pageCount = Math.ceil(totalDocuments / pageSize);
-  res.status(200).json({ frames, pageCount });
+  res.status(200).json({ frames });
 });
 
 const getFrameById = asyncHandler(async (req, res) => {
