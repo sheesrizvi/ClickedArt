@@ -153,45 +153,103 @@ const userRegistration = asyncHandler(async (req, res) => {
 
 const userLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  if (email && password) {
-    let user = await User.findOne({ email });
-    if (user && (await user.isPasswordCorrect(password)) && user.isActive) {
-      if (user.deleted === true) {
-        throw new Error("user deleted");
-      }
-      user.password = undefined;
-      const token = await user.generateAccessToken();
-      res.json({
-        status: true,
-        user,
-        token,
-      });
-    } else {
-      res.status(400);
-      throw new Error("Invalid credentials");
-    }
+
+  if (!email || !password) {
+    return res.status(400).json({
+      status: false,
+      message: "Email and password are required",
+    });
   }
+
+  const user = await User.findOne({
+    email: email.toLowerCase(),
+  });
+
+  if (!user) {
+    return res.status(401).json({
+      status: false,
+      message: "Invalid email or password",
+    });
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(String(password).trim());
+
+  if (!isPasswordValid) {
+    return res.status(401).json({
+      status: false,
+      message: "Invalid email or password",
+    });
+  }
+
+  if (!user.isEmailVerified) {
+    return res.status(403).json({
+      status: false,
+      message: "Please verify your email before logging in",
+    });
+  }
+
+  if (!user.isActive) {
+    return res.status(403).json({
+      status: false,
+      message: "Account is inactive",
+    });
+  }
+
+  if (user.deleted === true) {
+    return res.status(403).json({
+      status: false,
+      message: "User account has been deleted",
+    });
+  }
+
+  const token = await user.generateAccessToken();
+
+  const responseUser = user.toObject();
+  delete responseUser.password;
+
+  return res.status(200).json({
+    status: true,
+    user: responseUser,
+    token,
+  });
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
+
   if (!email) {
-    return res.status(400).send({ status: true, message: "Email not Found" });
+    return res.status(400).json({
+      status: false,
+      message: "Email is required",
+    });
   }
-  const existedUser = await User.findOne({ email: email.toLowerCase() });
+
+  const existedUser = await User.findOne({
+    email: email.toLowerCase(),
+  });
+
   if (!existedUser) {
-    return res.status(400).send({ status: false, message: "Email not exist" });
+    return res.status(404).json({
+      status: false,
+      message: "Account with this email does not exist",
+    });
+  }
+
+  if (!existedUser.isEmailVerified) {
+    return res.status(403).json({
+      status: false,
+      message: "Please verify your email before resetting password",
+    });
   }
 
   const randomPassword = await sendResetEmail(existedUser.email);
 
   existedUser.password = randomPassword;
-  console.log("randomPassword", randomPassword);
-  console.log(existedUser);
   await existedUser.save();
-  res.status(200).send({
+
+  return res.status(200).json({
     status: true,
-    message: "OTP sent to your email. Please check for passwrod reset",
+    message: "Temporary password sent to your email",
   });
 });
 
@@ -329,12 +387,12 @@ const convertUserToPhotographer = asyncHandler(async (req, res) => {
   if (isCompany) {
     if (!companyName || !companyEmail || !companyPhone || !companyAddress) {
       throw new Error(
-        "Company details are required! Otherwise Please register as individual photographer"
+        "Company details are required! Otherwise Please register as individual photographer",
       );
     } else {
       photographerData.isCompany = isCompany;
-      (photographerData.companyEmail = companyEmail),
-        (photographerData.companyAddress = companyAddress);
+      ((photographerData.companyEmail = companyEmail),
+        (photographerData.companyAddress = companyAddress));
       photographerData.companyPhone = companyPhone;
     }
   }
@@ -444,7 +502,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     },
     {
       new: true,
-    }
+    },
   );
 
   if (!user) {

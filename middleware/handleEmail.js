@@ -1,11 +1,11 @@
-const nodemailer = require('nodemailer')
-const asyncHandler =require('express-async-handler')
-const generator = require('generate-password')
-const dotenv = require('dotenv')
+const nodemailer = require("nodemailer");
+const asyncHandler = require("express-async-handler");
+const generator = require("generate-password");
+const dotenv = require("dotenv");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { S3 } = require("@aws-sdk/client-s3");
-const { GetObjectCommand } = require('@aws-sdk/client-s3');
-const axios = require('axios');
+const { GetObjectCommand } = require("@aws-sdk/client-s3");
+const axios = require("axios");
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -20,8 +20,8 @@ const s3 = new S3Client(config);
 const transporter = nodemailer.createTransport({
   // service: "gmail",
   host: "smtpout.secureserver.net",
-  port: 465, 
-  secure: true, 
+  port: 465,
+  secure: true,
 
   auth: {
     user: process.env.USER_EMAIL,
@@ -29,28 +29,25 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
-
 const verifyTransporter = asyncHandler(async (req, res, next) => {
   try {
     await transporter.verify();
-    
-    next();  
+
+    next();
   } catch (error) {
-    console.log(error)
-    throw new Error('Email transporter verification failed');
+    console.log(error);
+    throw new Error("Email transporter verification failed");
   }
 });
 
+const sendResetEmail = asyncHandler(async (email) => {
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
 
-const sendResetEmail = asyncHandler(async(email) => {
-  const otp = Math.floor(100000 + Math.random() * 900000);
-  
-    const info = await transporter.sendMail({
-      from: `Clicked Art ${process.env.USER_EMAIL}`, 
-      to: email, 
-      subject: `Your New Password for Login`,
-      text: `
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: `Your New Password for Login`,
+    text: `
   Hello,
   
   We’ve generated a Temporary New Password for your account to help you log in securely.
@@ -73,19 +70,17 @@ const sendResetEmail = asyncHandler(async(email) => {
   
   P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-    });
-    
-    return otp
-    
-  })
+  });
 
+  return otp;
+});
 
 const sendVerificationEmail = asyncHandler(async (otp, email) => {
-    const info = await transporter.sendMail({
-        from: `Clicked Art ${process.env.USER_EMAIL}`,
-        to: email,
-        subject: `Verify Your Email Address - Clicked Art`, 
-        text: `
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: `Verify Your Email Address - Clicked Art`,
+    text: `
 Hello,
 
 Thank you for signing up with Clicked Art! To complete the verification of your email address, please use the One-Time Password (OTP) provided below.
@@ -109,18 +104,16 @@ Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
         `,
-    });
-    return true;
+  });
+  return true;
 });
 
-  
-
 const sendApprovedMail = asyncHandler(async (photographerName, email) => {
-    const info = await transporter.sendMail({
-      from: `Clicked Art ${process.env.USER_EMAIL}`,
-      to: email,
-      subject: "Welcome to ClickedArt.com – Your Registration is Approved!",
-      text: `
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Welcome to ClickedArt.com – Your Registration is Approved!",
+    text: `
   Dear ${photographerName},
   
   Congratulations!
@@ -149,27 +142,26 @@ const sendApprovedMail = asyncHandler(async (photographerName, email) => {
   
   P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-    });
-    return true;
   });
-  
+  return true;
+});
 
 const sendRejectionEmail = asyncHandler(async (name, email, reasons = []) => {
-    
-    reasons = [
-      "Reason 1: Insufficient details in the application on form.",
-      "Reason 2: Supporting documents were incomplete or unclear.",
-    ];
-  
-    const formattedReasons = Array.isArray(reasons) && reasons.length > 0
+  reasons = [
+    "Reason 1: Insufficient details in the application on form.",
+    "Reason 2: Supporting documents were incomplete or unclear.",
+  ];
+
+  const formattedReasons =
+    Array.isArray(reasons) && reasons.length > 0
       ? reasons.map((reason) => `• ${reason}`).join("\n")
       : "No specific reasons provided.";
-  
-    const info = await transporter.sendMail({
-      from: `Clicked Art ${process.env.USER_EMAIL}`,
-      to: email,
-      subject: "Registration Update on ClickedArt.com",
-      text: `
+
+  const info = await transporter.sendMail({
+    from: `Clicked Art ${process.env.USER_EMAIL}`,
+    to: email,
+    subject: "Registration Update on ClickedArt.com",
+    text: `
   Dear ${name},
   
   Thank you for your interest in joining ClickedArt.com. We truly appreciate your effort in registering with us and your enthusiasm to be a part of our community.
@@ -191,18 +183,18 @@ const sendRejectionEmail = asyncHandler(async (name, email, reasons = []) => {
   
   P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-    });
-  
-    return true;
   });
-  
 
-const sendApprovedImageMail = asyncHandler(async (photographerName, email, imageTitle) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Your Image on ClickedArt.com has been Approved!",
-    text: `
+  return true;
+});
+
+const sendApprovedImageMail = asyncHandler(
+  async (photographerName, email, imageTitle) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Your Image on ClickedArt.com has been Approved!",
+      text: `
 Dear ${photographerName},
 
 Congratulations!
@@ -227,24 +219,31 @@ Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
+const sendUnapprovedImageMail = asyncHandler(
+  async (
+    photographerName,
+    email,
+    imageTitle,
+    reasons = [
+      "Reason 1: Image quality did not meet our standards.",
+      "Reason 2: Image was blurry or poorly lit.",
+    ],
+  ) => {
+    const formattedReasons =
+      Array.isArray(reasons) && reasons.length > 0
+        ? reasons.map((reason) => `• ${reason}`).join("\n")
+        : "No specific reasons provided.";
 
-const sendUnapprovedImageMail = asyncHandler(async (photographerName, email, imageTitle, reasons = [
-  "Reason 1: Image quality did not meet our standards.",
-  "Reason 2: Image was blurry or poorly lit.",
-]) => {
-  const formattedReasons = Array.isArray(reasons) && reasons.length > 0
-    ? reasons.map((reason) => `• ${reason}`).join("\n")
-    : "No specific reasons provided.";
-
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Update on Your Image Submission to ClickedArt.com",
-    text: `
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Update on Your Image Submission to ClickedArt.com",
+      text: `
 Dear ${photographerName},
 
 Thank you for submitting your image titled "${imageTitle}" to ClickedArt.com.
@@ -266,11 +265,10 @@ Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-  });
-  return true;
-});
-
-
+    });
+    return true;
+  },
+);
 
 const sendMonetizationMail = asyncHandler(async (photographerName, email) => {
   const info = await transporter.sendMail({
@@ -320,14 +318,21 @@ P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, fea
   return true;
 });
 
+const sendMonetizationDisApprovalMail = asyncHandler(
+  async (
+    photographerName,
+    email,
+    reasons = [
+      " Insufficient portfolio quality to meet our standards.",
+      " Required verification documents were incomplete or unclear.",
+    ],
+  ) => {
+    const formattedReasons =
+      Array.isArray(reasons) && reasons.length > 0
+        ? reasons.map((reason) => `• ${reason}`).join("\n")
+        : "No specific reasons provided.";
 
-const sendMonetizationDisApprovalMail = asyncHandler(async (photographerName, email, reasons = [" Insufficient portfolio quality to meet our standards.", " Required verification documents were incomplete or unclear.",]  ) => {
-
-  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
-  ? reasons.map((reason) => `• ${reason}`).join("\n")
-  : "No specific reasons provided.";
-
-const info = await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Monetization Request Update",
@@ -356,16 +361,18 @@ Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
-const setApprovedImageOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) =>{
-const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Your Photo Has Been Approved and is Ready for Sale! ",
-    text: `
+const setApprovedImageOfMonetizedProfile = asyncHandler(
+  async (photographerName, email, imageTitle) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Your Photo Has Been Approved and is Ready for Sale! ",
+      text: `
  Dear ${photographerName},
 
   We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
@@ -393,16 +400,18 @@ BOOST YOUR VISIBILITY
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-});
-return true;
-})
+    });
+    return true;
+  },
+);
 
-const sendEventSubmissionConfirmation = asyncHandler(async (photographerName, email, imageTitle) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Congratulations - Your Photograph Has Been Selected!",
-    text: `
+const sendEventSubmissionConfirmation = asyncHandler(
+  async (photographerName, email, imageTitle) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Congratulations - Your Photograph Has Been Selected!",
+      text: `
 Dear ${photographerName},
 
 We are delighted to inform you that your submitted photograph titled *"${imageTitle}"* has been selected by our expert jury for display in the “Frames of India” Photo Exhibition.
@@ -445,18 +454,19 @@ Team ClickedArt
 📧 support@clickedart.com  
 🌐 www.clickedart.com
     `,
-  });
+    });
 
-  return true;
-});
+    return true;
+  },
+);
 
-
-const setApprovedImageOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle) => {
-const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: " Your Photo Has Been Approved By ClickedArt! ",
-    text: `
+const setApprovedImageOfNonMonetizedProfile = asyncHandler(
+  async (photographerName, email, imageTitle) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: " Your Photo Has Been Approved By ClickedArt! ",
+      text: `
 Dear ${photographerName},
 
   We are excited to inform you that your recently uploaded photo titled ${imageTitle} has been approved! 
@@ -496,19 +506,27 @@ royalties based on your user tier:
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-});
-return true;
-})
+    });
+    return true;
+  },
+);
 
+const sendUnapprovedImageMailOfMonetizedProfile = asyncHandler(
+  async (
+    photographerName,
+    email,
+    imageTitle,
+    reasons = [
+      "Reason 1: Image quality did not meet our standards.",
+      "Reason 2: Image was blurry or poorly lit.",
+    ],
+  ) => {
+    const formattedReasons =
+      Array.isArray(reasons) && reasons.length > 0
+        ? reasons.map((reason) => `• ${reason}`).join("\n")
+        : "No specific reasons provided.";
 
-const sendUnapprovedImageMailOfMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit.",]) => {
-
-
-const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
-      ? reasons.map((reason) => `• ${reason}`).join("\n")
-      : "No specific reasons provided.";
-
-const info = await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Your Photo Upload Requires Revisions ",
@@ -547,22 +565,31 @@ Empowering Photographers Everywhere
 
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
+const sendUnapprovedImageMailOfNonMonetizedProfile = asyncHandler(
+  async (
+    photographerName,
+    email,
+    imageTitle,
+    reasons = [
+      "Reason 1: Image quality did not meet our standards.",
+      "Reason 2: Image was blurry or poorly lit.",
+    ],
+  ) => {
+    const formattedReasons =
+      Array.isArray(reasons) && reasons.length > 0
+        ? reasons.map((reason) => `• ${reason}`).join("\n")
+        : "No specific reasons provided.";
 
-const sendUnapprovedImageMailOfNonMonetizedProfile = asyncHandler(async (photographerName, email, imageTitle, reasons = ["Reason 1: Image quality did not meet our standards.", "Reason 2: Image was blurry or poorly lit."]) => {
-
-  const formattedReasons = Array.isArray(reasons) && reasons.length > 0 
-      ? reasons.map((reason) => `• ${reason}`).join("\n")
-      : "No specific reasons provided.";
-
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Update on Your Photo Upload",
-    text: `
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Update on Your Photo Upload",
+      text: `
 Dear ${photographerName},
 
 Thank you for sharing your work with ClickedArt.com.
@@ -626,14 +653,14 @@ support@clickedart.com
 
 P.S. Follow us on Instagram at https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
-
-const sendMembershipUpgradeMail = asyncHandler(async (photographerName, membershipType, email) => {
-
-  const info = await transporter.sendMail({
+const sendMembershipUpgradeMail = asyncHandler(
+  async (photographerName, membershipType, email) => {
+    const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: email,
       subject: "Welcome to Your Upgraded Membership on ClickedArt.com!",
@@ -686,32 +713,32 @@ support@clickedart.com
 
 P.S. Follow us on Instagram at https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
+const sendOrderThankYouMail = asyncHandler(
+  async (customerName, orderDate, items, customerEmail, s3Links, orderId) => {
+    let attachments = [];
 
+    // if (Array.isArray(s3Links) && s3Links.length > 0) {
 
-const sendOrderThankYouMail = asyncHandler(async (customerName, orderDate, items, customerEmail, s3Links, orderId) => {
-  let attachments = [];
+    //   for (let link of s3Links) {
+    //     const response = await axios.get(link, { responseType: 'arraybuffer' });
 
-  // if (Array.isArray(s3Links) && s3Links.length > 0) {
-  
-  //   for (let link of s3Links) {
-  //     const response = await axios.get(link, { responseType: 'arraybuffer' });
-      
-  //     attachments.push({
-  //       filename: 'order-details.pdf', 
-  //       content: response.data,
-  //       contentType: 'application/pdf', 
-  //     });
-  //   }
-  // }
+    //     attachments.push({
+    //       filename: 'order-details.pdf',
+    //       content: response.data,
+    //       contentType: 'application/pdf',
+    //     });
+    //   }
+    // }
 
-  const info = await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `Clicked Art ${process.env.USER_EMAIL}`,
       to: customerEmail,
-      cc: 'finance@clickedart.com',
+      cc: "finance@clickedart.com",
       subject: "Thank You for Your Order on ClickedArt.com!",
       text: `
 Dear ${customerName},
@@ -728,9 +755,11 @@ You can view your complete order details and download any digital purchases dire
 
 ________________________________________
 Order Link(s):
-${Array.isArray(s3Links) && s3Links.length > 0 
-  ? s3Links.map((link, idx) => `  ${idx + 1}. ${link}`).join('\n') 
-  : '  No downloadable items found.'}
+${
+  Array.isArray(s3Links) && s3Links.length > 0
+    ? s3Links.map((link, idx) => `  ${idx + 1}. ${link}`).join("\n")
+    : "  No downloadable items found."
+}
 
 ________________________________________
 What Happens Next?
@@ -755,19 +784,20 @@ ________________________________________
 P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
       `,
       // attachments,
-  });
+    });
 
-  return true;
-});
+    return true;
+  },
+);
 
-
-
-const sendMembershipRenewalReminderMail = asyncHandler(async (photographerName, email) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Your Membership with ClickedArt.com is Expiring Soon – Renew Today!",
-    text: `
+const sendMembershipRenewalReminderMail = asyncHandler(
+  async (photographerName, email) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject:
+        "Your Membership with ClickedArt.com is Expiring Soon – Renew Today!",
+      text: `
 Dear ${photographerName},
 
 We hope you’ve been enjoying your membership on ClickedArt.com! We’re writing to let you know that your current membership is set to expire soon.
@@ -819,33 +849,34 @@ support@clickedart.com
 
 P.S. Follow us on Instagram at https://www.instagram.com/clickedartofficial/ for updates, featured artwork, and more inspiring photos from our talented photographers!
     `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
+const sendPaymentInvoiceMail = asyncHandler(
+  async (photographerName, email, s3Links) => {
+    let attachments = [];
 
-const sendPaymentInvoiceMail = asyncHandler(async (photographerName, email, s3Links) => {
-  let attachments = [];
+    // if (Array.isArray(s3Links) && s3Links.length > 0) {
+    //   console.log(s3Links)
+    //   for (let link of s3Links) {
+    //     const response = await axios.get(link, { responseType: 'arraybuffer' });
 
-  // if (Array.isArray(s3Links) && s3Links.length > 0) {
-  //   console.log(s3Links)
-  //   for (let link of s3Links) {
-  //     const response = await axios.get(link, { responseType: 'arraybuffer' });
-      
-  //     attachments.push({
-  //       filename: 'invoice-details.pdf', 
-  //       content: response.data,
-  //       contentType: 'application/pdf', 
-  //     });
-  //   }
-  // }
+    //     attachments.push({
+    //       filename: 'invoice-details.pdf',
+    //       content: response.data,
+    //       contentType: 'application/pdf',
+    //     });
+    //   }
+    // }
 
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    cc: 'finance@clickedart.com', 
-    subject: "Your Payment Invoice from ClickedArt.com",
-    text: `
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      cc: "finance@clickedart.com",
+      subject: "Your Payment Invoice from ClickedArt.com",
+      text: `
 Dear ${photographerName},
 
 Your Invoice is generated. Your payment will be credited in your A/C in next Payment cycle which is 1st week of every month
@@ -873,18 +904,20 @@ ________________________________________
 P.S. Stay connected with us on social media for the latest updates and featured artwork:
 Instagram: https://www.instagram.com/clickedartofficial/
     `,
-   // attachments,  
-  });
+      // attachments,
+    });
 
-  return true;
-});
+    return true;
+  },
+);
 
-const sendStoryPublishedMail = asyncHandler(async (photographerName, email, storyTitle) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Your Story Has Been Published on ClickedArt.com!",
-    text: `
+const sendStoryPublishedMail = asyncHandler(
+  async (photographerName, email, storyTitle) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Your Story Has Been Published on ClickedArt.com!",
+      text: `
   Dear ${photographerName},
 
   Great news!
@@ -917,9 +950,10 @@ const sendStoryPublishedMail = asyncHandler(async (photographerName, email, stor
 
   P.S. Follow us on https://www.instagram.com/clickedartofficial/ for updates, featured stories, and more inspiring work from our talented photographers!
     `,
-  });
-  return true;
-});
+    });
+    return true;
+  },
+);
 
 // const sendWeeklyMailToInactivePhotographers = asyncHandler(async (photographerName, email) => {
 //   const info = await transporter.sendMail({
@@ -929,10 +963,10 @@ const sendStoryPublishedMail = asyncHandler(async (photographerName, email, stor
 //     text: `
 //   Dear ${photographerName},
 
-//   Thank you for registering on ClickedArt! Your profile is live, 
+//   Thank you for registering on ClickedArt! Your profile is live,
 //   but we noticed that you haven’t uploaded any photos yet.
 //   Showcase your talent, reach a wider audience,
-//   and start earning from your photography. 
+//   and start earning from your photography.
 //   By uploading your images, you can:
 
 //   ✔ Build your personal photography portfolio
@@ -984,12 +1018,14 @@ const sendStoryPublishedMail = asyncHandler(async (photographerName, email, stor
 //   return true;
 // })
 
-const sendWeeklyMailToInactivePhotographers = asyncHandler(async (photographerName, email) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Your ClickedArt Profile Is Waiting – Start Uploading Your Photos Today!",
-    html: `
+const sendWeeklyMailToInactivePhotographers = asyncHandler(
+  async (photographerName, email) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject:
+        "Your ClickedArt Profile Is Waiting – Start Uploading Your Photos Today!",
+      html: `
       <p>Dear ${photographerName},</p>
 
       <p>Thank you for registering on ClickedArt! Your profile is live, 
@@ -1020,18 +1056,19 @@ const sendWeeklyMailToInactivePhotographers = asyncHandler(async (photographerNa
       <strong>Team ClickedArt</strong> 📸<br>
       <a href="https://www.clickedart.com" target="_blank">www.clickedart.com</a></p>
     `,
-  });
+    });
 
-  return true;
-});
+    return true;
+  },
+);
 
-
-const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(async (photographerName, email) => {
-  const info = await transporter.sendMail({
-    from: `Clicked Art ${process.env.USER_EMAIL}`,
-    to: email,
-    subject: "Monetize Your ClickedArt Profile & Start Earning Today!",
-    html: `
+const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(
+  async (photographerName, email) => {
+    const info = await transporter.sendMail({
+      from: `Clicked Art ${process.env.USER_EMAIL}`,
+      to: email,
+      subject: "Monetize Your ClickedArt Profile & Start Earning Today!",
+      html: `
       <p>Dear ${photographerName},</p>
 
       <p>We noticed that you’ve registered on ClickedArt, but your profile isn’t monetized yet! Don’t miss the opportunity to showcase your incredible work and start earning from your photography.</p>
@@ -1058,33 +1095,32 @@ const sendWeeklyMailToNonMonetizedPhotographers = asyncHandler(async (photograph
       <strong>Team ClickedArt</strong> 📸<br>
       <a href="https://www.clickedart.com" target="_blank">www.clickedart.com</a></p>
     `,
-  });
+    });
 
-  return true;
-});
+    return true;
+  },
+);
 
-
-
-  module.exports = {
-    sendResetEmail,
-    verifyTransporter,
-    sendVerificationEmail,
-    sendApprovedMail,
-    sendRejectionEmail,
-    sendApprovedImageMail,
-    sendUnapprovedImageMail,
-    sendMonetizationMail,
-    sendMonetizationDisApprovalMail,
-    setApprovedImageOfMonetizedProfile,
-    setApprovedImageOfNonMonetizedProfile,
-    sendUnapprovedImageMailOfMonetizedProfile,
-    sendEventSubmissionConfirmation,
-    sendUnapprovedImageMailOfNonMonetizedProfile,
-    sendMembershipUpgradeMail,
-    sendOrderThankYouMail,
-    sendMembershipRenewalReminderMail,
-    sendPaymentInvoiceMail,
-    sendStoryPublishedMail,
-    sendWeeklyMailToInactivePhotographers,
-    sendWeeklyMailToNonMonetizedPhotographers
-  }
+module.exports = {
+  sendResetEmail,
+  verifyTransporter,
+  sendVerificationEmail,
+  sendApprovedMail,
+  sendRejectionEmail,
+  sendApprovedImageMail,
+  sendUnapprovedImageMail,
+  sendMonetizationMail,
+  sendMonetizationDisApprovalMail,
+  setApprovedImageOfMonetizedProfile,
+  setApprovedImageOfNonMonetizedProfile,
+  sendUnapprovedImageMailOfMonetizedProfile,
+  sendEventSubmissionConfirmation,
+  sendUnapprovedImageMailOfNonMonetizedProfile,
+  sendMembershipUpgradeMail,
+  sendOrderThankYouMail,
+  sendMembershipRenewalReminderMail,
+  sendPaymentInvoiceMail,
+  sendStoryPublishedMail,
+  sendWeeklyMailToInactivePhotographers,
+  sendWeeklyMailToNonMonetizedPhotographers,
+};

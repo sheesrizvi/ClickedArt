@@ -17,6 +17,7 @@ const {
 const { sendOtpSms } = require("../middleware/sendOtpSms.js");
 const Subscription = require("../models/subscriptionModel.js");
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 
 const registerPhotographer = asyncHandler(async (req, res) => {
   const {
@@ -98,7 +99,7 @@ const registerPhotographer = asyncHandler(async (req, res) => {
   if (isCompany) {
     if (!companyName || !companyEmail || !companyAddress || !companyPhone) {
       throw new Error(
-        "Company details are required! Otherwise Please register as freelancer"
+        "Company details are required! Otherwise Please register as freelancer",
       );
     } else {
       photographerData.isCompany = isCompany;
@@ -319,44 +320,75 @@ const updatePhotographer = asyncHandler(async (req, res) => {
 
 const photographerLogin = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  if (email && password) {
-    let photographer = await Photographer.findOne({ email });
-    if (
-      photographer &&
-      (await photographer.isPasswordCorrect(password)) &&
-      photographer.isEmailVerified
-    ) {
-      if (
-        photographer.photographerStatus === "pending" ||
-        photographer.photographerStatus === "rejected"
-      ) {
-        throw new Error("Sorry! You need to wait till admin approval");
-      }
 
-      const token = await photographer.generateAccessToken();
-
-      if (!photographer.active) {
-        throw new Error(
-          "Sorry, Your Profile is Deleted. Please contact support."
-        );
-      }
-
-      photographer.lastActive = new Date();
-      photographer.lastLogin = new Date();
-      await photographer.save();
-
-      photographer.password = undefined;
-      res.status(200).json({
-        status: true,
-        message: "Photogphotographer Login Successful",
-        photographer,
-        token,
-      });
-    } else {
-      res.status(400);
-      throw new Error("Invalid credentials");
-    }
+  if (!email || !password) {
+    return res.status(400).json({
+      status: false,
+      message: "Email and password are required",
+    });
   }
+
+  const photographer = await Photographer.findOne({
+    email: email.toLowerCase(),
+  });
+
+  if (!photographer) {
+    return res.status(401).json({
+      status: false,
+      message: "Invalid email or password",
+    });
+  }
+
+  const isPasswordValid = await photographer.isPasswordCorrect(
+    String(password).trim(),
+  );
+
+  if (!isPasswordValid) {
+    return res.status(401).json({
+      status: false,
+      message: "Invalid email or password",
+    });
+  }
+
+  if (!photographer.isEmailVerified) {
+    return res.status(403).json({
+      status: false,
+      message: "Please verify your email before logging in",
+    });
+  }
+
+  if (
+    photographer.photographerStatus === "pending" ||
+    photographer.photographerStatus === "rejected"
+  ) {
+    return res.status(403).json({
+      status: false,
+      message: "Your account is awaiting admin approval",
+    });
+  }
+
+  if (!photographer.active) {
+    return res.status(403).json({
+      status: false,
+      message: "Your profile has been deactivated. Contact support.",
+    });
+  }
+
+  const token = await photographer.generateAccessToken();
+
+  photographer.lastActive = new Date();
+  photographer.lastLogin = new Date();
+  await photographer.save();
+
+  const responseUser = photographer.toObject();
+  delete responseUser.password;
+
+  return res.status(200).json({
+    status: true,
+    message: "Photographer login successful",
+    photographer: responseUser,
+    token,
+  });
 });
 
 const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
@@ -375,8 +407,8 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
   }
 
   if (action === "approved") {
-    (photographer.photographerStatus = "approved"),
-      (photographer.active = true);
+    ((photographer.photographerStatus = "approved"),
+      (photographer.active = true));
     photographer.rejectedAt = null;
     if (photographer.user) {
       const user = await User.findById(photographer.user);
@@ -387,8 +419,8 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
     const email = photographer.email;
     sendApprovedMail(name, email);
   } else if (action === "rejected") {
-    (photographer.photographerStatus = "rejected"),
-      (photographer.rejectedAt = new Date());
+    ((photographer.photographerStatus = "rejected"),
+      (photographer.rejectedAt = new Date()));
     const name = `${photographer.firstName} ${photographer.lastName}`;
     const email = photographer.email;
     sendRejectionEmail(name, email);
@@ -402,22 +434,41 @@ const handlePhotographerStatusUpdate = asyncHandler(async (req, res) => {
 
 const resetPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
+
   if (!email) {
-    return res.status(400).send({ status: true, message: "Email not Found" });
+    return res.status(400).json({
+      status: false,
+      message: "Email is required",
+    });
   }
+
   const existedUser = await Photographer.findOne({
     email: email.toLowerCase(),
   });
+
   if (!existedUser) {
-    return res.status(400).send({ status: false, message: "Email not exist" });
+    return res.status(404).json({
+      status: false,
+      message: "Account with this email does not exist",
+    });
   }
 
-  const randomPassword = await sendResetEmail(existedUser.email);
+  if (!existedUser.isEmailVerified) {
+    return res.status(403).json({
+      status: false,
+      message:
+        "Email is not verified. Please verify your email before resetting password.",
+    });
+  }
+
+  const randomPassword = await sendResetEmail(email);
+
   existedUser.password = randomPassword;
   await existedUser.save();
-  res.status(200).send({
+
+  return res.status(200).json({
     status: true,
-    message: "OTP sent to your email. Please check for passwrod reset",
+    message: "Temporary password sent to your email",
   });
 });
 
@@ -486,13 +537,13 @@ const getAllPhotographersForAdmin = asyncHandler(async (req, res) => {
       subscriptions.map((s) => [
         s.userInfo.user.toString(),
         s.planId?.name || "Basic",
-      ])
+      ]),
     );
     const activeImageMap = new Map(
-      activeImages.map((i) => [i._id.toString(), i.count])
+      activeImages.map((i) => [i._id.toString(), i.count]),
     );
     const pendingImageMap = new Map(
-      pendingImages.map((i) => [i._id.toString(), i.count])
+      pendingImages.map((i) => [i._id.toString(), i.count]),
     );
 
     const enrichedPhotographers = photographers.map((p) => ({
@@ -600,7 +651,7 @@ const getAllNotFeaturedPhotographers = asyncHandler(async (req, res) => {
         activeUploadingImgCount,
         pendingImagesCount,
       };
-    })
+    }),
   );
 
   res.status(200).send({ photographers, pageCount });
@@ -872,7 +923,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     },
     {
       new: true,
-    }
+    },
   );
 
   if (!photographer) {
@@ -992,7 +1043,7 @@ const makeArtistOfTheMonth = asyncHandler(async (req, res) => {
 
   await Photographer.updateMany(
     { artistOfTheMonth: true },
-    { $set: { artistOfTheMonth: false } }
+    { $set: { artistOfTheMonth: false } },
   );
 
   photographer.artistOfTheMonth = true;
@@ -1086,7 +1137,7 @@ const getActivePhotographers = asyncHandler(async (req, res) => {
         isActive: true,
       });
       photographer.imagesCount = imagesCount;
-    })
+    }),
   );
 
   res.json({ activePhotographers, pageCount });
@@ -1122,7 +1173,7 @@ const getInactivePhotographers = asyncHandler(async (req, res) => {
         isActive: true,
       });
       photographer.imagesCount = imagesCount;
-    })
+    }),
   );
 
   res.json({ inactivePhotographers, pageCount });
@@ -1135,7 +1186,7 @@ const getCertificateByEventName = asyncHandler(async (req, res) => {
     return res.status(404).send({ message: "Photographer not found" });
   }
   const certificate = photographer.eventCertificates.find(
-    (cert) => cert.eventName === eventName
+    (cert) => cert.eventName === eventName,
   );
   if (!certificate) {
     return res
@@ -1152,7 +1203,7 @@ const addEventCertificate = asyncHandler(async (req, res) => {
     return res.status(404).send({ message: "Photographer not found" });
   }
   const existingCertificate = photographer.eventCertificates.find(
-    (cert) => cert.eventName === eventName
+    (cert) => cert.eventName === eventName,
   );
   if (existingCertificate) {
     return res
@@ -1174,7 +1225,7 @@ const removeEventCertificate = asyncHandler(async (req, res) => {
     return res.status(404).send({ message: "Photographer not found" });
   }
   const certificateIndex = photographer.eventCertificates.findIndex(
-    (cert) => cert.eventName === eventName
+    (cert) => cert.eventName === eventName,
   );
   if (certificateIndex === -1) {
     return res
@@ -1214,7 +1265,7 @@ const getAllEventCertificates = asyncHandler(async (req, res) => {
       photographerName: `${photographer.firstName} ${photographer.lastName}`,
       eventName: cert.eventName,
       fileUrl: cert.fileUrl,
-    }))
+    })),
   );
   if (allCertificates.length === 0) {
     return res.status(404).send({ message: "No event certificates found" });
