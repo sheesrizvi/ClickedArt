@@ -461,7 +461,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     });
   }
 
-  const randomPassword = await sendResetEmail(email);
+  const randomPassword = await sendResetEmail(existedUser.email);
 
   existedUser.password = randomPassword;
   await existedUser.save();
