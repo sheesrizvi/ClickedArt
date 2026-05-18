@@ -46,8 +46,9 @@ const userSchema = new mongoose.Schema(
     },
     username: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
       lowercase: true,
       trim: true,
     },
@@ -117,7 +118,6 @@ const userSchema = new mongoose.Schema(
 userSchema.index({
   firstName: "text",
   lastName: "text",
-  username: "text",
   email: "text",
 });
 
