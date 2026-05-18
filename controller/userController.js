@@ -235,7 +235,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!existedUser.isEmailVerified) {
+  if (!existedUser.isActive) {
     return res.status(403).json({
       status: false,
       message: "Please verify your email before resetting password",
