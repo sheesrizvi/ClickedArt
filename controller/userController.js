@@ -1,7 +1,7 @@
 const User = require("../models/userModel.js");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require("bcrypt");
-const { generateFromEmail } = require("unique-username-generator");
+const Order = require("../models/orderModel.js");
 const Photographer = require("../models/photographerModel.js");
 const UserType = require("../models/typeModel.js");
 const {
@@ -181,17 +181,10 @@ const userLogin = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!user.isEmailVerified) {
-    return res.status(403).json({
-      status: false,
-      message: "Please verify your email before logging in",
-    });
-  }
-
   if (!user.isActive) {
     return res.status(403).json({
       status: false,
-      message: "Account is inactive",
+      message: "Please verify your email before logging in",
     });
   }
 
@@ -256,7 +249,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 const getAllUsers = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const users = await User.find({ isActive: true })
+  const users = await User.find({ isActive: true, deleted: { $ne: true } })
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
@@ -265,7 +258,10 @@ const getAllUsers = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Users not found" });
   }
 
-  const totalDocuments = await User.countDocuments({ isActive: true });
+  const totalDocuments = await User.countDocuments({
+    isActive: true,
+    deleted: { $ne: true },
+  });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ users, pageCount });
@@ -314,7 +310,7 @@ const userProfileUpdate = asyncHandler(async (req, res) => {
   user.shippingAddress = shippingAddress || user.shippingAddress;
   user.mobile = mobile || user.mobile;
   user.whatsapp = whatsapp || user.whatsapp;
-  user.isMarried = isMarried;
+  if (isMarried !== undefined) user.isMarried = isMarried;
   user.anniversary = anniversary || user.anniversary;
 
   if (email && email !== user.email) {
@@ -372,12 +368,13 @@ const convertUserToPhotographer = asyncHandler(async (req, res) => {
     throw new Error("User is already a photographer");
   }
 
+  const fullName = `${user.firstName} ${user.lastName || ""}`.trim();
   const photographerData = {
-    name: user.name,
+    name: fullName,
     email: user.email,
-    address: user.address,
+    address: user.shippingAddress?.address || "",
     password: user.password,
-    companyName: !companyName ? user.name : companyName,
+    companyName: !companyName ? fullName : companyName,
     portfolioLink,
     photographyStyles,
     yearsOfExperience,
@@ -470,7 +467,7 @@ const resendOTP = asyncHandler(async (req, res) => {
         emailSent && smsSent ? "email and SMS" : emailSent ? "email" : "SMS"
       }`,
       errors: errors.length ? errors : undefined,
-      photographer: user,
+      user: user,
     });
   } else {
     return res.status(500).send({
