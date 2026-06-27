@@ -12,6 +12,7 @@ const User = require("../models/userModel.js");
 const Referral = require("../models/referralModel.js");
 const Paper = require("../models/imagebase/paperModel");
 const Frame = require("../models/imagebase/frameModel.js");
+const Mount = require("../models/imagebase/mountModel");
 const Razorpay = require("razorpay");
 const Monetization = require("../models/monetizationModel.js");
 const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
@@ -624,6 +625,45 @@ const payment = asyncHandler(async (req, res) => {
   res.status(200).json({ result });
 });
 
+const getAvailableMounts = (width, height, allMounts = []) => {
+  if (!width || !height) return [];
+
+  const w = parseFloat(width);
+  const h = parseFloat(height);
+
+  const minDim = Math.min(w, h);
+  const maxDim = Math.max(w, h);
+
+  let maxAllowedThickness = 0;
+
+  if (minDim <= 27 && maxDim <= 37) {
+    maxAllowedThickness = Infinity; // All mounts allowed
+  } else if (minDim <= 28 && maxDim <= 38) {
+    maxAllowedThickness = 1.5; // Up to 1.5"
+  } else if (minDim <= 29 && maxDim <= 39) {
+    maxAllowedThickness = 1.0; // Up to 1.0"
+  } else {
+    maxAllowedThickness = 0; // No mounts allowed
+  }
+
+  if (maxAllowedThickness === 0) {
+    return [];
+  }
+
+  if (allMounts && allMounts.length > 0) {
+    // Collect all unique active thicknesses from allMounts that are <= maxAllowedThickness
+    const thicknesses = allMounts
+      .filter((m) => m && m.thickness !== undefined && parseFloat(m.thickness) <= maxAllowedThickness)
+      .map((m) => String(m.thickness));
+    // Deduplicate
+    return Array.from(new Set(thicknesses));
+  }
+
+  // Fallback defaults
+  const defaults = ["1", "1.5", "2"];
+  return defaults.filter((val) => parseFloat(val) <= maxAllowedThickness);
+};
+
 const calculateCartItemsPrice = async (
   items,
   couponCode,
@@ -642,9 +682,11 @@ const calculateCartItemsPrice = async (
 
     const frameIds = items.filter((i) => i.frameId).map((i) => i.frameId);
     const paperIds = items.filter((i) => i.paperId).map((i) => i.paperId);
+    const mountIds = items.filter((i) => i.mountId).map((i) => i.mountId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
+    const mounts = await Mount.find({ _id: { $in: mountIds } });
     const layoutContent = await LayoutContent.findOne({});
     const coupon = await Coupon.findOne({ code: couponCode });
 
@@ -652,7 +694,7 @@ const calculateCartItemsPrice = async (
     const maxDiscount = coupon?.maxDiscountAmount || 0;
 
     for (const item of items) {
-      const { imageId, paperId, frameId, width, height, resolution } = item;
+      const { imageId, paperId, frameId, mountId, width, height, resolution } = item;
       const area = (width || 0) * (height || 0);
 
       if (!paperId && imageId && !isCustom) {
@@ -735,10 +777,42 @@ const calculateCartItemsPrice = async (
         }
       }
 
-      totalFinalPrice += paperFinalPrice + frameFinalPrice;
+      let mountInitialPrice = 0;
+      let mountBasePrice = 0;
+      let mountFinalPrice = 0;
+
+      if (mountId && frameId) {
+        const mount = mounts.find((m) => m._id.toString() === mountId);
+        if (mount) {
+          const available = getAvailableMounts(width, height, mounts);
+          if (!available.includes(String(mount.thickness))) {
+            throw new Error(`Mount thickness ${mount.thickness} is not allowed for print dimensions ${width}x${height}`);
+          }
+          mountInitialPrice = area * mount.initialBasePrice;
+          const mountUnitPrice = mount.basePricePerUnit || mount.basePricePerLinearInch || 0;
+          mountBasePrice = area * mountUnitPrice;
+
+          // USER DISCOUNT (implicit)
+          totalPhotographerDiscount += mountInitialPrice - mountBasePrice;
+
+          mountFinalPrice = mountBasePrice;
+
+          // PHOTOGRAPHER DISCOUNT
+          if (photographerId && mount.photographerDiscount) {
+            const discount = mountBasePrice * (mount.photographerDiscount / 100);
+
+            mountFinalPrice -= discount;
+            totalPhotographerDiscount += discount;
+          }
+
+          subtotal += mountInitialPrice;
+        }
+      }
+
+      totalFinalPrice += paperFinalPrice + frameFinalPrice + mountFinalPrice;
 
       rawCouponDiscount +=
-        (paperFinalPrice + frameFinalPrice) * (couponDiscountPercentage / 100);
+        (paperFinalPrice + frameFinalPrice + mountFinalPrice) * (couponDiscountPercentage / 100);
 
       if (layoutContent?.charges?.delivery) {
         totalDeliveryCharge += await calculateDelhiveryCharge(
@@ -1140,6 +1214,9 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 const inchToCm = 2.54;
 
 async function calculateDelhiveryCharge(width, height, hasFrame, d_pin) {
+  if (!d_pin || d_pin.toString().trim().length !== 6) {
+    return 0;
+  }
   let length_cm, height_cm, depth_cm;
 
   if (hasFrame) {
@@ -1196,9 +1273,11 @@ const calculateCartPrice = async (req, res) => {
 
     const frameIds = items.filter((i) => i.frameId).map((i) => i.frameId);
     const paperIds = items.filter((i) => i.paperId).map((i) => i.paperId);
+    const mountIds = items.filter((i) => i.mountId).map((i) => i.mountId);
 
     const frames = await Frame.find({ _id: { $in: frameIds } });
     const papers = await Paper.find({ _id: { $in: paperIds } });
+    const mounts = await Mount.find({ _id: { $in: mountIds } });
     const layoutContent = await LayoutContent.findOne({});
     const coupon = await Coupon.findOne({ code: couponCode });
 
@@ -1206,7 +1285,7 @@ const calculateCartPrice = async (req, res) => {
     const maxDiscount = coupon?.maxDiscountAmount || 0;
 
     for (const item of items) {
-      const { imageId, paperId, frameId, width, height, resolution } = item;
+      const { imageId, paperId, frameId, mountId, width, height, resolution } = item;
       const area = (width || 0) * (height || 0);
 
       if (!paperId && imageId && !isCustom) {
@@ -1285,10 +1364,43 @@ const calculateCartPrice = async (req, res) => {
         }
       }
 
-      totalFinalPrice += paperFinalPrice + frameFinalPrice;
+      let mountInitialPrice = 0;
+      let mountBasePrice = 0;
+      let mountFinalPrice = 0;
+
+      if (mountId && frameId) {
+        const mount = mounts.find((m) => m._id.toString() === mountId);
+        if (mount) {
+          const available = getAvailableMounts(width, height, mounts);
+          if (!available.includes(String(mount.thickness))) {
+            throw new Error(`Mount thickness ${mount.thickness} is not allowed for print dimensions ${width}x${height}`);
+          }
+
+          mountInitialPrice = area * mount.initialBasePrice;
+          const mountUnitPrice = mount.basePricePerUnit || mount.basePricePerLinearInch || 0;
+          mountBasePrice = area * mountUnitPrice;
+
+          // USER DISCOUNT (implicit)
+          totalPhotographerDiscount += mountInitialPrice - mountBasePrice;
+
+          mountFinalPrice = mountBasePrice;
+
+          // PHOTOGRAPHER DISCOUNT
+          if (photographerId && mount.photographerDiscount) {
+            const discount = mountBasePrice * (mount.photographerDiscount / 100);
+
+            mountFinalPrice -= discount;
+            totalPhotographerDiscount += discount;
+          }
+
+          subtotal += mountInitialPrice;
+        }
+      }
+
+      totalFinalPrice += paperFinalPrice + frameFinalPrice + mountFinalPrice;
 
       rawCouponDiscount +=
-        (paperFinalPrice + frameFinalPrice) * (couponDiscountPercentage / 100);
+        (paperFinalPrice + frameFinalPrice + mountFinalPrice) * (couponDiscountPercentage / 100);
 
       if (layoutContent?.charges?.delivery) {
         totalDeliveryCharge += await calculateDelhiveryCharge(
@@ -1334,7 +1446,7 @@ const calculateCartPrice = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error." });
+    res.status(400).json({ message: error.message || "Server error." });
   }
 };
 
