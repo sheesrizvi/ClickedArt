@@ -297,7 +297,8 @@ const generateInvoice = async (req, res) => {
     })
       .populate("orderItems.imageInfo.image")
       .populate("orderItems.paperInfo.paper")
-      .populate("orderItems.frameInfo.frame");
+      .populate("orderItems.frameInfo.frame")
+      .populate("orderItems.mountInfo.mount");
 
     const referralBalance = await ReferralBalance.aggregate([
       {
@@ -472,7 +473,8 @@ const generateSingleOrderInvoice = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate("orderItems.imageInfo.image")
       .populate("orderItems.paperInfo.paper")
-      .populate("orderItems.frameInfo.frame");
+      .populate("orderItems.frameInfo.frame")
+      .populate("orderItems.mountInfo.mount");
 
     if (!order || order.orderStatus !== "completed") {
       return res

@@ -13,6 +13,7 @@ const Referral = require("../models/referralModel.js");
 const Paper = require("../models/imagebase/paperModel");
 const Frame = require("../models/imagebase/frameModel.js");
 const Mount = require("../models/imagebase/mountModel");
+const { getAvailableMounts } = require("../utils/mountValidator");
 const Razorpay = require("razorpay");
 const Monetization = require("../models/monetizationModel.js");
 const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
@@ -157,8 +158,24 @@ const createOrder = asyncHandler(async (req, res) => {
         );
       }
 
+      let mountInfo = undefined;
+      if (item.mountInfo && (item.mountInfo.mount || item.mountInfo.name)) {
+        mountInfo = {
+          name: item.mountInfo.name || "Mount",
+          color: typeof item.mountInfo.color === 'object' && item.mountInfo.color.hex
+            ? item.mountInfo.color
+            : { name: item.mountInfo.color || "Default", hex: item.mountInfo.color || "#000000" },
+          thickness: Number(item.mountInfo.thickness || 0),
+          price: Number(item.mountInfo.price || 0),
+        };
+        if (item.mountInfo.mount && item.mountInfo.mount !== "null" && item.mountInfo.mount !== "") {
+          mountInfo.mount = item.mountInfo.mount;
+        }
+      }
+
       updatedItems.push({
         ...item,
+        mountInfo,
         sgst,
         cgst,
         totalGST,
@@ -324,6 +341,9 @@ const getAllOrders = asyncHandler(async (req, res) => {
         {
           path: "imageInfo.photographer",
         },
+        {
+          path: "mountInfo.mount",
+        },
       ],
     })
     .populate("userInfo.user")
@@ -361,6 +381,9 @@ const getFailedOrders = asyncHandler(async (req, res) => {
         },
         {
           path: "imageInfo.photographer",
+        },
+        {
+          path: "mountInfo.mount",
         },
       ],
     })
@@ -400,6 +423,9 @@ const getMyOrders = asyncHandler(async (req, res) => {
         },
         {
           path: "imageInfo.photographer",
+        },
+        {
+          path: "mountInfo.mount",
         },
       ],
     })
@@ -447,6 +473,9 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
         },
         {
           path: "imageInfo.photographer",
+        },
+        {
+          path: "mountInfo.mount",
         },
       ],
     })
@@ -538,6 +567,9 @@ const getOrderById = asyncHandler(async (req, res) => {
         {
           path: "imageInfo.photographer",
         },
+        {
+          path: "mountInfo.mount",
+        },
       ],
     })
     .populate("userInfo.user");
@@ -572,6 +604,9 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
         },
         {
           path: "imageInfo.photographer",
+        },
+        {
+          path: "mountInfo.mount",
         },
       ],
     })
@@ -624,45 +659,6 @@ const payment = asyncHandler(async (req, res) => {
 
   res.status(200).json({ result });
 });
-
-const getAvailableMounts = (width, height, allMounts = []) => {
-  if (!width || !height) return [];
-
-  const w = parseFloat(width);
-  const h = parseFloat(height);
-
-  const minDim = Math.min(w, h);
-  const maxDim = Math.max(w, h);
-
-  let maxAllowedThickness = 0;
-
-  if (minDim <= 27 && maxDim <= 37) {
-    maxAllowedThickness = Infinity; // All mounts allowed
-  } else if (minDim <= 28 && maxDim <= 38) {
-    maxAllowedThickness = 1.5; // Up to 1.5"
-  } else if (minDim <= 29 && maxDim <= 39) {
-    maxAllowedThickness = 1.0; // Up to 1.0"
-  } else {
-    maxAllowedThickness = 0; // No mounts allowed
-  }
-
-  if (maxAllowedThickness === 0) {
-    return [];
-  }
-
-  if (allMounts && allMounts.length > 0) {
-    // Collect all unique active thicknesses from allMounts that are <= maxAllowedThickness
-    const thicknesses = allMounts
-      .filter((m) => m && m.thickness !== undefined && parseFloat(m.thickness) <= maxAllowedThickness)
-      .map((m) => String(m.thickness));
-    // Deduplicate
-    return Array.from(new Set(thicknesses));
-  }
-
-  // Fallback defaults
-  const defaults = ["1", "1.5", "2"];
-  return defaults.filter((val) => parseFloat(val) <= maxAllowedThickness);
-};
 
 const calculateCartItemsPrice = async (
   items,
@@ -928,6 +924,9 @@ const getPendingOrders = asyncHandler(async (req, res) => {
         },
         {
           path: "imageInfo.photographer",
+        },
+        {
+          path: "mountInfo.mount",
         },
       ],
     })

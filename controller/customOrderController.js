@@ -107,11 +107,27 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     )}`;
     await incrementCounter(financialYear);
 
+    let mountInfo = undefined;
+    if (item.mountInfo && (item.mountInfo.mount || item.mountInfo.name)) {
+      mountInfo = {
+        name: item.mountInfo.name || "Mount",
+        color: typeof item.mountInfo.color === 'object' && item.mountInfo.color.hex
+          ? item.mountInfo.color
+          : { name: item.mountInfo.color || "Default", hex: item.mountInfo.color || "#000000" },
+        thickness: Number(item.mountInfo.thickness || 0),
+        price: Number(item.mountInfo.price || 0),
+      };
+      if (item.mountInfo.mount && item.mountInfo.mount !== "null" && item.mountInfo.mount !== "") {
+        mountInfo.mount = item.mountInfo.mount;
+      }
+    }
+
     const newOrder = new CustomImageOrder({
       userInfo: { user: userId, userType },
       orderItems: [
         {
           ...item,
+          mountInfo,
           sgst,
           cgst,
           totalGST,
@@ -279,6 +295,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
   const orders = await CustomImageOrder.find({ "userInfo.user": userId })
     .populate("orderItems.frameInfo.frame")
     .populate("orderItems.paperInfo.paper")
+    .populate("orderItems.mountInfo.mount")
     .sort({ createdAt: -1 });
 
   if (!orders || orders.length === 0) {
@@ -294,7 +311,8 @@ const getCustomOrderById = asyncHandler(async (req, res) => {
   const order = await CustomImageOrder.findById(orderId)
     .populate("userInfo.user")
     .populate("orderItems.frameInfo.frame")
-    .populate("orderItems.paperInfo.paper");
+    .populate("orderItems.paperInfo.paper")
+    .populate("orderItems.mountInfo.mount");
 
   if (!order) {
     return res.status(404).json({ message: "Order not found" });

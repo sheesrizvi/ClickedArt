@@ -77,6 +77,25 @@ const orderSchema = new mongoose.Schema(
             type: Number,
           },
         },
+        mountInfo: {
+          mount: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Mount",
+          },
+          name: {
+            type: String,
+          },
+          color: {
+            name: { type: String },
+            hex: { type: String },
+          },
+          thickness: {
+            type: Number,
+          },
+          price: {
+            type: Number,
+          },
+        },
         subTotal: {
           type: Number,
           required: true,
