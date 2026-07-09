@@ -46,6 +46,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const termsRoutes = require("./routes/termsRoutes");
 const privacyPolicyRoutes = require("./routes/privacyPolicyRoutes");
 const upload = require("./routes/upload");
+const artworkRoutes = require("./routes/artworkRoutes");
 const cron = require("node-cron");
 const {
   checkAndUpdateSubscriptions,
@@ -115,6 +116,7 @@ app.use("/api/custom-order", customOrderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/terms", termsRoutes);
 app.use("/api/privacy-policy", privacyPolicyRoutes);
+app.use("/api/artworks", artworkRoutes);
 app.use("/api/test", (req, res) => {
   res.status(200).json({ message: "Test route is working!" });
 });
