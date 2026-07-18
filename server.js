@@ -47,6 +47,8 @@ const termsRoutes = require("./routes/termsRoutes");
 const privacyPolicyRoutes = require("./routes/privacyPolicyRoutes");
 const upload = require("./routes/upload");
 const artworkRoutes = require("./routes/artworkRoutes");
+const artworkCategoryRoutes = require("./routes/artworkCategoryRoutes");
+const artworkOrderRoutes = require("./routes/artworkOrderRoutes");
 const cron = require("node-cron");
 const {
   checkAndUpdateSubscriptions,
@@ -117,6 +119,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/terms", termsRoutes);
 app.use("/api/privacy-policy", privacyPolicyRoutes);
 app.use("/api/artworks", artworkRoutes);
+app.use("/api/artwork-category", artworkCategoryRoutes);
+app.use("/api/artwork-orders", artworkOrderRoutes);
 app.use("/api/test", (req, res) => {
   res.status(200).json({ message: "Test route is working!" });
 });
@@ -174,4 +178,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Successfully served on port: ${PORT}.`);
+// Restart nodemon comment
 });

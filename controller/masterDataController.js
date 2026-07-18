@@ -9,6 +9,7 @@ const Monetization = require("../models/monetizationModel.js");
 const User = require("../models/userModel.js");
 const ImageVault = require("../models/imagebase/imageVaultModel.js");
 const Category = require("../models/categoryModel.js");
+const ArtworkCategory = require("../models/artworkCategoryModel.js");
 const Blog = require("../models/socials/blogModel.js");
 const Frame = require("../models/imagebase/frameModel.js");
 const Paper = require("../models/imagebase/paperModel.js");
@@ -159,6 +160,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       activePhotographers,
       pendingPhotos,
       totalCategories,
+      totalArtworkCategories,
       pendingPhotographers,
       totalBlogs,
       pendingBlogs,
@@ -196,6 +198,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
         })
       ),
       safeCount(Category.countDocuments()),
+      safeCount(ArtworkCategory.countDocuments()),
       safeCount(
         Photographer.countDocuments({
           photographerStatus: "pending",
@@ -246,6 +249,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       activePhotographers,
       pendingPhotos,
       totalCategories,
+      totalArtworkCategories,
       pendingPhotographers,
       totalBlogs,
       pendingBlogs,

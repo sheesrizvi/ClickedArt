@@ -1,161 +1,129 @@
 const mongoose = require("mongoose");
-require("./categoryModel");
+const validator = require('validator');
 
-const artworkSchema = mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Photographer",
-      required: true,
-    },
-    title: {
-      type: String,
-      trim: true,
-      required: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    medium: {
-      type: String,
-      trim: true,
-      enum: [
-        "Oil",
-        "Acrylic",
-        "Watercolor",
-        "Gouache",
-        "Pastel",
-        "Charcoal",
-        "Pencil",
-        "Ink",
-        "Digital",
-        "Mixed Media",
-        "Other",
-      ],
-      default: "Other",
-    },
-    style: {
-      type: String,
-      trim: true,
-      enum: [
-        "Abstract",
-        "Realism",
-        "Impressionism",
-        "Expressionism",
-        "Surrealism",
-        "Minimalism",
-        "Pop Art",
-        "Cubism",
-        "Landscape",
-        "Portrait",
-        "Still Life",
-        "Other",
-      ],
-      default: "Other",
-    },
-    orientation: {
-      type: String,
-      trim: true,
-      enum: ["Portrait", "Landscape", "Square"],
-      default: "Landscape",
-    },
+const artworkSchema = mongoose.Schema({
     category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ArtworkCategory'
     },
-    dimensions: {
-      width: { type: Number },
-      height: { type: Number },
-      unit: { type: String, enum: ["cm", "inch"], default: "cm" },
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Photographer',
+        required: true
     },
-    yearCreated: {
-      type: Number,
-    },
-    keywords: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    price: {
-      type: Number,
-      default: 0,
+    photographer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Photographer'
     },
     imageLinks: {
-      original: { type: String, required: true },
-      thumbnail: { type: String },
-      medium: { type: String },
-      small: { type: String },
+        thumbnail: { type: String },
+        original: { type: String, required: true },
     },
     resolutions: {
-      original: {
-        width: { type: Number },
-        height: { type: Number },
-      },
-      medium: {
-        width: { type: Number },
-        height: { type: Number },
-      },
-      small: {
-        width: { type: Number },
-        height: { type: Number },
-      },
-      thumbnail: {
-        width: { type: Number },
-        height: { type: Number },
-      },
+        thumbnail: {  width: { type: Number }, height: { type: Number }  },
+        original: {  width: { type: Number }, height: { type: Number }  },
     },
-    fileSize: {
-      type: Number,
+    title: {
+        type: String
+    },
+    description: {
+        type: String
+    },
+    story: {
+        type: String
+    },
+    keywords: [
+        {
+            type: String,
+            required: true
+        }
+    ],
+    location: { 
+        type: String
+    },
+    watermark: {
+        type: Boolean,
+        default: false
+    },
+    cameraDetails: {
+        camera: { type: String, trim: true },
+        lens: { type: String, trim: true },
+        settings: {
+          focalLength: { type: String, trim: true },
+          aperture: { type: String, trim: true },
+          shutterSpeed: { type: String, trim: true },
+          iso: { type: Number },
+        },
+    },
+    price: {
+        type: Number
+    },
+    license: {
+       type: mongoose.Schema.Types.ObjectId,
+       ref: "License",
+    },
+    exclusiveLicenseStatus: {
+        type: String,
+        default: 'pending',
+        enum: ['pending', 'review', 'approved', 'rejected']
     },
     isActive: {
-      type: Boolean,
-      default: false,
+        type: Boolean,
+        default: false
     },
-    isApproved: {
-      type: Boolean,
-      default: false,
+    featuredArtwork: {
+        type: Boolean,
+        default: false
     },
-    rejectionReason: [
-      {
+    rejectionReason: [{
         type: String,
         trim: true,
-      },
-    ],
-    featuredArtwork: {
-      type: Boolean,
-      default: false,
+        default: null
+    }],
+    notForSale: {
+        type: Boolean,
+        default: false
     },
     slug: {
-      type: String,
-      unique: true,
-      sparse: true,
+        type: String
+    },
+    eventName: {
+        type: String
+    },
+    eventEndDate: {
+        type: Date
+    },
+    selectedForEvent: {
+        type: Boolean,
+        default: false
+    },
+    isApproved: {
+        type: Boolean,
+        default: false
     },
     isAvailable: {
-      type: Boolean,
-      default: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-// Auto-generate slug from title + id before saving
-artworkSchema.pre("save", async function (next) {
-  if (this.isNew || this.isModified("title")) {
-    const base = (this.title || "artwork")
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, "")
-      .trim()
-      .replace(/\s+/g, "-");
-    const unique = `${base}-${Date.now()}`;
-    this.slug = unique;
-  }
-  next();
+        type: Boolean,
+        default: true
+    }
+}, {
+    timestamps: true
 });
 
-const Artwork = mongoose.model("Artwork", artworkSchema);
+artworkSchema.virtual('orientation').get(function() {
+    if (this.resolutions && this.resolutions.original) {
+        const { width, height } = this.resolutions.original;
+        if (width && height) {
+            if (width > height) return 'Landscape';
+            if (width < height) return 'Portrait';
+            return 'Square';
+        }
+    }
+    return null;
+});
+
+artworkSchema.set('toJSON', { virtuals: true });
+artworkSchema.set('toObject', { virtuals: true });
+
+const Artwork = mongoose.model('Artwork', artworkSchema);
 
 module.exports = Artwork;

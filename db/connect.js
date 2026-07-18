@@ -8,6 +8,8 @@ const Photographer = require('../models/photographerModel.js')
 const User = require('../models/userModel.js')
 const Notification = require('../models/notificationModel.js')
 
+const { seedArtworkCategories } = require("./seed.js");
+
 const dbConnect = async () => {
     try {
        const dbOptions = {
@@ -15,6 +17,7 @@ const dbConnect = async () => {
        }
         const connectionInstance =  await mongoose.connect(process.env.MONGO_URI, dbOptions)
         console.log(`MongoDB Connected ${connectionInstance.connection.host} <-> ${connectionInstance.connection.name}`)
+        await seedArtworkCategories();
     } catch(e) {
         console.log('MongoDB Connection Error', e.message)
         process.exit(1)

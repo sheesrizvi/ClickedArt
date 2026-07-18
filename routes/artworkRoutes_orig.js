@@ -35,16 +35,12 @@ const upload = multer({
 
 // ─── Public Routes ───────────────────────────────────────────────
 router.get("/public", getPublicArtworks);
-router.get("/get-images-by-sort-type", getPublicArtworks);
-router.get("/search-images", getPublicArtworks);
-router.get("/get-image-by-slug", getArtworkBySlug);
 router.get("/slug/:slug", getArtworkBySlug);
 
 // ─── Protected Photographer Routes ───────────────────────────────
 router.post("/upload", IsAdminOrPhotographer, upload.single("artwork"), uploadArtwork);
 router.get("/my-artworks", IsAdminOrPhotographer, getMyArtworks);
 router.put("/:id", IsAdminOrPhotographer, updateArtwork);
-router.delete("/delete-image", IsAdminOrPhotographer, deleteArtwork);
 router.delete("/:id", IsAdminOrPhotographer, deleteArtwork);
 
 // ─── Admin-Only Routes ───────────────────────────────────────────

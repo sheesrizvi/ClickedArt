@@ -1,6 +1,6 @@
 const Artwork = require("../models/artworkModel");
 const Photographer = require("../models/photographerModel");
-const Category = require("../models/artworkCategoryModel");
+const Category = require("../models/categoryModel");
 const User = require("../models/userModel");
 const asyncHandler = require("express-async-handler");
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
@@ -198,14 +198,9 @@ const getMyArtworks = asyncHandler(async (req, res) => {
     Artwork.countDocuments(filter),
   ]);
 
-  const populated = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
   res.status(200).json({
     success: true,
-    artworks: populated,
+    artworks,
     total,
     page,
     pageCount: Math.ceil(total / pageSize),
@@ -218,28 +213,23 @@ const getMyArtworks = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getPublicArtworks = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || parseInt(req.query.pageNumber) || 1;
+  const page = parseInt(req.query.page) || 1;
   const pageSize = parseInt(req.query.pageSize) || 24;
   const skip = (page - 1) * pageSize;
-  const search = req.query.search || req.query.q || req.query.Query || "";
+  const search = req.query.search || "";
   const orientation = req.query.orientation || "";
   const featured = req.query.featured || "";
   const photographer = req.query.photographer || "";
-  const sort = req.query.sort || req.query.sortType || "newest";
+  const sort = req.query.sort || "newest";
 
-  const filter = { isActive: true, isApproved: true, isAvailable: { $ne: false } };
+  const filter = { isActive: true, isApproved: true, isAvailable: true };
   if (search) filter.$or = [
     { title: { $regex: search, $options: "i" } },
-    { keywords: { $regex: search, $options: "i" } },
+    { keywords: { $in: [new RegExp(search, "i")] } },
   ];
   if (orientation) filter.orientation = orientation;
   if (featured === "true") filter.featuredArtwork = true;
   if (photographer) filter.user = photographer;
-
-  const categoryId = req.query.categoryId || req.query.category;
-  if (categoryId && categoryId !== "all" && categoryId !== "undefined") {
-    filter.category = categoryId;
-  }
 
   const sortMap = {
     newest: { createdAt: -1 },
@@ -263,14 +253,10 @@ const getPublicArtworks = asyncHandler(async (req, res) => {
   photographers.forEach((p) => { userMap[p._id.toString()] = p; });
   users.forEach((u) => { userMap[u._id.toString()] = u; });
 
-  const populated = rawArtworks.map((art) => {
-    const userObj = art.user ? userMap[art.user.toString()] || null : null;
-    return {
-      ...art,
-      user: userObj,
-      photographer: userObj,
-    };
-  });
+  const populated = rawArtworks.map((art) => ({
+    ...art,
+    user: art.user ? userMap[art.user.toString()] || null : null,
+  }));
 
   const artworks = populated.filter((art) => art.user);
   const total = artworks.length;
@@ -279,7 +265,6 @@ const getPublicArtworks = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     artworks: paginatedArtworks,
-    photos: paginatedArtworks, // Support both formats for frontend compatibility
     total,
     page,
     pageCount: Math.ceil(total / pageSize),
@@ -288,21 +273,17 @@ const getPublicArtworks = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Get artwork by slug (public detail page)
- * @route   GET /api/artworks/slug/:slug or /api/artworks/get-image-by-slug?slug=:slug
+ * @route   GET /api/artworks/slug/:slug
  * @access  Public
  */
 const getArtworkBySlug = asyncHandler(async (req, res) => {
-  const slug = req.params.slug || req.query.slug;
-  if (!slug) {
-    return res.status(400).json({ success: false, message: "Slug is required." });
-  }
+  const { slug } = req.params;
   const artwork = await Artwork.findOne({ slug, isApproved: true, isActive: true })
     .populate("user", "firstName lastName username profileImage")
     .lean();
   if (!artwork) {
     return res.status(404).json({ success: false, message: "Artwork not found." });
   }
-  artwork.photographer = artwork.user;
   res.status(200).json({ success: true, artwork });
 });
 
@@ -345,14 +326,10 @@ const getAllArtworksAdmin = asyncHandler(async (req, res) => {
   photographers.forEach((p) => { userMap[p._id.toString()] = p; });
   users.forEach((u) => { userMap[u._id.toString()] = u; });
 
-  const populated = rawArtworks.map((art) => {
-    const userObj = art.user ? userMap[art.user.toString()] || null : null;
-    return {
-      ...art,
-      user: userObj,
-      photographer: userObj,
-    };
-  });
+  const populated = rawArtworks.map((art) => ({
+    ...art,
+    user: art.user ? userMap[art.user.toString()] || null : null,
+  }));
 
   const artworks = populated.filter((art) => art.user);
   const total = artworks.length;
@@ -379,7 +356,6 @@ const getArtworkById = asyncHandler(async (req, res) => {
   if (!artwork) {
     return res.status(404).json({ success: false, message: "Artwork not found." });
   }
-  artwork.photographer = artwork.user;
   res.status(200).json({ success: true, artwork });
 });
 
@@ -445,9 +421,8 @@ const updateArtwork = asyncHandler(async (req, res) => {
 const deleteArtwork = asyncHandler(async (req, res) => {
   const userId = req.user._id || req.user.id;
   const isAdmin = ["Admin", "admin", "seo"].includes(req.user.type);
-  const artworkId = req.params.id || req.query.id || req.body.id;
 
-  const artwork = await Artwork.findById(artworkId);
+  const artwork = await Artwork.findById(req.params.id);
   if (!artwork) {
     return res.status(404).json({ success: false, message: "Artwork not found." });
   }
@@ -466,7 +441,7 @@ const deleteArtwork = asyncHandler(async (req, res) => {
     ]);
   }
 
-  await Artwork.findByIdAndDelete(artworkId);
+  await Artwork.findByIdAndDelete(req.params.id);
   res.status(200).json({ success: true, message: "Artwork deleted successfully." });
 });
 
@@ -541,12 +516,7 @@ const getPendingArtworks = asyncHandler(async (req, res) => {
     Artwork.countDocuments(filter),
   ]);
 
-  const populatedPending = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
-  res.status(200).json({ success: true, artworks: populatedPending, total, page, pageCount: Math.ceil(total / pageSize) });
+  res.status(200).json({ success: true, artworks, total, page, pageCount: Math.ceil(total / pageSize) });
 });
 
 /**
@@ -571,12 +541,7 @@ const getRejectedArtworks = asyncHandler(async (req, res) => {
     Artwork.countDocuments(filter),
   ]);
 
-  const populatedRejected = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
-  res.status(200).json({ success: true, artworks: populatedRejected, total, page, pageCount: Math.ceil(total / pageSize) });
+  res.status(200).json({ success: true, artworks, total, page, pageCount: Math.ceil(total / pageSize) });
 });
 
 module.exports = {
