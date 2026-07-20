@@ -13,6 +13,10 @@ const {
   toggleFeaturedArtwork,
   getPendingArtworks,
   getRejectedArtworks,
+  getUserUploadedArtworks,
+  approveUserUploadedArtwork,
+  rejectUserUploadedArtwork,
+  deleteUserUploadedArtwork,
 } = require("../controller/artworkController");
 const { IsAdminOrPhotographer, isAdmin } = require("../middleware/authMiddleware");
 
@@ -51,6 +55,10 @@ router.delete("/:id", IsAdminOrPhotographer, deleteArtwork);
 router.get("/admin/all", isAdmin, getAllArtworksAdmin);
 router.get("/admin/pending", isAdmin, getPendingArtworks);
 router.get("/admin/rejected", isAdmin, getRejectedArtworks);
+router.get("/admin/user-uploaded", isAdmin, getUserUploadedArtworks);
+router.post("/admin/user-uploaded/approve", isAdmin, approveUserUploadedArtwork);
+router.post("/admin/user-uploaded/reject", isAdmin, rejectUserUploadedArtwork);
+router.delete("/admin/user-uploaded/:id", isAdmin, deleteUserUploadedArtwork);
 router.get("/:id", isAdmin, getArtworkById);
 router.post("/approve", isAdmin, approveArtwork);
 router.post("/toggle-featured", isAdmin, toggleFeaturedArtwork);

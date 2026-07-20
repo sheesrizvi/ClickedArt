@@ -66,7 +66,7 @@ const uploadArtwork = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "No file uploaded." });
   }
 
-  const { title, description, medium, style, orientation, keywords, yearCreated, dimensionWidth, dimensionHeight, dimensionUnit, publishStatus, featureAll, categoryName } = req.body;
+  const { title, description, medium, style, orientation, keywords, yearCreated, dimensionWidth, dimensionHeight, dimensionUnit, publishStatus, featureAll, categoryName, uploadSource } = req.body;
 
   // File size limit: 30MB
   if (req.file.size > 30 * 1024 * 1024) {
@@ -126,6 +126,9 @@ const uploadArtwork = asyncHandler(async (req, res) => {
   const isDraft = isAdminUser && publishStatus === "draft";
   const isPublished = isAdminUser && !isDraft;
   const isFeatured = isAdminUser && (featureAll === "true" || featureAll === true);
+  
+  const source = uploadSource || (isAdminUser ? "admin" : "user");
+  const initialApprovalStatus = (source === "user") ? "Pending" : (isPublished ? "Approved" : "Pending");
 
   let categoryId = null;
   if (categoryName) {
@@ -166,6 +169,8 @@ const uploadArtwork = asyncHandler(async (req, res) => {
     isActive: isAdminUser ? isPublished : false,
     isApproved: isAdminUser ? isPublished : false,
     featuredArtwork: isFeatured,
+    uploadSource: source,
+    approvalStatus: initialApprovalStatus,
   });
 
   res.status(201).json({ success: true, artwork });
@@ -269,6 +274,7 @@ const getPublicArtworks = asyncHandler(async (req, res) => {
       ...art,
       user: userObj,
       photographer: userObj,
+      category: art.category ? [art.category] : [],
     };
   });
 
@@ -298,11 +304,13 @@ const getArtworkBySlug = asyncHandler(async (req, res) => {
   }
   const artwork = await Artwork.findOne({ slug, isApproved: true, isActive: true })
     .populate("user", "firstName lastName username profileImage")
+    .populate("category", "name")
     .lean();
   if (!artwork) {
     return res.status(404).json({ success: false, message: "Artwork not found." });
   }
   artwork.photographer = artwork.user;
+  artwork.category = artwork.category ? [artwork.category] : [];
   res.status(200).json({ success: true, artwork });
 });
 
@@ -351,6 +359,7 @@ const getAllArtworksAdmin = asyncHandler(async (req, res) => {
       ...art,
       user: userObj,
       photographer: userObj,
+      category: art.category ? [art.category] : [],
     };
   });
 
@@ -375,11 +384,13 @@ const getAllArtworksAdmin = asyncHandler(async (req, res) => {
 const getArtworkById = asyncHandler(async (req, res) => {
   const artwork = await Artwork.findById(req.params.id)
     .populate("user", "firstName lastName username profileImage email")
+    .populate("category", "name")
     .lean();
   if (!artwork) {
     return res.status(404).json({ success: false, message: "Artwork not found." });
   }
   artwork.photographer = artwork.user;
+  artwork.category = artwork.category ? [artwork.category] : [];
   res.status(200).json({ success: true, artwork });
 });
 
@@ -579,6 +590,137 @@ const getRejectedArtworks = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, artworks: populatedRejected, total, page, pageCount: Math.ceil(total / pageSize) });
 });
 
+/**
+ * @desc    Get all user uploaded artworks for admin review
+ * @route   GET /api/artworks/admin/user-uploaded
+ * @access  Admin
+ */
+const getUserUploadedArtworks = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = parseInt(req.query.pageSize) || 20;
+  const skip = (page - 1) * pageSize;
+  const search = req.query.search || "";
+  const status = req.query.status || "";
+
+  const filter = { uploadSource: "user" };
+  if (search) filter.title = { $regex: search, $options: "i" };
+  if (status === "approved") { filter.approvalStatus = "Approved"; }
+  else if (status === "pending") { filter.approvalStatus = "Pending"; }
+  else if (status === "rejected") { filter.approvalStatus = "Rejected"; }
+
+  const rawArtworks = await Artwork.find(filter)
+    .populate("category", "name")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const userIds = [...new Set(rawArtworks.map((art) => art.user).filter(Boolean))];
+  const [photographers, users] = await Promise.all([
+    Photographer.find({ _id: { $in: userIds } }, "firstName lastName username profileImage email").lean(),
+    User.find({ _id: { $in: userIds } }, "firstName lastName username profileImage email").lean(),
+  ]);
+
+  const userMap = {};
+  photographers.forEach((p) => { userMap[p._id.toString()] = p; });
+  users.forEach((u) => { userMap[u._id.toString()] = u; });
+
+  const populated = rawArtworks.map((art) => {
+    const userObj = art.user ? userMap[art.user.toString()] || null : null;
+    return {
+      ...art,
+      user: userObj,
+      photographer: userObj,
+      category: art.category ? [art.category] : [],
+    };
+  });
+
+  const artworks = populated.filter((art) => art.user);
+  const total = artworks.length;
+  const paginatedArtworks = artworks.slice(skip, skip + pageSize);
+
+  res.status(200).json({
+    success: true,
+    artworks: paginatedArtworks,
+    total,
+    page,
+    pageCount: Math.ceil(total / pageSize),
+  });
+});
+
+/**
+ * @desc    Approve a user uploaded artwork (admin only)
+ * @route   POST /api/artworks/admin/user-uploaded/approve
+ * @access  Admin
+ */
+const approveUserUploadedArtwork = asyncHandler(async (req, res) => {
+  const { artworkId } = req.body;
+  if (!artworkId) return res.status(400).json({ success: false, message: "artworkId is required." });
+
+  const artwork = await Artwork.findById(artworkId);
+  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
+  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
+
+  artwork.approvalStatus = "Approved";
+  artwork.isActive = true;
+  artwork.isApproved = true;
+  artwork.approvedBy = req.user._id;
+  artwork.approvedAt = new Date();
+  artwork.rejectionReason = [];
+  artwork.rejectedReasonStr = "";
+
+  await artwork.save();
+  res.status(200).json({ success: true, artwork });
+});
+
+/**
+ * @desc    Reject a user uploaded artwork (admin only)
+ * @route   POST /api/artworks/admin/user-uploaded/reject
+ * @access  Admin
+ */
+const rejectUserUploadedArtwork = asyncHandler(async (req, res) => {
+  const { artworkId, rejectionReason } = req.body;
+  if (!artworkId) return res.status(400).json({ success: false, message: "artworkId is required." });
+
+  const artwork = await Artwork.findById(artworkId);
+  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
+  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
+
+  artwork.approvalStatus = "Rejected";
+  artwork.isActive = false;
+  artwork.isApproved = false;
+  artwork.rejectedAt = new Date();
+  artwork.rejectedReasonStr = rejectionReason || "Does not meet quality standards.";
+  artwork.rejectionReason = [artwork.rejectedReasonStr];
+
+  await artwork.save();
+  res.status(200).json({ success: true, artwork });
+});
+
+/**
+ * @desc    Delete user uploaded artwork (removes S3 assets + DB record)
+ * @route   DELETE /api/artworks/admin/user-uploaded/:id
+ * @access  Admin
+ */
+const deleteUserUploadedArtwork = asyncHandler(async (req, res) => {
+  const artworkId = req.params.id;
+  
+  const artwork = await Artwork.findById(artworkId);
+  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
+  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
+
+  // Delete all S3 assets
+  if (artwork.imageLinks) {
+    await Promise.allSettled([
+      deleteFromS3(artwork.imageLinks.original),
+      deleteFromS3(artwork.imageLinks.thumbnail),
+      deleteFromS3(artwork.imageLinks.small),
+      deleteFromS3(artwork.imageLinks.medium),
+    ]);
+  }
+
+  await Artwork.findByIdAndDelete(artworkId);
+  res.status(200).json({ success: true, message: "User uploaded artwork deleted successfully." });
+});
+
 module.exports = {
   uploadArtwork,
   getMyArtworks,
@@ -592,4 +734,8 @@ module.exports = {
   toggleFeaturedArtwork,
   getPendingArtworks,
   getRejectedArtworks,
+  getUserUploadedArtworks,
+  approveUserUploadedArtwork,
+  rejectUserUploadedArtwork,
+  deleteUserUploadedArtwork,
 };

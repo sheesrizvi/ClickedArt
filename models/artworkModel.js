@@ -104,6 +104,27 @@ const artworkSchema = mongoose.Schema({
     isAvailable: {
         type: Boolean,
         default: true
+    },
+    uploadSource: {
+        type: String,
+        enum: ['admin', 'bulk', 'user']
+    },
+    approvalStatus: {
+        type: String,
+        enum: ['Pending', 'Approved', 'Rejected']
+    },
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    approvedAt: {
+        type: Date
+    },
+    rejectedAt: {
+        type: Date
+    },
+    rejectedReasonStr: {
+        type: String
     }
 }, {
     timestamps: true

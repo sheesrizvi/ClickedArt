@@ -1388,16 +1388,42 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     });
 
   if (!image) {
-    return res.status(400).send({ message: "No Image found" });
-  }
+    const Artwork = require("../../models/artworkModel.js");
+    let artwork = await Artwork.findOne({
+      slug: { $regex: new RegExp(`^${slug}$`, "i") },
+    })
+      .populate("category license")
+      .populate({
+        path: "user",
+        select: "-bestPhotos",
+      });
 
-  const imageObject = image.toObject();
-  imageObject.imageLinks = {
-    thumbnail: imageObject.imageLinks?.thumbnail || null,
-  };
-  image = {
-    ...imageObject,
-  };
+    if (!artwork) {
+      return res.status(400).send({ message: "No Image found" });
+    }
+
+    const artworkObj = artwork.toObject();
+    const priceVal = artworkObj.price || 0;
+    image = {
+      ...artworkObj,
+      photographer: artworkObj.user || null,
+      category: artworkObj.category ? [artworkObj.category] : [],
+      price: {
+        original: priceVal,
+        medium: priceVal,
+        small: priceVal,
+      },
+    };
+  } else {
+    const imageObject = image.toObject();
+    imageObject.imageLinks = {
+      thumbnail: imageObject.imageLinks?.thumbnail || null,
+      original: imageObject.imageLinks?.original || null,
+    };
+    image = {
+      ...imageObject,
+    };
+  }
 
   res.status(200).send({ image });
 });
