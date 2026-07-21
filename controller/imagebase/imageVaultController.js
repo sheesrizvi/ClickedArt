@@ -931,7 +931,12 @@ const searchImages = asyncHandler(async (req, res) => {
   const searchQuery = Query;
   const sortOrder = order === "asc" ? 1 : -1;
 
-  let sortCriteria = {
+  let sortCriteria = searchQuery ? {
+    relevanceScore: -1,
+    createdAt: -1,
+    "imageAnalytics.views": -1,
+    "imageAnalytics.downloads": -1,
+  } : {
     createdAt: -1,
     "imageAnalytics.views": -1,
     "imageAnalytics.downloads": -1,
