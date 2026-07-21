@@ -992,14 +992,6 @@ const searchImages = asyncHandler(async (req, res) => {
         },
       },
     });
-
-    pipeline.push({
-      $match: {
-        relevanceScore: {
-          $gte: 1,
-        },
-      },
-    });
   }
 
   pipeline.push({

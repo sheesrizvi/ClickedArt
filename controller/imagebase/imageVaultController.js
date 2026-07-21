@@ -968,7 +968,6 @@ const searchImages = asyncHandler(async (req, res) => {
     },
     { $match: { isActive: true } },
     { $addFields: { relevanceScore: { $meta: "searchScore" } } },
-    { $match: { relevanceScore: { $gte: 1 } } },
 
     {
       $facet: {
