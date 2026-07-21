@@ -1,7 +1,8 @@
-const ArtworkCategory = require("../models/artworkCategoryModel.js");
+const ArtworkCategory = require("../models/artworkCategoryModel");
 const asyncHandler = require("express-async-handler");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
+const ImageVault = require("../models/imagebase/imageVaultModel.js");
 const Artwork = require("../models/artworkModel.js");
 
 const config = {
@@ -16,18 +17,15 @@ const s3 = new S3Client(config);
 const createCategory = asyncHandler(async (req, res) => {
   const { name, description, coverImage, tags } = req.body;
 
-  const trimmedName = name ? name.trim() : "";
-  const trimmedDesc = description ? description.trim() : "";
-
-  const categoryExist = await ArtworkCategory.findOne({ name: trimmedName });
+  const categoryExist = await ArtworkCategory.findOne({ name });
   if (categoryExist)
     return res
       .status(400)
-      .send({ message: "Artwork Category already exist with this name" });
+      .send({ message: "Category already exist with this name" });
 
   const category = await ArtworkCategory.create({
-    name: trimmedName,
-    description: trimmedDesc,
+    name,
+    description,
     coverImage,
     tags,
   });
@@ -39,10 +37,10 @@ const updateCategory = asyncHandler(async (req, res) => {
   const { id, name, description, coverImage, tags } = req.body;
 
   const category = await ArtworkCategory.findOne({ _id: id });
-  if (!category) return res.status(400).send({ message: "Artwork Category not exist" });
+  if (!category) return res.status(400).send({ message: "Category not exist" });
 
-  category.name = name ? name.trim() : category.name;
-  category.description = description ? description.trim() : category.description;
+  category.name = name || category.name;
+  category.description = description || category.description;
   category.coverImage = coverImage || category.coverImage;
   category.tags = tags || category.tags;
 
@@ -55,8 +53,8 @@ const deleteCategory = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
   const category = await ArtworkCategory.findOne({ _id: id });
-  if (!category) return res.status(400).send({ message: "Artwork Category not exist" });
-  const f1 = category?.coverImage || undefined;
+  if (!category) return res.status(400).send({ message: "Category not exist" });
+  f1 = category?.coverImage || undefined;
 
   if (f1) {
     const fileName = f1.split("//")[1].split("/")[1];
@@ -69,7 +67,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
 
   await ArtworkCategory.findOneAndDelete({ _id: id });
 
-  res.status(200).send({ message: "Artwork Category deleted successfully" });
+  res.status(200).send({ message: "Category deleted successfully" });
 });
 
 const getCategoryById = asyncHandler(async (req, res) => {
@@ -88,15 +86,17 @@ const getAllCategory = asyncHandler(async (req, res) => {
   const categories = await ArtworkCategory.find({})
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize);
+  if (!categories || categories.length === 0)
+    return res.status(400).send({ message: "Category not exist" });
 
-  res.status(200).send({ categories: categories || [], pageCount });
+  res.status(200).send({ categories, pageCount });
 });
 
 const getCategoriesByHighestImageCount = asyncHandler(async (req, res) => {
   const categories = await ArtworkCategory.aggregate([
     {
       $lookup: {
-        from: "artworks",
+        from: "imagevaults",
         localField: "_id",
         foreignField: "category",
         as: "images",
@@ -125,7 +125,7 @@ const getCategoriesByHighestImageCount = asyncHandler(async (req, res) => {
 //     return res.status(400).send({ message: 'Query is required' })
 //   }
 
-//   // const results = await Category.aggregate([
+//   // const results = await ArtworkCategory.aggregate([
 //   //   {
 //   //     $search: {
 //   //       index: 'categoryIndex',
@@ -147,7 +147,7 @@ const getCategoriesByHighestImageCount = asyncHandler(async (req, res) => {
 //   //   }
 //   // ]);
 
-//     const categories = await Category.find({ $or: [
+//     const categories = await ArtworkCategory.find({ $or: [
 //       { name: { $regex: Query, $options: 'i' } },
 //       { description: { $regex: Query, $options: 'i' } }
 //     ] })
@@ -201,7 +201,7 @@ const searchCategories = async (req, res) => {
   if (sortType === "date") {
     sortCriteria = { createdAt: sortOrder };
   } else if (sortType === "price") {
-    sortCriteria = { "price": sortOrder };
+    sortCriteria = { "price.original": sortOrder };
   } else if (sortType === "views") {
     sortCriteria = { "imageAnalytics.views": sortOrder };
   } else if (sortType === "likes") {
@@ -228,7 +228,7 @@ const searchCategories = async (req, res) => {
     { $limit: pageSize },
     {
       $lookup: {
-        from: "artworkcategories",
+        from: "categories",
         localField: "category",
         foreignField: "_id",
         as: "category",
@@ -237,14 +237,22 @@ const searchCategories = async (req, res) => {
     {
       $lookup: {
         from: "photographers",
-        localField: "user",
+        localField: "photographer",
         foreignField: "_id",
         as: "photographer",
       },
     },
+    {
+      $lookup: {
+        from: "licenses",
+        localField: "license",
+        foreignField: "_id",
+        as: "license",
+      },
+    },
   ]);
 
-  const totalDocuments = await Artwork.countDocuments({
+  const totalDocuments = await ImageVault.countDocuments({
     category: { $in: categoriesIds },
     isActive: true,
   });

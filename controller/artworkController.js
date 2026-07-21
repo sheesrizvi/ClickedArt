@@ -1,741 +1,1847 @@
-const Artwork = require("../models/artworkModel");
-const Photographer = require("../models/photographerModel");
-const Category = require("../models/artworkCategoryModel");
-const User = require("../models/userModel");
+const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-const sharp = require("sharp");
+const Artwork = require("../models/artworkModel.js");
+const Category = require("../models/artworkCategoryModel.js");
+const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
+const Like = require("../models/socials/likeModel.js");
+const Comment = require("../models/socials/commentModel.js");
+const Follow = require("../models/socials/followModel.js");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client } = require("@aws-sdk/client-s3");
+const Photographer = require("../models/photographerModel.js");
+const RoyaltySettings = require("../models/imagebase/royaltyModel.js");
+const Order = require("../models/orderModel.js");
+const { generateSlug } = require("../middleware/slugMiddleware.js");
+const {
+  sendApprovedImageMail,
+  sendUnapprovedImageMail,
+  setApprovedImageOfMonetizedProfile,
+  setApprovedImageOfNonMonetizedProfile,
+  sendUnapprovedImageMailOfMonetizedProfile,
+  sendEventSubmissionConfirmation,
+  sendUnapprovedImageMailOfNonMonetizedProfile,
+} = require("../middleware/handleEmail.js");
+const {
+  sendNotificationToUser,
+} = require("../middleware/notificationUtils.js");
 
-// S3 Client
-const s3 = new S3Client({
+const Subscription = require("../models/subscriptionModel.js");
+
+const config = {
   region: process.env.AWS_BUCKET_REGION,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY,
     secretAccessKey: process.env.AWS_SECRET_KEY,
   },
-});
-
-// Helper: Upload buffer to S3
-const uploadBufferToS3 = async (buffer, key, contentType) => {
-  const params = {
-    Bucket: process.env.AWS_BUCKET,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-  };
-  await s3.send(new PutObjectCommand(params));
-  return `https://${process.env.AWS_BUCKET}.s3.${process.env.AWS_BUCKET_REGION}.amazonaws.com/${key}`;
 };
 
-// Helper: Delete S3 object by URL
-const deleteFromS3 = async (url) => {
-  if (!url) return;
-  const parts = url.split(".amazonaws.com/");
-  if (parts[1]) {
-    await s3.send(
-      new DeleteObjectCommand({
-        Bucket: process.env.AWS_BUCKET,
-        Key: parts[1],
-      })
-    );
-  }
-};
+const s3 = new S3Client(config);
 
-// Helper: Generate slug
-const generateSlug = (title) => {
-  return (title || "artwork")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-};
+const addImageInVault = asyncHandler(async (req, res) => {
+  const {
+    category,
+    photographer,
+    imageLinks,
+    resolutions,
+    description,
+    story,
+    keywords,
+    location,
+    watermark,
+    cameraDetails,
+    price,
+    license,
+    title,
+    notForSale,
+    eventName,
+    eventEndDate,
+  } = req.body;
 
-/**
- * @desc    Upload a single artwork (photographer)
- * @route   POST /api/artworks/upload
- * @access  Protected (Photographer | Admin)
- */
-const uploadArtwork = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
+  if (!category || !photographer || !imageLinks)
+    return res.status(400).send({ message: "Mandatory Fields are required" });
 
-  const isAdminUser = ["Admin", "admin", "seo", "finance", "print"].includes(req.user.type);
-  // If admin, they can assign artwork to a specific photographer
-  const effectiveUserId = (isAdminUser && req.body.photographerId) ? req.body.photographerId : userId;
-
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "No file uploaded." });
+  if (price === undefined || price === null) {
+    return res.status(400).send({ message: "Price is required" });
   }
 
-  const { title, description, medium, style, orientation, keywords, yearCreated, dimensionWidth, dimensionHeight, dimensionUnit, publishStatus, featureAll, categoryName, uploadSource } = req.body;
-
-  // File size limit: 30MB
-  if (req.file.size > 30 * 1024 * 1024) {
-    return res.status(400).json({ success: false, message: "File exceeds 30MB limit." });
+  if (price > 25000) {
+    return res.status(400).send({ message: "Price cannot be more than 25000" });
   }
 
-  const filename = req.file.originalname;
-  const autoTitle = title || filename.substring(0, filename.lastIndexOf(".")).replace(/[-_.]+/g, " ") || filename;
-
-  // Duplicate detection in same user account
-  const existing = await Artwork.findOne({
-    user: effectiveUserId,
-    title: autoTitle,
-    fileSize: req.file.size,
-  });
-  if (existing) {
-    return res.status(400).json({ success: false, message: `An artwork named "${autoTitle}" with the same file already exists.` });
+  if (category.length < 1 || category.length > 5) {
+    return res
+      .status(400)
+      .send({ message: "You can select at least one & at max 5 categories" });
   }
 
-  const originalBuffer = req.file.buffer;
-  const metadata = await sharp(originalBuffer).metadata();
-  const { width, height } = metadata;
-  const contentType = req.file.mimetype;
-  const timestamp = Date.now();
-  const baseKey = `artworks/${effectiveUserId}/${timestamp}`;
+  const subscription = await Subscription.findOne({
+    "userInfo.user": photographer,
+    "userInfo.userType": "Photographer",
+    isActive: true,
+  }).populate("planId");
 
-  // Process resolutions
-  const [thumbBuffer, smallBuffer, medBuffer] = await Promise.all([
-    sharp(originalBuffer).resize({ width: 300, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 75 }).toBuffer(),
-    sharp(originalBuffer).resize({ width: 800, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer(),
-    sharp(originalBuffer).resize({ width: 1600, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer(),
-  ]);
-
-  const [thumbMeta, smallMeta, medMeta] = await Promise.all([
-    sharp(thumbBuffer).metadata(),
-    sharp(smallBuffer).metadata(),
-    sharp(medBuffer).metadata(),
-  ]);
-
-  // Upload all resolutions to S3
-  const [originalUrl, thumbUrl, smallUrl, medUrl] = await Promise.all([
-    uploadBufferToS3(originalBuffer, `${baseKey}_original.jpg`, contentType),
-    uploadBufferToS3(thumbBuffer, `${baseKey}_thumb.jpg`, "image/jpeg"),
-    uploadBufferToS3(smallBuffer, `${baseKey}_small.jpg`, "image/jpeg"),
-    uploadBufferToS3(medBuffer, `${baseKey}_medium.jpg`, "image/jpeg"),
-  ]);
-
-  // Parse keywords
-  const parsedKeywords = keywords
-    ? (typeof keywords === "string" ? keywords.split(",") : keywords).map((k) => k.trim()).filter(Boolean)
-    : ["artwork", "art"];
-
-  // Build slug
-  const slug = `${generateSlug(autoTitle)}-${timestamp}`;
-
-  // Admin uploads: published = active & approved, draft = stored but not live
-  const isDraft = isAdminUser && publishStatus === "draft";
-  const isPublished = isAdminUser && !isDraft;
-  const isFeatured = isAdminUser && (featureAll === "true" || featureAll === true);
-  
-  const source = uploadSource || (isAdminUser ? "admin" : "user");
-  const initialApprovalStatus = (source === "user") ? "Pending" : (isPublished ? "Approved" : "Pending");
-
-  let categoryId = null;
-  if (categoryName) {
-    const categoryDoc = await Category.findOne({ name: { $regex: new RegExp(`^${categoryName.trim()}$`, "i") } });
-    if (categoryDoc) categoryId = categoryDoc._id;
-  }
-
-  const artwork = await Artwork.create({
-    user: effectiveUserId,
-    title: autoTitle,
-    description: description || "",
-    medium: medium || "Other",
-    style: style || "Other",
-    orientation: orientation || "Landscape",
-    category: categoryId,
-    dimensions: {
-      width: parseFloat(dimensionWidth) || null,
-      height: parseFloat(dimensionHeight) || null,
-      unit: dimensionUnit || "cm",
-    },
-    yearCreated: parseInt(yearCreated) || null,
-    keywords: parsedKeywords,
-    price: 0,
-    imageLinks: {
-      original: originalUrl,
-      thumbnail: thumbUrl,
-      small: smallUrl,
-      medium: medUrl,
-    },
-    resolutions: {
-      original: { width, height },
-      thumbnail: { width: thumbMeta.width, height: thumbMeta.height },
-      small: { width: smallMeta.width, height: smallMeta.height },
-      medium: { width: medMeta.width, height: medMeta.height },
-    },
-    fileSize: req.file.size,
-    slug,
-    isActive: isAdminUser ? isPublished : false,
-    isApproved: isAdminUser ? isPublished : false,
-    featuredArtwork: isFeatured,
-    uploadSource: source,
-    approvalStatus: initialApprovalStatus,
-  });
-
-  res.status(201).json({ success: true, artwork });
-});
-
-
-/**
- * @desc    Get all artworks by the logged-in photographer (their workspace)
- * @route   GET /api/artworks/my-artworks
- * @access  Protected (Photographer | Admin)
- */
-const getMyArtworks = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
-  const page = parseInt(req.query.page) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
-  const search = req.query.search || "";
-  const medium = req.query.medium || "";
-  const status = req.query.status || "";
-
-  const filter = { user: userId };
-  if (search) filter.title = { $regex: search, $options: "i" };
-  if (medium) filter.medium = medium;
-  if (status === "approved") { filter.isApproved = true; filter.isActive = true; }
-  else if (status === "pending") { filter.isApproved = false; filter.isActive = false; filter.rejectionReason = { $size: 0 }; }
-  else if (status === "rejected") { filter.rejectionReason = { $not: { $size: 0 } }; }
-
-  const [artworks, total] = await Promise.all([
-    Artwork.find(filter).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
-    Artwork.countDocuments(filter),
-  ]);
-
-  const populated = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
-  res.status(200).json({
-    success: true,
-    artworks: populated,
-    total,
-    page,
-    pageCount: Math.ceil(total / pageSize),
-  });
-});
-
-/**
- * @desc    Public gallery of all approved artworks
- * @route   GET /api/artworks/public
- * @access  Public
- */
-const getPublicArtworks = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || parseInt(req.query.pageNumber) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 24;
-  const skip = (page - 1) * pageSize;
-  const search = req.query.search || req.query.q || req.query.Query || "";
-  const orientation = req.query.orientation || "";
-  const featured = req.query.featured || "";
-  const photographer = req.query.photographer || "";
-  const sort = req.query.sort || req.query.sortType || "newest";
-
-  const filter = { isActive: true, isApproved: true, isAvailable: { $ne: false } };
-  if (search) filter.$or = [
-    { title: { $regex: search, $options: "i" } },
-    { keywords: { $regex: search, $options: "i" } },
-  ];
-  if (orientation) filter.orientation = orientation;
-  if (featured === "true") filter.featuredArtwork = true;
-  if (photographer) filter.user = photographer;
-
-  const categoryId = req.query.categoryId || req.query.category;
-  if (categoryId && categoryId !== "all" && categoryId !== "undefined") {
-    filter.category = categoryId;
-  }
-
-  const sortMap = {
-    newest: { createdAt: -1 },
-    oldest: { createdAt: 1 },
-    "price-asc": { price: 1 },
-    "price-desc": { price: -1 },
-  };
-
-  const rawArtworks = await Artwork.find(filter)
-    .populate("category", "name")
-    .sort(sortMap[sort] || { createdAt: -1 })
-    .lean();
-
-  const userIds = [...new Set(rawArtworks.map((art) => art.user).filter(Boolean))];
-  const [photographers, users] = await Promise.all([
-    Photographer.find({ _id: { $in: userIds } }, "firstName lastName username profileImage").lean(),
-    User.find({ _id: { $in: userIds } }, "firstName lastName username profileImage").lean(),
-  ]);
-
-  const userMap = {};
-  photographers.forEach((p) => { userMap[p._id.toString()] = p; });
-  users.forEach((u) => { userMap[u._id.toString()] = u; });
-
-  const populated = rawArtworks.map((art) => {
-    const userObj = art.user ? userMap[art.user.toString()] || null : null;
-    return {
-      ...art,
-      user: userObj,
-      photographer: userObj,
-      category: art.category ? [art.category] : [],
-    };
-  });
-
-  const artworks = populated.filter((art) => art.user);
-  const total = artworks.length;
-  const paginatedArtworks = artworks.slice(skip, skip + pageSize);
-
-  res.status(200).json({
-    success: true,
-    artworks: paginatedArtworks,
-    photos: paginatedArtworks, // Support both formats for frontend compatibility
-    total,
-    page,
-    pageCount: Math.ceil(total / pageSize),
-  });
-});
-
-/**
- * @desc    Get artwork by slug (public detail page)
- * @route   GET /api/artworks/slug/:slug or /api/artworks/get-image-by-slug?slug=:slug
- * @access  Public
- */
-const getArtworkBySlug = asyncHandler(async (req, res) => {
-  const slug = req.params.slug || req.query.slug;
-  if (!slug) {
-    return res.status(400).json({ success: false, message: "Slug is required." });
-  }
-  const artwork = await Artwork.findOne({ slug, isApproved: true, isActive: true })
-    .populate("user", "firstName lastName username profileImage")
-    .populate("category", "name")
-    .lean();
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
-  }
-  artwork.photographer = artwork.user;
-  artwork.category = artwork.category ? [artwork.category] : [];
-  res.status(200).json({ success: true, artwork });
-});
-
-/**
- * @desc    Get all artworks (admin view with full filters)
- * @route   GET /api/artworks/admin/all
- * @access  Admin
- */
-const getAllArtworksAdmin = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
-  const search = req.query.search || "";
-  const medium = req.query.medium || "";
-  const status = req.query.status || "";
-  const featured = req.query.featured || "";
-  const photographer = req.query.photographer || "";
-
-  const filter = {};
-  if (search) filter.title = { $regex: search, $options: "i" };
-  if (medium) filter.medium = medium;
-  if (photographer) filter.user = photographer;
-  if (featured === "true") filter.featuredArtwork = true;
-  if (status === "approved") { filter.isApproved = true; filter.isActive = true; }
-  else if (status === "pending") { filter.isApproved = false; filter.isActive = false; }
-  else if (status === "rejected") { filter.rejectionReason = { $not: { $size: 0 } }; filter.isApproved = false; }
-
-  const rawArtworks = await Artwork.find(filter)
-    .populate("category", "name")
-    .sort({ createdAt: -1 })
-    .lean();
-
-  const userIds = [...new Set(rawArtworks.map((art) => art.user).filter(Boolean))];
-  const [photographers, users] = await Promise.all([
-    Photographer.find({ _id: { $in: userIds } }, "firstName lastName username profileImage").lean(),
-    User.find({ _id: { $in: userIds } }, "firstName lastName username profileImage").lean(),
-  ]);
-
-  const userMap = {};
-  photographers.forEach((p) => { userMap[p._id.toString()] = p; });
-  users.forEach((u) => { userMap[u._id.toString()] = u; });
-
-  const populated = rawArtworks.map((art) => {
-    const userObj = art.user ? userMap[art.user.toString()] || null : null;
-    return {
-      ...art,
-      user: userObj,
-      photographer: userObj,
-      category: art.category ? [art.category] : [],
-    };
-  });
-
-  const artworks = populated.filter((art) => art.user);
-  const total = artworks.length;
-  const paginatedArtworks = artworks.slice(skip, skip + pageSize);
-
-  res.status(200).json({
-    success: true,
-    artworks: paginatedArtworks,
-    total,
-    page,
-    pageCount: Math.ceil(total / pageSize),
-  });
-});
-
-/**
- * @desc    Get single artwork by ID (admin/owner)
- * @route   GET /api/artworks/:id
- * @access  Protected
- */
-const getArtworkById = asyncHandler(async (req, res) => {
-  const artwork = await Artwork.findById(req.params.id)
-    .populate("user", "firstName lastName username profileImage email")
-    .populate("category", "name")
-    .lean();
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
-  }
-  artwork.photographer = artwork.user;
-  artwork.category = artwork.category ? [artwork.category] : [];
-  res.status(200).json({ success: true, artwork });
-});
-
-/**
- * @desc    Update artwork details
- * @route   PUT /api/artworks/:id
- * @access  Protected (owner or admin)
- */
-const updateArtwork = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
-  const isAdmin = ["Admin", "admin", "seo"].includes(req.user.type);
-
-  const artwork = await Artwork.findById(req.params.id);
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
-  }
-
-  // Only owner or admin can update
-  if (!isAdmin && artwork.user.toString() !== userId.toString()) {
-    return res.status(403).json({ success: false, message: "Not authorized." });
-  }
-
-  const allowedFields = ["title", "description", "medium", "style", "orientation", "price", "yearCreated", "keywords", "isAvailable"];
-  allowedFields.forEach((field) => {
-    if (req.body[field] !== undefined) artwork[field] = req.body[field];
-  });
-
-  if (isAdmin) {
-    if (req.body.photographerId) {
-      artwork.user = req.body.photographerId;
-    }
-    if (req.body.categoryName) {
-      const categoryDoc = await Category.findOne({ name: { $regex: new RegExp(`^${req.body.categoryName.trim()}$`, "i") } });
-      if (categoryDoc) artwork.category = categoryDoc._id;
-    }
-    if (req.body.publishStatus) {
-      const active = req.body.publishStatus === "published";
-      artwork.isActive = active;
-      artwork.isApproved = active;
-    }
-    if (req.body.featured !== undefined) {
-      artwork.featuredArtwork = req.body.featured === "true" || req.body.featured === true;
-    }
-  }
-
-  if (req.body.dimensionWidth || req.body.dimensionHeight) {
-    artwork.dimensions = {
-      width: parseFloat(req.body.dimensionWidth) || artwork.dimensions?.width,
-      height: parseFloat(req.body.dimensionHeight) || artwork.dimensions?.height,
-      unit: req.body.dimensionUnit || artwork.dimensions?.unit || "cm",
-    };
-  }
-
-  await artwork.save();
-  res.status(200).json({ success: true, artwork });
-});
-
-/**
- * @desc    Delete artwork (removes S3 assets + DB record)
- * @route   DELETE /api/artworks/:id
- * @access  Protected (owner or admin)
- */
-const deleteArtwork = asyncHandler(async (req, res) => {
-  const userId = req.user._id || req.user.id;
-  const isAdmin = ["Admin", "admin", "seo"].includes(req.user.type);
-  const artworkId = req.params.id || req.query.id || req.body.id;
-
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
-  }
-
-  if (!isAdmin && artwork.user.toString() !== userId.toString()) {
-    return res.status(403).json({ success: false, message: "Not authorized." });
-  }
-
-  // Delete all S3 assets
-  if (artwork.imageLinks) {
-    await Promise.allSettled([
-      deleteFromS3(artwork.imageLinks.original),
-      deleteFromS3(artwork.imageLinks.thumbnail),
-      deleteFromS3(artwork.imageLinks.small),
-      deleteFromS3(artwork.imageLinks.medium),
-    ]);
-  }
-
-  await Artwork.findByIdAndDelete(artworkId);
-  res.status(200).json({ success: true, message: "Artwork deleted successfully." });
-});
-
-/**
- * @desc    Approve or reject an artwork (admin only)
- * @route   POST /api/artworks/approve
- * @access  Admin
- */
-const approveArtwork = asyncHandler(async (req, res) => {
-  const { artworkId, status, rejectionReason } = req.body;
-
-  if (!artworkId || !status) {
-    return res.status(400).json({ success: false, message: "artworkId and status are required." });
-  }
-
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
-  }
-
-  if (status === "approved") {
-    artwork.isApproved = true;
-    artwork.isActive = true;
-    artwork.rejectionReason = [];
-  } else if (status === "rejected") {
-    artwork.isApproved = false;
-    artwork.isActive = false;
-    artwork.rejectionReason = rejectionReason ? [rejectionReason] : ["Does not meet quality standards."];
+  let imageLimit;
+  if (subscription?.planId?.name === "Basic") {
+    imageLimit = 10;
+  } else if (subscription?.planId?.name === "Intermediate") {
+    imageLimit = 50;
+  } else if (subscription?.planId?.name === "Premium") {
+    imageLimit = Infinity;
   } else {
-    return res.status(400).json({ success: false, message: "Invalid status. Use 'approved' or 'rejected'." });
+    imageLimit = 10;
   }
 
-  await artwork.save();
-  res.status(200).json({ success: true, artwork });
-});
+  const uploadedImagesCount = await Artwork.countDocuments({ photographer });
 
-/**
- * @desc    Toggle featured status of an artwork (admin only)
- * @route   POST /api/artworks/toggle-featured
- * @access  Admin
- */
-const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
-  const { artworkId } = req.body;
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) {
-    return res.status(404).json({ success: false, message: "Artwork not found." });
+  let planName = "Basic";
+  if (subscription && subscription.planId && subscription.planId.name) {
+    planName = subscription.planId.name;
   }
-  artwork.featuredArtwork = !artwork.featuredArtwork;
-  await artwork.save();
-  res.status(200).json({ success: true, artwork, featured: artwork.featuredArtwork });
-});
+  if (uploadedImagesCount >= imageLimit) {
+    return res.status(400).send({
+      message: `You have reached your upload limit of ${imageLimit} images for the ${planName} plan.`,
+    });
+  }
 
-/**
- * @desc    Get all pending artworks for admin review
- * @route   GET /api/artworks/admin/pending
- * @access  Admin
- */
-const getPendingArtworks = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
+  const royaltyShare = await RoyaltySettings.findOne({
+    licensingType: "exclusive",
+  });
+  if (!royaltyShare || !royaltyShare.sizePricingModifiers) {
+    return res
+      .status(500)
+      .send({ message: "Royalty settings not found. Please contact support." });
+  }
+  const sizePricingModifiers = royaltyShare.sizePricingModifiers;
 
-  const filter = { isApproved: false, isActive: false, rejectionReason: { $size: 0 } };
+  const prices = {};
+  prices.original = price;
+  if (imageLinks.medium) {
+    prices.medium = price * (1 + sizePricingModifiers.medium / 100);
+  }
+  prices.small = price * (1 + sizePricingModifiers.small / 100);
 
-  const [artworks, total] = await Promise.all([
-    Artwork.find(filter)
-      .populate("user", "firstName lastName username profileImage")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean(),
-    Artwork.countDocuments(filter),
-  ]);
+  const slug = generateSlug(title);
 
-  const populatedPending = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
-  res.status(200).json({ success: true, artworks: populatedPending, total, page, pageCount: Math.ceil(total / pageSize) });
-});
-
-/**
- * @desc    Get all rejected artworks
- * @route   GET /api/artworks/admin/rejected
- * @access  Admin
- */
-const getRejectedArtworks = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
-
-  const filter = { isApproved: false, rejectionReason: { $not: { $size: 0 } } };
-
-  const [artworks, total] = await Promise.all([
-    Artwork.find(filter)
-      .populate("user", "firstName lastName username profileImage")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean(),
-    Artwork.countDocuments(filter),
-  ]);
-
-  const populatedRejected = artworks.map((art) => ({
-    ...art,
-    photographer: art.user || null,
-  }));
-
-  res.status(200).json({ success: true, artworks: populatedRejected, total, page, pageCount: Math.ceil(total / pageSize) });
-});
-
-/**
- * @desc    Get all user uploaded artworks for admin review
- * @route   GET /api/artworks/admin/user-uploaded
- * @access  Admin
- */
-const getUserUploadedArtworks = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const pageSize = parseInt(req.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
-  const search = req.query.search || "";
-  const status = req.query.status || "";
-
-  const filter = { uploadSource: "user" };
-  if (search) filter.title = { $regex: search, $options: "i" };
-  if (status === "approved") { filter.approvalStatus = "Approved"; }
-  else if (status === "pending") { filter.approvalStatus = "Pending"; }
-  else if (status === "rejected") { filter.approvalStatus = "Rejected"; }
-
-  const rawArtworks = await Artwork.find(filter)
-    .populate("category", "name")
-    .sort({ createdAt: -1 })
-    .lean();
-
-  const userIds = [...new Set(rawArtworks.map((art) => art.user).filter(Boolean))];
-  const [photographers, users] = await Promise.all([
-    Photographer.find({ _id: { $in: userIds } }, "firstName lastName username profileImage email").lean(),
-    User.find({ _id: { $in: userIds } }, "firstName lastName username profileImage email").lean(),
-  ]);
-
-  const userMap = {};
-  photographers.forEach((p) => { userMap[p._id.toString()] = p; });
-  users.forEach((u) => { userMap[u._id.toString()] = u; });
-
-  const populated = rawArtworks.map((art) => {
-    const userObj = art.user ? userMap[art.user.toString()] || null : null;
-    return {
-      ...art,
-      user: userObj,
-      photographer: userObj,
-      category: art.category ? [art.category] : [],
-    };
+  const newImage = await Artwork.create({
+    category,
+    photographer,
+    imageLinks,
+    resolutions,
+    title,
+    description,
+    keywords,
+    location,
+    story,
+    license,
+    watermark,
+    cameraDetails,
+    price: prices,
+    notForSale,
+    slug,
+    eventName,
+    eventEndDate,
   });
 
-  const artworks = populated.filter((art) => art.user);
-  const total = artworks.length;
-  const paginatedArtworks = artworks.slice(skip, skip + pageSize);
+  await ImageAnalytics.create({
+    image: newImage._id,
+    imageModel: "Artwork"
+  });
+
+  await Photographer.findOneAndUpdate(
+    { _id: photographer },
+    { $inc: { photosCount: 1 } }
+  );
+  res.status(201).send({ photo: newImage });
+});
+
+const updateImageInVault = asyncHandler(async (req, res) => {
+  const {
+    id,
+    category,
+    photographer,
+    imageLinks,
+    resolutions,
+    title,
+    description,
+    story,
+    keywords,
+    location,
+    watermark,
+    cameraDetails,
+    price,
+    license,
+    notForSale,
+    eventName,
+    eventEndDate,
+  } = req.body;
+
+  if (!category || !photographer || !imageLinks || !id)
+    return res.status(400).send({ message: "Mandatory Fields are required" });
+
+  if (category.length < 1 || category.length > 5) {
+    return res
+      .status(400)
+      .send({ message: "You can select min 1 and max 5 categories" });
+  }
+
+  if (price === undefined || price === null) {
+    return res.status(400).send({ message: "Price is required" });
+  }
+
+  if (price > 25000) {
+    return res.status(400).send({ message: "Price cannot be more than 25000" });
+  }
+
+  const photo = await Artwork.findOne({ _id: id, photographer });
+  if (!photo) return res.status(400).send({ message: "Photo not found" });
+
+  if (photo.title !== title || !photo.slug) {
+    const slug = generateSlug(title);
+    photo.slug = slug;
+  }
+
+  photo.category = category || photo.category;
+  photo.resolutions = resolutions || photo.resolutions;
+  photo.description = description || photo.description;
+  photo.title = title || photo.title;
+  photo.keywords = keywords || photo.keywords;
+  photo.location = location || photo.location;
+  photo.watermark = watermark || photo.watermark;
+  photo.cameraDetails = cameraDetails || photo.cameraDetails;
+  photo.story = story || photo.story;
+  photo.license = license || photo.license;
+  photo.eventName = eventName || photo.eventName;
+  photo.eventEndDate = eventEndDate || photo.eventEndDate;
+
+  if (notForSale !== undefined) {
+    photo.notForSale = notForSale;
+  }
+
+  //  const prices = {}
+  //  if(price) {
+  //   const royaltyShare = await RoyaltySettings.findOne({ licensingType: 'exclusive' })
+  //   const sizePricingModifiers = royaltyShare.sizePricingModifiers;
+
+  //   prices.original = price
+  //   if(imageLinks.medium) {
+  //     prices.medium = price * (1 + sizePricingModifiers.medium / 100);
+  //   }
+  //   prices.small = price * (1 + sizePricingModifiers.small / 100);
+
+  //  }
+  //  photo.price = prices || photo.price
+
+  //  await photo.save()
+
+  const prices = {};
+
+  if (price !== undefined) {
+    if (price === 0) {
+      prices.original = 0;
+      prices.medium = 0;
+      prices.small = 0;
+    } else {
+      const royaltyShare = await RoyaltySettings.findOne({
+        licensingType: "exclusive",
+      });
+      const sizePricingModifiers = royaltyShare.sizePricingModifiers;
+
+      prices.original = price;
+      if (photo.imageLinks.medium) {
+        prices.medium = price * (1 + sizePricingModifiers.medium / 100);
+      }
+
+      if (photo.imageLinks.small) {
+        prices.small = price * (1 + sizePricingModifiers.small / 100);
+      }
+    }
+  }
+
+  photo.price = prices || photo.price;
+
+  await photo.save();
+
+  res.status(201).send({ photo });
+});
+
+const getImageFromVault = asyncHandler(async (req, res) => {
+  const { id } = req.query;
+
+  let image = await Artwork.findOne({ _id: id }).populate(
+    "photographer category license"
+  );
+
+  if (!image) return res.status(400).send({ message: "Image not found" });
+
+  // const likeExist = await Like.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId })
+  // const commentExist = await Comment.findOne({ 'entityInfo.entity': id, 'userInfo.user': requesterId  })
+  const imageAnalytics = await ImageAnalytics.findOne({ image: id });
+  const imageObject = image.toObject();
+  imageObject.imageLinks = {
+    thumbnail: imageObject.imageLinks?.thumbnail || null,
+  };
+
+  image = {
+    ...imageObject,
+    imageAnalytics,
+  };
+  res.status(200).send({ photo: image });
+});
+
+const getAllImagesFromVault = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const totalDocuments = await Artwork.countDocuments({ isActive: true });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const images = await Artwork.find({ isActive: true })
+    .populate("category photographer license")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  const newImages = await Promise.all(
+    images.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      const imageObject = image.toObject();
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+
+      return {
+        ...imageObject,
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+
+  res.status(200).send({ photos: newImages, pageCount });
+});
+
+const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
+  const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
+
+  const photos = await Artwork.find({ photographer, isActive: true })
+    .populate("category photographer license")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  if (!photos || photos.length === 0)
+    return res.status(400).send({ message: "Photos not found" });
+
+  const totalDocuments = await Artwork.countDocuments({
+    photographer,
+    isActive: true,
+  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const newPhotos = await Promise.all(
+    photos.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      const imageObject = image.toObject();
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+
+      return {
+        ...imageObject,
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+
+  res
+    .status(200)
+    .send({ message: "Images by Photographer", photos: newPhotos, pageCount });
+});
+
+const getImagesByCategory = asyncHandler(async (req, res) => {
+  const { category, pageNumber = 1, pageSize = 20 } = req.query;
+
+  const photos = await Artwork.find({ category, isActive: true })
+    .populate("category photographer license")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  if (!photos || photos.length === 0)
+    return res.status(400).send({ message: "Photos not found" });
+
+  const totalDocuments = await Artwork.countDocuments({
+    category,
+    isActive: true,
+  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const newPhotos = await Promise.all(
+    photos.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      const imageObject = image.toObject();
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+
+      return {
+        ...imageObject,
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+  res
+    .status(200)
+    .send({ message: "Images by Category", photos: newPhotos, pageCount });
+});
+
+const getImagesByCategoryType = asyncHandler(async (req, res) => {
+  const { categoryName, pageNumber = 1, pageSize = 20 } = req.query;
+
+  const category = await Category.findOne({ name: categoryName });
+
+  if (!category)
+    return res
+      .status(400)
+      .send({ message: "Category not found with this title" });
+  const photos = await Artwork.find({
+    category: category._id,
+    isActive: true,
+  })
+    .populate("category photographer license ")
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  if (!photos || photos.length === 0)
+    return res.status(400).send({ message: "Photos not found" });
+
+  const totalDocuments = await Artwork.countDocuments({
+    category: category._id,
+    isActive: true,
+  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const newPhotos = await Promise.all(
+    photos.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      // const imageObject = image.toObject();
+      // imageObject.imageLinks = { thumbnail: imageObject.imageLinks?.thumbnail || null };
+
+      return {
+        ...image.toObject(),
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+
+  res
+    .status(200)
+    .send({ message: "Images by Category", photos: newPhotos, pageCount });
+});
+
+const deleteAllResolutions = asyncHandler(async (images) => {
+  const deletePromises = [];
+
+  for (const [key, url] of Object.entries(images)) {
+    if (url) {
+      const fileKey = url.split(".amazonaws.com/")[1];
+      if (fileKey) {
+        const command = new DeleteObjectCommand({
+          Bucket: process.env.AWS_BUCKET,
+          Key: fileKey,
+        });
+
+        deletePromises.push(s3.send(command));
+      }
+    }
+  }
+
+  const results = await Promise.all(deletePromises);
+
+  return;
+});
+
+const deleteImagesFromVault = asyncHandler(async (req, res) => {
+  const { id } = req.query;
+
+  const photo = await Artwork.findOne({ _id: id });
+
+  if (!photo) return res.status(400).send({ message: "Photo not found" });
+
+  if (photo.imageLinks) {
+    deleteAllResolutions(photo.imageLinks);
+  }
+  await Artwork.findOneAndUpdate({ _id: id }, { $set: { isActive: false } });
+  // await Photographer.findOneAndUpdate({_id: photo.photographer}, { $inc: { photosCount: -1 } })
+  // await ImageAnalytics.findOneAndDelete({ image: photo._id })
+
+  res.status(200).send({ message: "Image deleted" });
+});
+
+const approveImage = asyncHandler(async (req, res) => {
+  const { status, rejectionReason, imageId } = req.body;
+
+  if (!["approved", "rejected", "review"].includes(status)) {
+    return res.status(400).json({
+      message:
+        'Invalid status. Allowed values are "approved", "rejected", or "review".',
+    });
+  }
+
+  const image = await Artwork.findById(imageId).populate("photographer");
+  if (!image || !image.photographer) {
+    return res.status(404).json({ message: "Image not found." });
+  }
+
+  const imageUrl = image.imageLinks?.thumbnail || null;
+
+  if (status === "rejected" && rejectionReason) {
+    image.rejectionReason = rejectionReason || null;
+    image.isActive = false;
+    const imageTitle = image.title;
+    image.exclusiveLicenseStatus = status;
+    const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`;
+    const email = image.photographer.email;
+    const reasons = image.rejectionReason;
+    const isMonetized = image.photographer.isMonetized;
+    if (!image.eventName || image.eventName === "") {
+      if (isMonetized) {
+        sendUnapprovedImageMailOfMonetizedProfile(
+          photographerName,
+          email,
+          imageTitle,
+          reasons
+        );
+      } else {
+        sendUnapprovedImageMailOfNonMonetizedProfile(
+          photographerName,
+          email,
+          imageTitle,
+          reasons
+        );
+      }
+    }
+    try {
+      await sendNotificationToUser({
+        userId: image.photographer._id,
+        userType: "Photographer",
+        title: "Image Rejected",
+        body: `Your image "${imageTitle}" has been Rejected. Please check you email for more details.`,
+        type: "image",
+        data: {
+          url: `clickedartartist://profile`,
+          image: imageUrl,
+        },
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+  } else if (status === "approved") {
+    const photographerName = `${image.photographer.firstName} ${image.photographer.lastName}`;
+    const isMonetized = image.photographer.isMonetized;
+    const email = image.photographer.email;
+    const imageTitle = image.title;
+    image.rejectionReason = null;
+    image.isActive = true;
+    image.exclusiveLicenseStatus = status;
+    if (image.eventName && image.eventName !== "") {
+      // sendEventSubmissionConfirmation(photographerName, email, imageTitle)
+    } else if (isMonetized) {
+      setApprovedImageOfMonetizedProfile(photographerName, email, imageTitle);
+    } else {
+      setApprovedImageOfNonMonetizedProfile(
+        photographerName,
+        email,
+        imageTitle
+      );
+    }
+    try {
+      await sendNotificationToUser({
+        userId: image.photographer._id,
+        userType: "Photographer",
+        title: "Image Approved",
+        body: `Your image "${imageTitle}" has been approved.`,
+        type: "image",
+        data: {
+          url: `clickedartartist://profile`,
+          image: imageUrl,
+        },
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+  } else if (status === "review") {
+    image.rejectionReason = null;
+    image.isActive = false;
+    image.exclusiveLicenseStatus = status;
+  }
+
+  await image.save();
 
   res.status(200).json({
-    success: true,
-    artworks: paginatedArtworks,
-    total,
-    page,
-    pageCount: Math.ceil(total / pageSize),
+    message: `Image ${status} successfully.`,
+    image,
   });
 });
 
-/**
- * @desc    Approve a user uploaded artwork (admin only)
- * @route   POST /api/artworks/admin/user-uploaded/approve
- * @access  Admin
- */
-const approveUserUploadedArtwork = asyncHandler(async (req, res) => {
-  const { artworkId } = req.body;
-  if (!artworkId) return res.status(400).json({ success: false, message: "artworkId is required." });
+const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
-  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
+  const totalDocuments = await Artwork.countDocuments({
+    exclusiveLicenseStatus: { $in: ["pending", "review"] },
+    isActive: false,
+  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  artwork.approvalStatus = "Approved";
-  artwork.isActive = true;
-  artwork.isApproved = true;
-  artwork.approvedBy = req.user._id;
-  artwork.approvedAt = new Date();
-  artwork.rejectionReason = [];
-  artwork.rejectedReasonStr = "";
+  const images = await Artwork.find({
+    exclusiveLicenseStatus: { $in: ["pending", "review"] },
+    isActive: false,
+  })
+    .populate("category photographer license")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
 
-  await artwork.save();
-  res.status(200).json({ success: true, artwork });
+  const newImages = await Promise.all(
+    images.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      return {
+        ...image.toObject(),
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+
+  res.status(200).send({ photos: newImages, pageCount });
 });
 
-/**
- * @desc    Reject a user uploaded artwork (admin only)
- * @route   POST /api/artworks/admin/user-uploaded/reject
- * @access  Admin
- */
-const rejectUserUploadedArtwork = asyncHandler(async (req, res) => {
-  const { artworkId, rejectionReason } = req.body;
-  if (!artworkId) return res.status(400).json({ success: false, message: "artworkId is required." });
+const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
+  const { imageId } = req.body;
 
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
-  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
+  const image = await Artwork.findOne({ _id: imageId });
 
-  artwork.approvalStatus = "Rejected";
-  artwork.isActive = false;
-  artwork.isApproved = false;
-  artwork.rejectedAt = new Date();
-  artwork.rejectedReasonStr = rejectionReason || "Does not meet quality standards.";
-  artwork.rejectionReason = [artwork.rejectedReasonStr];
-
-  await artwork.save();
-  res.status(200).json({ success: true, artwork });
-});
-
-/**
- * @desc    Delete user uploaded artwork (removes S3 assets + DB record)
- * @route   DELETE /api/artworks/admin/user-uploaded/:id
- * @access  Admin
- */
-const deleteUserUploadedArtwork = asyncHandler(async (req, res) => {
-  const artworkId = req.params.id;
-  
-  const artwork = await Artwork.findById(artworkId);
-  if (!artwork) return res.status(404).json({ success: false, message: "Artwork not found." });
-  if (artwork.uploadSource !== "user") return res.status(400).json({ success: false, message: "Only user uploaded artworks can be processed here." });
-
-  // Delete all S3 assets
-  if (artwork.imageLinks) {
-    await Promise.allSettled([
-      deleteFromS3(artwork.imageLinks.original),
-      deleteFromS3(artwork.imageLinks.thumbnail),
-      deleteFromS3(artwork.imageLinks.small),
-      deleteFromS3(artwork.imageLinks.medium),
-    ]);
+  if (!image) {
+    throw new Error("Image not found");
   }
 
-  await Artwork.findByIdAndDelete(artworkId);
-  res.status(200).json({ success: true, message: "User uploaded artwork deleted successfully." });
+  image.featuredArtwork = !image.featuredArtwork;
+
+  await image.save();
+
+  res.status(200).send({ message: "Featured Artwork toggle successfully" });
+});
+
+const getFeaturedArtwork = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const [featuredArtwork, totalDocuments] = await Promise.all([
+    Artwork.find({ featuredArtwork: true, isActive: true })
+      .populate("category photographer license")
+      .sort({ createdAt: -1 })
+      .skip((pageNumber - 1) * pageSize)
+      .limit(pageSize),
+    Artwork.countDocuments({ featuredArtwork: true, isActive: true }),
+  ]);
+
+  if (!featuredArtwork || featuredArtwork.length === 0) {
+    return res.status(400).send({ message: "Featured Artwork not found" });
+  }
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const newPhotos = await Promise.all(
+    featuredArtwork.map((image) => {
+      const imageObject = image.toObject();
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+
+      return {
+        ...imageObject,
+      };
+    })
+  );
+
+  res.status(200).send({ featuredArtwork: newPhotos, pageCount });
+});
+
+// const searchImages = asyncHandler(async (req, res) => {
+//   let { Query, pageNumber = 1, pageSize = 20 } = req.query;
+//   if(!Query) {
+//     return res.status(400).send({ message: 'Query is required' })
+//   }
+//   pageSize = parseInt(pageNumber, 10)
+//   pageNumber = parseInt(pageSize, 20)
+//   // const pipeline = [
+//   //   {
+//   //     $search: {
+//   //       index: 'default',
+//   //       text: {
+//   //         query: searchQuery,
+//   //         path: ['title', 'description', 'story', 'keywords'],
+//   //         fuzzy: { maxEdits: 2, prefixLength: 2 }
+//   //       }
+//   //     }
+//   //   },
+//   // ]
+
+//   const pipeline = [
+//     {
+//       $search: {
+//         index: "imagesearchindex",
+//         compound: {
+//           should: [
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "title",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "description",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "story",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "keywords",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2  }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     },
+//     { $match: { isActive: true } },
+
+//     // {$addFields: {score: {$meta: "searchScore"}}},
+//     // {$setWindowFields: {output: {maxScore: {$max: "$score"}}}},
+//     // {$addFields: {normalizedScore: {$divide: ["$score", "$maxScore"]}}},
+//     // {$match: {normalizedScore: {$gte: 0.9}}},
+//     // {$sort: {normalizedScore: -1}},
+//     {
+//       $addFields: {
+//         relevanceScore: { $meta: "searchScore" },
+//       },
+//     },
+//     {
+//       $match: {
+//         relevanceScore: { $gte: 0.6 },
+//       },
+//     },
+//     { $skip: (pageNumber - 1) * pageSize },
+//     { $limit: pageSize },
+//   ];
+
+//   const totalPipeline = [
+//     {
+//       $search: {
+//         index: "imagesearchindex",
+//         compound: {
+//           should: [
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "title",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "description",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "story",
+//                 fuzzy: { maxEdits: 2, prefixLength: 2 }
+//               }
+//             },
+//             {
+//               text: {
+//                 query: Query,
+//                 path: "keywords",
+//                 fuzzy: { maxEdits: 2 }
+//               }
+//             }
+//           ]
+//         }
+//       }
+//     },
+//     {
+//       $addFields: {
+//         relevanceScore: { $meta: "searchScore" },
+//       },
+//     },
+//     {
+//       $match: {
+//         relevanceScore: { $gte: 0.6 },
+//       },
+//     },
+//     { $match: { isActive: true } },
+//     { $count: "total" }
+//   ];
+
+//   let results = await Artwork.aggregate(pipeline);
+//   const totalDocuments = await Artwork.aggregate(totalPipeline);
+
+//   let count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
+//   // const pageCount = Math.ceil(count / pageSize);
+
+//   const imageIds = results.map((result) => result._id)
+
+//   results = await Artwork.find({ _id: { $in: imageIds } }).populate('category photographer license')
+
+//   const categories = await Category.find({ $or: [
+//     { name: { $regex: Query, $options: 'i' } },
+//     { description: { $regex: Query, $options: 'i' } }
+//   ] })
+
+//   const categoriesIds = categories.map((category) => category._id)
+
+//   const categoryImageResults = await Artwork.find({
+//       category: { $in: categoriesIds },
+//       isActive: true
+//    }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
+
+//    const totalCategoryDocuments = await Artwork.countDocuments({
+//       category: { $in: categoriesIds },
+//       isActive: true
+//    })
+//    console.log(totalCategoryDocuments, count)
+//    results = [...results, ...categoryImageResults]
+
+//    console.log(results.length)
+//    const uniqueResults = Array.from(
+//     new Map(results.map(item => [item._id.toString(), item])).values()
+//   );
+//    count = uniqueResults.length
+//    const pageCount = Math.ceil(count / pageSize);
+
+//   res.status(200).send({ results: uniqueResults, pageCount });
+// });
+
+// const searchImages = asyncHandler(async (req, res) => {
+//   let { Query, pageNumber = 1, pageSize = 20, sortType='date_popularity', order='desc' } = req.query;
+
+//   if (!Query) {
+//     return res.status(400).send({ message: 'Query is required' });
+//   }
+
+//   pageNumber = parseInt(pageNumber, 10);
+//   pageSize = parseInt(pageSize, 10);
+
+//   const searchPipeline = [
+//     {
+//       $search: {
+//         index: 'imagesearchindex',
+//         compound: {
+//           should: ['title', 'description', 'story', 'keywords'].map((field) => ({
+//             text: {
+//               query: Query,
+//               path: field,
+//               fuzzy: { maxEdits: 2, prefixLength: 2 }
+//             }
+//           }))
+//         }
+//       }
+//     },
+//     { $match: { isActive: true } },
+//     { $addFields: { relevanceScore: { $meta: 'searchScore' } } },
+//     { $match: { relevanceScore: { $gte: 0.6 } } },
+//     { $sort: { relevanceScore: -1 } },
+//     { $skip: (pageNumber - 1) * pageSize },
+//     { $limit: pageSize }
+//   ];
+
+//   const countPipeline = [
+//     ...searchPipeline.slice(0, -2),
+//     { $count: 'total' }
+//   ];
+
+//   let results = await Artwork.aggregate(searchPipeline);
+//   const totalDocs = await Artwork.aggregate(countPipeline);
+//   let count = totalDocs.length > 0 ? totalDocs[0].total : 0;
+
+//   const imageIds = results.map((result) => result._id);
+//   results = await Artwork.find({ _id: { $in: imageIds } }).populate('category photographer license');
+
+//   const categories = await Category.find({
+//     $or: [
+//       { name: { $regex: Query, $options: 'i' } },
+//       { description: { $regex: Query, $options: 'i' } }
+//     ]
+//   });
+
+//   const categoryImageResults = await Artwork.find({
+//     category: { $in: categories.map((c) => c._id) },
+//     isActive: true
+//   }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize);
+
+//   results = [...results, ...categoryImageResults];
+//   results = Array.from(new Map(results.map(item => [item._id.toString(), item])).values());
+
+//   count = results.length;
+//   const pageCount = Math.ceil(count / pageSize);
+
+//   res.status(200).send({ results, pageCount });
+// });
+
+const searchImages = asyncHandler(async (req, res) => {
+  let {
+    pageNumber = 1,
+    pageSize = 20,
+    sortType = "date_popularity",
+    order = "desc",
+    Query = "",
+  } = req.query;
+
+  pageNumber = Number(pageNumber);
+  pageSize = Number(pageSize);
+
+  const searchQuery = Query.trim();
+  const sortOrder = order === "asc" ? 1 : -1;
+
+  let sortCriteria = {
+    createdAt: -1,
+    "imageAnalytics.views": -1,
+    "imageAnalytics.downloads": -1,
+  };
+
+  switch (sortType) {
+    case "date":
+      sortCriteria = { createdAt: sortOrder };
+      break;
+
+    case "price":
+      sortCriteria = { "price.original": sortOrder };
+      break;
+
+    case "views":
+      sortCriteria = { "imageAnalytics.views": sortOrder };
+      break;
+
+    case "likes":
+      sortCriteria = { "imageAnalytics.likes": sortOrder };
+      break;
+
+    case "downloads":
+      sortCriteria = { "imageAnalytics.downloads": sortOrder };
+      break;
+  }
+
+  const pipeline = [];
+
+  // Atlas Search only when query exists
+  if (searchQuery) {
+    pipeline.push({
+      $search: {
+        index: "imagesearchindex",
+        compound: {
+          should: ["title", "description", "story", "keywords"].map(
+            (field) => ({
+              text: {
+                query: searchQuery,
+                path: field,
+                fuzzy: {
+                  maxEdits: 2,
+                  prefixLength: 2,
+                },
+              },
+            })
+          ),
+        },
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        relevanceScore: {
+          $meta: "searchScore",
+        },
+      },
+    });
+
+    pipeline.push({
+      $match: {
+        relevanceScore: {
+          $gte: 1,
+        },
+      },
+    });
+  }
+
+  pipeline.push({
+    $match: {
+      isActive: true,
+    },
+  });
+
+  pipeline.push({
+    $facet: {
+      meta: [
+        {
+          $count: "totalDocuments",
+        },
+      ],
+
+      data: [
+        ...(searchQuery ? [{ $sort: { relevanceScore: -1 } }] : []),
+
+        {
+          $skip: (pageNumber - 1) * pageSize,
+        },
+
+        {
+          $limit: pageSize,
+        },
+
+        // Artwork Analytics
+        {
+          $lookup: {
+            from: "imageanalytics",
+            let: {
+              artworkId: "$_id",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$image", "$$artworkId"],
+                      },
+                      {
+                        $eq: ["$imageModel", "Artwork"],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "imageAnalytics",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$imageAnalytics",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Photographer
+        {
+          $lookup: {
+            from: "photographers",
+            localField: "photographer",
+            foreignField: "_id",
+            as: "photographer",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$photographer",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Artwork Categories
+        {
+          $lookup: {
+            from: "artworkcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+
+        {
+          $sort: sortCriteria,
+        },
+      ],
+    },
+  });
+
+  const [{ data = [], meta = [] } = {}] = await Artwork.aggregate(
+    pipeline
+  );
+
+  const totalDocuments = meta[0]?.totalDocuments || 0;
+
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const photos = data.map((image) => ({
+    ...image,
+    imageLinks: {
+      thumbnail: image.imageLinks?.thumbnail || null,
+    },
+  }));
+
+  res.status(200).json({
+    photos,
+    pageCount,
+    totalDocuments,
+    currentPage: pageNumber,
+  });
+});
+
+
+const updateImageViewCount = asyncHandler(async (req, res) => {
+  const { imageId } = req.body;
+  if (!imageId) {
+    return res.status(400).send({ message: "No image found to update" });
+  }
+  const analytics = await ImageAnalytics.findOneAndUpdate(
+    {
+      image: imageId,
+    },
+    {
+      $inc: { views: 1 },
+    },
+    { new: true, upsert: true }
+  ).populate({
+    path: "image",
+    populate: [
+      {
+        path: "category",
+      },
+      {
+        path: "photographer",
+      },
+      {
+        path: "license",
+      },
+    ],
+  });
+
+  if (!analytics) {
+    return res.status(400).send({ message: "Not able to update" });
+  }
+  res.status(200).send({ message: "View Count Updated Successfully" });
+});
+
+const getImageAnalytics = asyncHandler(async (req, res) => {
+  const { imageId } = req.query;
+  const downloads = await Order.countDocuments({ "imageInfo.image": imageId });
+
+  const imageAnalytics = await ImageAnalytics.findOneAndUpdate(
+    { image: imageId },
+    {
+      downloads,
+    }
+  ).populate({
+    path: "image",
+    select:
+      "imageLinks.thumbnail resolutions title description story keywords category photographer license price location cameraDetails featuredArtwork notForSale slug",
+    populate: [
+      {
+        path: "category",
+      },
+      {
+        path: "photographer",
+      },
+      {
+        path: "license",
+      },
+    ],
+  });
+
+  if (!imageAnalytics) {
+    return res.status(400).send({ message: "No Image Analytics Found" });
+  }
+
+  const salesCount = await Order.aggregate([
+    { $match: { orderStatus: "completed", isPaid: true } },
+    { $unwind: "$orderItems" },
+    {
+      $match: {
+        "orderItems.imageInfo.image": new mongoose.Types.ObjectId(imageId),
+      },
+    },
+    { $count: "totalSales" },
+  ]);
+
+  const totalSales = salesCount[0]?.totalSales || 0;
+  const totalViews = imageAnalytics.views;
+
+  const conversionRate = totalViews
+    ? Math.min((totalSales / totalViews) * 100, 100)
+    : 0;
+
+  const imageAnalyticsData = {
+    ...imageAnalytics.toObject(),
+    conversionRate,
+  };
+  res
+    .status(200)
+    .send({ message: "Image Analytics", imageAnalytics: imageAnalyticsData });
+});
+
+const bestSellerPhotos = asyncHandler(async (req, res) => {
+  const bestSellers = await Order.aggregate([
+    {
+      $unwind: "$orderItems",
+    },
+    {
+      $group: {
+        _id: "$orderItems.imageInfo.image",
+        downloadCount: { $sum: 1 },
+      },
+    },
+    {
+      $sort: { downloadCount: -1 },
+    },
+    {
+      $limit: 10,
+    },
+    {
+      $lookup: {
+        from: "imagevaults",
+        localField: "_id",
+        foreignField: "_id",
+        as: "imageDetails",
+      },
+    },
+    {
+      $unwind: "$imageDetails",
+    },
+    {
+      $match: {
+        "imageDetails.isActive": true,
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "imageDetails.category",
+        foreignField: "_id",
+        as: "categoryDetails",
+      },
+    },
+    {
+      $lookup: {
+        from: "photographers",
+        localField: "imageDetails.photographer",
+        foreignField: "_id",
+        as: "photographerDetails",
+      },
+    },
+    {
+      $lookup: {
+        from: "licenses",
+        localField: "imageDetails.license",
+        foreignField: "_id",
+        as: "licenseDetails",
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        image: "$imageDetails",
+        downloadCount: 1,
+        categoryDetails: { $arrayElemAt: ["$categoryDetails", 0] },
+        photographerDetails: { $arrayElemAt: ["$photographerDetails", 0] },
+        licenseDetails: { $arrayElemAt: ["$licenseDetails", 0] },
+      },
+    },
+  ]);
+
+  const images = await Promise.all(
+    bestSellers.map(async (image) => {
+      const imageObject = image;
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+      return {
+        ...imageObject,
+      };
+    })
+  );
+
+  res.status(200).send({ bestSellers: images });
+}); // Not Tested
+
+const getRejectedImages = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const totalDocuments = await Artwork.countDocuments({
+    exclusiveLicenseStatus: { $in: ["rejected"] },
+    isActive: false,
+  });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const images = await Artwork.find({
+    exclusiveLicenseStatus: { $in: ["rejected"] },
+    isActive: false,
+  })
+    .populate("category photographer license")
+    .sort({ createdAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  const newImages = await Promise.all(
+    images.map(async (image) => {
+      // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      return {
+        ...image.toObject(),
+        imageAnalytics,
+        // hasLiked: !!likeExist,
+        // hasCommented: !!commentExist,
+      };
+    })
+  );
+
+  res.status(200).send({ photos: newImages, pageCount });
+});
+
+const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
+  let {
+    pageNumber = 1,
+    pageSize = 20,
+    sortType = "date_popularity",
+    order = "desc",
+  } = req.query;
+
+  pageNumber = parseInt(pageNumber);
+  pageSize = parseInt(pageSize);
+
+  const totalDocuments = await Artwork.countDocuments({ isActive: true });
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  let sortCriteria = {
+    createdAt: -1,
+    "imageAnalytics.views": -1,
+    "imageAnalytics.downloads": -1,
+  };
+  let sortOrder = order === "asc" ? 1 : -1;
+
+  if (sortType === "date") {
+    sortCriteria = { createdAt: sortOrder };
+  } else if (sortType === "price") {
+    sortCriteria = { "price.original": sortOrder };
+  } else if (sortType === "views") {
+    sortCriteria = { "imageAnalytics.views": sortOrder };
+  } else if (sortType === "likes") {
+    sortCriteria = { "imageAnalytics.likes": sortOrder };
+  } else if (sortType === "downloads") {
+    sortCriteria = { "imageAnalytics.downloads": sortOrder };
+  }
+
+  const matchStage = { isActive: true };
+
+  if (sortType === "price" && order === "asc") {
+    matchStage.notForSale = { $ne: true };
+  }
+
+  let images = await Artwork.aggregate([
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: "imageanalytics",
+        localField: "_id",
+        foreignField: "image",
+        as: "imageAnalytics",
+      },
+    },
+    {
+      $unwind: { path: "$imageAnalytics", preserveNullAndEmptyArrays: true },
+    },
+    {
+      $lookup: {
+        from: "photographers",
+        localField: "photographer",
+        foreignField: "_id",
+        as: "photographer",
+      },
+    },
+    { $unwind: { path: "$photographer", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+
+    {
+      $sort: sortCriteria,
+    },
+    {
+      $skip: (pageNumber - 1) * pageSize,
+    },
+    {
+      $limit: pageSize,
+    },
+  ]);
+
+  images = await Promise.all(
+    images.map(async (image) => {
+      const imageObject = image;
+      imageObject.imageLinks = {
+        thumbnail: imageObject.imageLinks?.thumbnail || null,
+      };
+      return {
+        ...imageObject,
+      };
+    })
+  );
+
+  res.status(200).send({ photos: images, pageCount });
+
+  // const newImages = await Promise.all(
+  //     images.map(async (image) => {
+  //         // const likeExist = await Like.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+  //         // const commentExist = await Comment.findOne({ 'entityInfo.entity': image._id, 'userInfo.user': requesterId });
+  //         const imageAnalytics = await ImageAnalytics.findOne({ image: image._id })
+
+  //         return {
+  //             ...image.toObject(),
+  //             imageAnalytics,
+  //             // hasLiked: !!likeExist,
+  //             // hasCommented: !!commentExist,
+  //         };
+  //     })
+  // );
+
+  //res.status(200).send({ photos : newImages, pageCount })
+});
+
+const updateNotForSaleStatus = asyncHandler(async (req, res) => {
+  const { imageId, status = false } = req.body;
+
+  await Artwork.findOneAndUpdate({ _id: imageId }, { notForSale: status });
+
+  res
+    .status(200)
+    .send({ message: "Image not for sale status updated successfuly" });
+});
+
+const getImageBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.query;
+
+  if (!slug) {
+    return res.status(400).send({ message: "Slug is required" });
+  }
+
+  let image = await Artwork.findOne({
+    slug: { $regex: new RegExp(`^${slug}$`, "i") },
+  })
+    .populate("category license")
+    .populate({
+      path: "photographer",
+      select: "-bestPhotos",
+    });
+
+  if (!image) {
+    const Artwork = require("../models/artworkModel.js");
+    let artwork = await Artwork.findOne({
+      slug: { $regex: new RegExp(`^${slug}$`, "i") },
+    })
+      .populate("category license")
+      .populate({
+        path: "user",
+        select: "-bestPhotos",
+      });
+
+    if (!artwork) {
+      return res.status(400).send({ message: "No Image found" });
+    }
+
+    const artworkObj = artwork.toObject();
+    const priceVal = artworkObj.price || 0;
+    image = {
+      ...artworkObj,
+      photographer: artworkObj.user || null,
+      category: artworkObj.category ? [artworkObj.category] : [],
+      price: {
+        original: priceVal,
+        medium: priceVal,
+        small: priceVal,
+      },
+    };
+  } else {
+    const imageObject = image.toObject();
+    imageObject.imageLinks = {
+      thumbnail: imageObject.imageLinks?.thumbnail || null,
+      original: imageObject.imageLinks?.original || null,
+    };
+    image = {
+      ...imageObject,
+    };
+  }
+
+  res.status(200).send({ image });
+});
+
+const getImageForDownload = asyncHandler(async (req, res) => {
+  let { id, resolution } = req.query;
+
+  let image = await Artwork.findOne({ _id: id })
+    .select(
+      "imageLinks photographer resolutions title description story keywords category photographer license price location cameraDetails slug"
+    )
+    .populate("photographer category license");
+
+  let imageUrl = image.imageLinks[resolution];
+
+  if (!imageUrl)
+    return res
+      .status(400)
+      .send({ message: "Requested resolution not available" });
+
+  res.status(200).send({
+    photo: { ...image.toObject(), imageLinks: { [resolution]: imageUrl } },
+  });
+});
+
+const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
+  const { photographerId, eventName } = req.query;
+
+  const images = await Artwork.find({
+    photographer: photographerId,
+    eventName: eventName.toLowerCase(),
+  });
+
+  if (!images || images.length === 0) {
+    throw new Error("Images not found");
+  }
+
+  res.status(200).send({ images });
+});
+
+const getImagesByEvents = asyncHandler(async (req, res) => {
+  const { eventName } = req.query;
+
+  const images = await Artwork.find({
+    eventName: eventName.toLowerCase(),
+    isActive: true,
+  }).populate("category photographer");
+
+  if (!images || images.length === 0) {
+    throw new Error("Images not found");
+  }
+
+  res.status(200).send({ images });
+});
+
+const getPhotographerByEvents = asyncHandler(async (req, res) => {
+  const { eventName, pageNumber = 1, limit = 20 } = req.query;
+
+  const lowerCaseEvent = eventName.toLowerCase();
+  const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
+
+  const totalImages = await Artwork.countDocuments({
+    eventName: lowerCaseEvent,
+  });
+
+  const images = await Artwork.find({ eventName: lowerCaseEvent })
+    .populate("photographer")
+    .skip(skip)
+    .limit(parseInt(limit));
+
+  const photographerMap = new Map();
+  images.forEach((img) => {
+    if (
+      img.photographer &&
+      !photographerMap.has(img.photographer._id.toString())
+    ) {
+      photographerMap.set(img.photographer._id.toString(), img.photographer);
+    }
+  });
+
+  const photographers = Array.from(photographerMap.values());
+
+  res.send({
+    photographers,
+    pageCount: Math.ceil(totalImages / parseInt(limit)),
+  });
+});
+
+const addEventToImage = asyncHandler(async (req, res) => {
+  const { imageId, eventName } = req.body;
+  if (!imageId || !eventName) {
+    return res
+      .status(400)
+      .send({ message: "Image ID and Event Name are required" });
+  }
+  const image = await Artwork.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  image.eventName = eventName.toLowerCase();
+  await image.save();
+
+  res.status(200).send({ message: "Event added to image successfully" });
+});
+
+const removeEventFromImage = asyncHandler(async (req, res) => {
+  const { imageId } = req.body;
+  if (!imageId) {
+    return res.status(400).send({ message: "Image ID is required" });
+  }
+  const image = await Artwork.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  image.eventName = "";
+  await image.save();
+  res.status(200).send({ message: "Event removed from image successfully" });
+});
+
+const selectImageForEvent = asyncHandler(async (req, res) => {
+  // set selectedForEvent to true for the image
+  const { imageId } = req.body;
+  if (!imageId) {
+    return res.status(400).send({ message: "Image ID is required" });
+  }
+  const image = await Artwork.findById(imageId);
+  if (!image) {
+    return res.status(404).send({ message: "Image not found" });
+  }
+  const isSelected = image.selectedForEvent;
+
+  if (isSelected) {
+    image.selectedForEvent = false;
+  } else {
+    image.selectedForEvent = true;
+  }
+  await image.save();
+  res.status(200).send({
+    message: `Image ${isSelected ? "deselected" : "selected"
+      } for event successfully`,
+  });
+});
+
+const getSelectImagesForEvent = asyncHandler(async (req, res) => {
+  const { eventName } = req.query;
+
+  const images = await Artwork.find({
+    eventName: eventName.toLowerCase(),
+    selectedForEvent: true,
+  }).populate("category photographer");
+
+  if (!images || images.length === 0) {
+    throw new Error("Images not found");
+  }
+
+  res.status(200).send({ images });
+});
+
+const getYearRewindOfPhotographer = asyncHandler(async (req, res) => {
+  let { username, year } = req.query;
+
+  if (!username || !year) {
+    return res.status(400).send({ message: "username and year are required" });
+  }
+
+  // normalize username
+  username = username.trim().toLowerCase();
+
+  const photographer = await Photographer.findOne({
+    username: { $regex: new RegExp(`^${username}$`, "i") },
+  }).select("_id firstName lastName username");
+
+  if (!photographer) {
+    return res.status(404).send({ message: "Photographer not found" });
+  }
+
+  const photographerId = photographer._id;
+
+  const startDate = new Date(`${year}-01-01T00:00:00Z`);
+  const endDate = new Date(`${year}-12-31T23:59:59Z`);
+
+  const result = await Artwork.aggregate([
+    {
+      $match: {
+        photographer: photographerId,
+        isActive: true,
+        createdAt: { $gte: startDate, $lte: endDate },
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $lookup: {
+        from: "imageanalytics",
+        localField: "_id",
+        foreignField: "image",
+        as: "analytics",
+      },
+    },
+    {
+      $addFields: {
+        views: { $ifNull: [{ $arrayElemAt: ["$analytics.views", 0] }, 0] },
+        month: { $month: "$createdAt" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalPhotosUploaded: { $sum: 1 },
+        totalViews: { $sum: "$views" },
+        mostViewed: {
+          $max: {
+            views: "$views",
+            doc: "$$ROOT",
+          },
+        },
+        monthCount: { $push: "$month" },
+        categoryList: { $push: "$category" },
+        uploadedPhotos: {
+          $push: {
+            thumbnail: "$imageLinks.thumbnail",
+            createdAt: "$createdAt",
+          },
+        },
+      },
+    },
+  ]);
+
+  if (!result || result.length === 0) {
+    return res.status(200).send({
+      totalPhotosUploaded: 0,
+      photoWithMostViews: null,
+      totalViews: 0,
+      mostUsedTheme: null,
+      mostActiveMonth: null,
+      uploadedPhotos: [],
+    });
+  }
+
+  const data = result[0];
+
+  const uploadedPhotos =
+    data.uploadedPhotos
+      ?.filter((p) => p.thumbnail)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((p) => p.thumbnail) || [];
+
+  const monthCountMap = {};
+  data.monthCount.forEach((m) => {
+    monthCountMap[m] = (monthCountMap[m] || 0) + 1;
+  });
+
+  const mostActiveMonth =
+    Object.keys(monthCountMap).reduce((a, b) =>
+      monthCountMap[a] > monthCountMap[b] ? a : b
+    ) || null;
+
+  const themeMap = {};
+  const coverMap = {};
+
+  data.categoryList.flat().forEach((cat) => {
+    if (!cat?.name) return;
+    themeMap[cat.name] = (themeMap[cat.name] || 0) + 1;
+    if (!coverMap[cat.name]) coverMap[cat.name] = cat.coverImage || null;
+  });
+
+  const mostUsedThemeName =
+    Object.keys(themeMap).reduce((a, b) =>
+      themeMap[a] > themeMap[b] ? a : b
+    ) || null;
+
+  const mostUsedTheme = mostUsedThemeName
+    ? {
+      name: mostUsedThemeName,
+      coverImage: coverMap[mostUsedThemeName],
+      count: themeMap[mostUsedThemeName],
+    }
+    : null;
+
+  let formattedTopPhoto = null;
+  if (data.mostViewed?.doc) {
+    const top = data.mostViewed.doc;
+    formattedTopPhoto = {
+      ...top,
+      category: top.category?.map((c) => c.name) || [],
+      views: data.mostViewed.views,
+    };
+  }
+
+  res.status(200).send({
+    photographer: {
+      name: (photographer.firstName || "") + " " + (photographer.lastName || ""),
+      username: photographer.username,
+    },
+    totalPhotosUploaded: data.totalPhotosUploaded,
+    photoWithMostViews: formattedTopPhoto,
+    totalViews: data.totalViews,
+    mostUsedTheme,
+    mostActiveMonth: mostActiveMonth ? Number(mostActiveMonth) : null,
+    uploadedPhotos,
+  });
 });
 
 module.exports = {
-  uploadArtwork,
-  getMyArtworks,
-  getPublicArtworks,
-  getArtworkBySlug,
-  getAllArtworksAdmin,
-  getArtworkById,
-  updateArtwork,
-  deleteArtwork,
-  approveArtwork,
+  addImageInVault,
+  updateImageInVault,
+  getImageFromVault,
+  getAllImagesFromVault,
+  deleteImagesFromVault,
+  getAllImagesByPhotographer,
+  getImagesByCategory,
+  getImagesByCategoryType,
+  approveImage,
+  getAllPendingImagesForAdmin,
   toggleFeaturedArtwork,
-  getPendingArtworks,
-  getRejectedArtworks,
-  getUserUploadedArtworks,
-  approveUserUploadedArtwork,
-  rejectUserUploadedArtwork,
-  deleteUserUploadedArtwork,
+  getFeaturedArtwork,
+  searchImages,
+  updateImageViewCount,
+  getImageAnalytics,
+  bestSellerPhotos,
+  getRejectedImages,
+  getAllImagesFromVaultBySorting,
+  updateNotForSaleStatus,
+  getImageBySlug,
+  getImageForDownload,
+  getImagesByEvents,
+  getImagesOfEventsByPhotographer,
+  getPhotographerByEvents,
+  addEventToImage,
+  removeEventFromImage,
+  selectImageForEvent,
+  getSelectImagesForEvent,
+  getYearRewindOfPhotographer,
 };

@@ -213,13 +213,13 @@ const createOrder = asyncHandler(async (req, res) => {
       platformFees,
       platformFeesAmount: platformFees
         ? Number(
-            (
-              (totalAmount +
-                (deliveryCharge ? totalDeliveryCharge : 0) +
-                (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
-              0.02
-            ).toFixed(2)
-          )
+          (
+            (totalAmount +
+              (deliveryCharge ? totalDeliveryCharge : 0) +
+              (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
+            0.02
+          ).toFixed(2)
+        )
         : 0,
       deliveryChargeAmount: deliveryCharge ? totalDeliveryCharge : 0,
     });
@@ -523,16 +523,13 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
     title: `Order Status Updated`,
-    body: `Your order is now: ${
-      orderStatus?.slice(0, 1).toUpperCase() + orderStatus?.slice(1)
-    }`,
+    body: `Your order is now: ${orderStatus?.slice(0, 1).toUpperCase() + orderStatus?.slice(1)
+      }`,
     type: "order",
     data: {
-      url: `${
-        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-      }://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${
-        order._id
-      }`,
+      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+        }://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id
+        }`,
     },
   });
 
@@ -700,8 +697,8 @@ const calculateCartItemsPrice = async (
           resolution === "small"
             ? image.price.small
             : resolution === "medium"
-            ? image.price.medium
-            : image.price.original;
+              ? image.price.medium
+              : image.price.original;
 
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
@@ -1294,8 +1291,8 @@ const calculateCartPrice = async (req, res) => {
           resolution === "small"
             ? image.price.small
             : resolution === "medium"
-            ? image.price.medium
-            : image.price.original;
+              ? image.price.medium
+              : image.price.original;
 
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
@@ -1462,16 +1459,13 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
     title: "Print Status Updated",
-    body: `Your order is now: ${
-      printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
-    }`,
+    body: `Your order is now: ${printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
+      }`,
     type: "order",
     data: {
-      url: `${
-        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-      }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
-        order._id
-      }`,
+      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+        }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id
+        }`,
     },
   });
 

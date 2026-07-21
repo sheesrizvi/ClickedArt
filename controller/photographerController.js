@@ -9,6 +9,7 @@ const {
 } = require("../middleware/handleEmail.js");
 const { differenceInYears, parseISO, isValid } = require("date-fns");
 const ImageVault = require("../models/imagebase/imageVaultModel.js");
+const Artwork = require("../models/artworkModel.js");
 const Referral = require("../models/referralModel.js");
 const {
   sendApprovedMail,
@@ -1027,6 +1028,31 @@ const getPendingImagesByPhotographer = asyncHandler(async (req, res) => {
   res.status(200).send({ pendingImages, pageCount });
 });
 
+const getPendingArtworksByPhotographer = asyncHandler(async (req, res) => {
+  const { photographer, pageSize = Infinity } = req.query;
+
+  const [pendingImages, totalDocuments] = await Promise.all([
+    Artwork.find({
+      photographer,
+      exclusiveLicenseStatus: { $in: ["pending", "review"] },
+      isActive: false,
+    }).populate("photographer category license"),
+    Artwork.countDocuments({
+      photographer,
+      exclusiveLicenseStatus: { $in: ["pending", "review"] },
+      isActive: false,
+    }),
+  ]);
+
+  if (!pendingImages || pendingImages.length === 0) {
+    return res.status(400).send({ message: "No Pending Images found" });
+  }
+
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  res.status(200).send({ pendingImages, pageCount });
+});
+
 const makeArtistOfTheMonth = asyncHandler(async (req, res) => {
   const { photographerId } = req.body;
 
@@ -1297,6 +1323,7 @@ module.exports = {
   changePassword,
   deletePhotographer,
   getPendingImagesByPhotographer,
+  getPendingArtworksByPhotographer,
   getAllNotFeaturedPhotographers,
   getInactivePhotographersByLastLogin,
   getActivePhotographers,

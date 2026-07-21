@@ -1,66 +1,72 @@
-const express = require("express");
-const multer = require("multer");
-const {
-  uploadArtwork,
-  getMyArtworks,
-  getPublicArtworks,
-  getArtworkBySlug,
-  getAllArtworksAdmin,
-  getArtworkById,
-  updateArtwork,
-  deleteArtwork,
-  approveArtwork,
-  toggleFeaturedArtwork,
-  getPendingArtworks,
-  getRejectedArtworks,
-  getUserUploadedArtworks,
-  approveUserUploadedArtwork,
-  rejectUserUploadedArtwork,
-  deleteUserUploadedArtwork,
-} = require("../controller/artworkController");
-const { IsAdminOrPhotographer, isAdmin } = require("../middleware/authMiddleware");
+const express = require('express')
+const { 
+        addImageInVault,
+        updateImageInVault,
+        getImageFromVault,
+        getAllImagesFromVault,
+        deleteImagesFromVault,
+        getAllImagesByPhotographer,
+        getImagesByCategory,
+        getImagesByCategoryType,
+        approveImage,
+        getAllPendingImagesForAdmin,
+        toggleFeaturedArtwork,
+        getFeaturedArtwork,
+        searchImages,
+        updateImageViewCount,
+        getImageAnalytics,
+        bestSellerPhotos,
+        getRejectedImages,
+        getAllImagesFromVaultBySorting,
+        updateNotForSaleStatus,
+        getImageBySlug,
+        getImageForDownload,
+        getImagesByEvents,
+        getImagesOfEventsByPhotographer,
+        getPhotographerByEvents,
+        addEventToImage,
+        removeEventFromImage,
+        selectImageForEvent,
+        getSelectImagesForEvent,
+        getYearRewindOfPhotographer,
+     } = require('../controller/artworkController')
+const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../middleware/authMiddleware')
 
-const router = express.Router();
+const router = express.Router()
 
-// Multer — in-memory storage for Sharp processing
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
-  fileFilter: (req, file, cb) => {
-    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only JPG, PNG, and WEBP files are allowed."), false);
-    }
-  },
-});
 
-// ─── Public Routes ───────────────────────────────────────────────
-router.get("/public", getPublicArtworks);
-router.get("/get-images-by-sort-type", getPublicArtworks);
-router.get("/search-images", getPublicArtworks);
-router.get("/get-image-by-slug", getArtworkBySlug);
-router.get("/slug/:slug", getArtworkBySlug);
+router.post('/add-image-in-vault', IsAdminOrPhotographer,  addImageInVault)
+router.post('/update-image-in-vault',  updateImageInVault)
+router.get('/get-image-by-id', getImageFromVault)
+router.get('/get-all-images', getAllImagesFromVault)
+router.delete('/delete-image', IsAdminOrPhotographer, deleteImagesFromVault)
+router.get('/get-images-by-photographer', getAllImagesByPhotographer)
+router.get('/get-image-by-category-id', getImagesByCategory)
+router.get('/get-image-by-category-type', getImagesByCategoryType)
+router.post('/approve-image', isAdmin, approveImage)
+router.get('/get-all-pending-images-for-admin', isAdmin, getAllPendingImagesForAdmin)
 
-// ─── Protected Photographer Routes ───────────────────────────────
-router.post("/upload", IsAdminOrPhotographer, upload.single("artwork"), uploadArtwork);
-router.get("/my-artworks", IsAdminOrPhotographer, getMyArtworks);
-router.put("/:id", IsAdminOrPhotographer, updateArtwork);
-router.delete("/delete-image", IsAdminOrPhotographer, deleteArtwork);
-router.delete("/:id", IsAdminOrPhotographer, deleteArtwork);
+router.post('/toggle-featured-artwork', isAdmin, toggleFeaturedArtwork)
+router.get('/get-featured-artwork', getFeaturedArtwork)
+router.get('/search-images', searchImages)
 
-// ─── Admin-Only Routes ───────────────────────────────────────────
-router.get("/admin/all", isAdmin, getAllArtworksAdmin);
-router.get("/admin/pending", isAdmin, getPendingArtworks);
-router.get("/admin/rejected", isAdmin, getRejectedArtworks);
-router.get("/admin/user-uploaded", isAdmin, getUserUploadedArtworks);
-router.post("/admin/user-uploaded/approve", isAdmin, approveUserUploadedArtwork);
-router.post("/admin/user-uploaded/reject", isAdmin, rejectUserUploadedArtwork);
-router.delete("/admin/user-uploaded/:id", isAdmin, deleteUserUploadedArtwork);
-router.get("/:id", isAdmin, getArtworkById);
-router.post("/approve", isAdmin, approveArtwork);
-router.post("/toggle-featured", isAdmin, toggleFeaturedArtwork);
+router.post('/add-image-views-count', updateImageViewCount)
+router.get('/get-image-analytics', getImageAnalytics)
+router.get('/best-seller-photos', bestSellerPhotos)
+router.get('/get-rejected-images', getRejectedImages)
 
-module.exports = router;
+router.get('/get-images-by-sort-type', getAllImagesFromVaultBySorting)
+router.post('/update-not-for-sale-status', updateNotForSaleStatus)
+
+router.get('/get-image-by-slug', getImageBySlug)
+router.get('/get-image-for-download', verifyToken, getImageForDownload)
+router.get('/get-images-of-events-by-photographer', getImagesOfEventsByPhotographer)
+router.get('/get-images-of-events', getImagesByEvents)
+router.get('/get-photographer-by-events', getPhotographerByEvents)
+router.post('/add-event-to-image', IsAdminOrPhotographer, addEventToImage)
+router.post('/remove-event-from-image', IsAdminOrPhotographer, removeEventFromImage)
+router.post('/select-image-for-event', IsAdminOrPhotographer, selectImageForEvent)
+router.get('/get-selected-images-of-events', getSelectImagesForEvent)
+router.get('/get-year-rewind-of-photographer', getYearRewindOfPhotographer)
+
+module.exports = router

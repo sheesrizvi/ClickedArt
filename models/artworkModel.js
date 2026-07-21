@@ -1,24 +1,20 @@
 const mongoose = require("mongoose");
-const validator = require('validator');
+const validator = require('validator')
 
 const artworkSchema = mongoose.Schema({
-    category: {
+    category: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'ArtworkCategory'
-    },
-    user: {
+    }],
+    photographer: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Photographer',
         required: true
     },
-    photographer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Photographer'
-    },
     imageLinks: {
         thumbnail: { type: String },
         original: { type: String, required: true },
-    },
+      },
     resolutions: {
         thumbnail: {  width: { type: Number }, height: { type: Number }  },
         original: {  width: { type: Number }, height: { type: Number }  },
@@ -27,11 +23,11 @@ const artworkSchema = mongoose.Schema({
         type: String
     },
     description: {
-        type: String
-    },
+            type: String
+        },
     story: {
-        type: String
-    },
+            type: String
+        },
     keywords: [
         {
             type: String,
@@ -54,9 +50,9 @@ const artworkSchema = mongoose.Schema({
           shutterSpeed: { type: String, trim: true },
           iso: { type: Number },
         },
-    },
+      },
     price: {
-        type: Number
+       original: { type: Number  },
     },
     license: {
        type: mongoose.Schema.Types.ObjectId,
@@ -96,54 +92,12 @@ const artworkSchema = mongoose.Schema({
     selectedForEvent: {
         type: Boolean,
         default: false
-    },
-    isApproved: {
-        type: Boolean,
-        default: false
-    },
-    isAvailable: {
-        type: Boolean,
-        default: true
-    },
-    uploadSource: {
-        type: String,
-        enum: ['admin', 'bulk', 'user']
-    },
-    approvalStatus: {
-        type: String,
-        enum: ['Pending', 'Approved', 'Rejected']
-    },
-    approvedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-    },
-    approvedAt: {
-        type: Date
-    },
-    rejectedAt: {
-        type: Date
-    },
-    rejectedReasonStr: {
-        type: String
     }
 }, {
     timestamps: true
-});
+})
 
-artworkSchema.virtual('orientation').get(function() {
-    if (this.resolutions && this.resolutions.original) {
-        const { width, height } = this.resolutions.original;
-        if (width && height) {
-            if (width > height) return 'Landscape';
-            if (width < height) return 'Portrait';
-            return 'Square';
-        }
-    }
-    return null;
-});
 
-artworkSchema.set('toJSON', { virtuals: true });
-artworkSchema.set('toObject', { virtuals: true });
 
 const Artwork = mongoose.model('Artwork', artworkSchema);
 

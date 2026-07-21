@@ -1,5 +1,5 @@
 const express = require('express')
-const { createCategory, updateCategory, deleteCategory, getAllCategory, getCategoryById, searchCategories, getCategoriesByHighestImageCount } = require('../controller/artworkcategoryController')
+const { createCategory, updateCategory, deleteCategory, getAllCategory, getCategoryById, searchCategories, getCategoriesByHighestImageCount } = require('../controller/artworkCategoryController')
 const { isAdmin } = require('../middleware/authMiddleware')
 const router = express.Router()
 
