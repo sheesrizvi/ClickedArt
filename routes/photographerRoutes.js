@@ -19,6 +19,7 @@ const {
   resendOTP,
   deletePhotographer,
   getPendingImagesByPhotographer,
+  getPendingArtworksByPhotographer,
   getAllNotFeaturedPhotographers,
   getInactivePhotographersByLastLogin,
   makeArtistOfTheMonth,
@@ -76,6 +77,10 @@ router.delete("/delete-photographer", deletePhotographer);
 router.get(
   "/get-pending-images-by-photographer",
   getPendingImagesByPhotographer
+);
+router.get(
+  "/get-pending-artworks-by-photographer",
+  getPendingArtworksByPhotographer
 );
 router.get(
   "/get-inactive-photographers-by-last-login",

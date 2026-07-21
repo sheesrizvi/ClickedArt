@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
-const Order = require("../models/orderModel");
+const ArtworkOrder = require("../models/artworkOrderModel");
 const Photographer = require("../models/photographerModel");
 const LayoutContent = require("../models/layoutContentModel");
 const UserType = require("../models/typeModel");
 const asyncHandler = require("express-async-handler");
-const ImageVault = require("../models/imagebase/imageVaultModel");
+const Artwork = require("../models/artworkModel");
 const GST = require("../models/gstModel");
 const Coupon = require("../models/couponModel");
 const ReferralBalance = require("../models/referralBalanceModel");
@@ -16,7 +16,7 @@ const Mount = require("../models/imagebase/mountModel");
 const { getAvailableMounts } = require("../utils/mountValidator");
 const Razorpay = require("razorpay");
 const Monetization = require("../models/monetizationModel.js");
-const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
+const ArtworkAnalytics = require("../models/artworkAnalyticsModel.js");
 const { sendOrderThankYouMail } = require("../middleware/handleEmail.js");
 const BuyerCounter = require("../models/buyerCounterModel.js");
 const moment = require("moment");
@@ -53,11 +53,11 @@ const deleteOrder = asyncHandler(async (req, res) => {
 
   if (!orderId) {
     res.status(400);
-    throw new Error("Order Id is required to delete");
+    throw new Error("ArtworkOrder Id is required to delete");
   }
 
-  await Order.findByIdAndDelete(orderId);
-  res.status(200).send({ message: "Order deleted" });
+  await ArtworkOrder.findByIdAndDelete(orderId);
+  res.status(200).send({ message: "ArtworkOrder deleted" });
 });
 
 const createOrder = asyncHandler(async (req, res) => {
@@ -80,7 +80,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const userType = await UserType.findOne({ user: userId }).select("type -_id");
   const type = userType?.type || null;
 
-  const orderExist = await Order.findOne({ "userInfo.user": userId });
+  const orderExist = await ArtworkOrder.findOne({ "userInfo.user": userId });
 
   const layoutContent = await LayoutContent.findOne({});
   const deliveryCharge = layoutContent?.charges?.delivery || false;
@@ -189,7 +189,7 @@ const createOrder = asyncHandler(async (req, res) => {
       (item) => item.paperInfo && item.paperInfo.paper
     );
 
-    const order = new Order({
+    const order = new ArtworkOrder({
       userInfo: {
         user: userId,
         userType: type,
@@ -213,13 +213,13 @@ const createOrder = asyncHandler(async (req, res) => {
       platformFees,
       platformFeesAmount: platformFees
         ? Number(
-          (
-            (totalAmount +
-              (deliveryCharge ? totalDeliveryCharge : 0) +
-              (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
-            0.02
-          ).toFixed(2)
-        )
+            (
+              (totalAmount +
+                (deliveryCharge ? totalDeliveryCharge : 0) +
+                (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
+              0.02
+            ).toFixed(2)
+          )
         : 0,
       deliveryChargeAmount: deliveryCharge ? totalDeliveryCharge : 0,
     });
@@ -263,15 +263,15 @@ const createOrder = asyncHandler(async (req, res) => {
 
   for (let item of orderItems) {
     if (item.imageInfo && item.imageInfo.image) {
-      const image = await ImageVault.findById(item.imageInfo.image);
+      const image = await Artwork.findById(item.imageInfo.image);
       if (image && image.title) itemNames.push(image.title);
 
       if (image && image._id) {
-        const downloads = await Order.countDocuments({
+        const downloads = await ArtworkOrder.countDocuments({
           "orderItems.imageInfo.image": image._id,
         });
 
-        await ImageAnalytics.findOneAndUpdate(
+        await ArtworkAnalytics.findOneAndUpdate(
           { image: image._id },
           { downloads }
         );
@@ -301,18 +301,18 @@ const createOrder = asyncHandler(async (req, res) => {
   );
 
   for (const ord of orders) {
-    const order = await Order.findOne({ _id: ord._id }).populate(
+    const order = await ArtworkOrder.findOne({ _id: ord._id }).populate(
       "userInfo.user"
     );
 
     if (!order) {
-      console.error(`Order not found for ID: ${ord._id}`);
+      console.error(`ArtworkOrder not found for ID: ${ord._id}`);
       continue;
     }
 
     if (order.printStatus === "no-print") continue;
 
-    console.log("Fetched Order:", order);
+    console.log("Fetched ArtworkOrder:", order);
     await registerDeliveryFromOrder(order);
   }
 
@@ -322,7 +322,7 @@ const createOrder = asyncHandler(async (req, res) => {
 const getAllOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({})
+  const orders = await ArtworkOrder.find({})
     .populate({
       path: "orderItems",
       populate: [
@@ -352,9 +352,9 @@ const getAllOrders = asyncHandler(async (req, res) => {
     .limit(pageSize);
 
   if (!orders || orders.length === 0)
-    return res.status(400).send({ message: "Order not found" });
+    return res.status(400).send({ message: "ArtworkOrder not found" });
 
-  const totalDocuments = await Order.countDocuments({});
+  const totalDocuments = await ArtworkOrder.countDocuments({});
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ orders, pageCount });
@@ -363,7 +363,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
 const getFailedOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ orderStatus: "failed" })
+  const orders = await ArtworkOrder.find({ orderStatus: "failed" })
     .populate({
       path: "orderItems",
       populate: [
@@ -393,9 +393,9 @@ const getFailedOrders = asyncHandler(async (req, res) => {
     .limit(pageSize);
 
   if (!orders || orders.length === 0)
-    return res.status(400).send({ message: "Order not found" });
+    return res.status(400).send({ message: "ArtworkOrder not found" });
 
-  const totalDocuments = await Order.countDocuments({ orderStatus: "failed" });
+  const totalDocuments = await ArtworkOrder.countDocuments({ orderStatus: "failed" });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ orders, pageCount });
@@ -403,7 +403,7 @@ const getFailedOrders = asyncHandler(async (req, res) => {
 
 const getMyOrders = asyncHandler(async (req, res) => {
   const { userId, pageNumber = 1, pageSize = 20 } = req.query;
-  const orders = await Order.find({ "userInfo.user": userId })
+  const orders = await ArtworkOrder.find({ "userInfo.user": userId })
     .populate({
       path: "orderItems",
       populate: [
@@ -436,10 +436,10 @@ const getMyOrders = asyncHandler(async (req, res) => {
 
   if (!orders || orders.length === 0) {
     res.status(400);
-    throw new Error("Order not found");
+    throw new Error("ArtworkOrder not found");
   }
 
-  const totalDocuments = await Order.countDocuments({
+  const totalDocuments = await ArtworkOrder.countDocuments({
     "userInfo.user": userId,
   });
   const pageCount = Math.ceil(totalDocuments / pageSize);
@@ -450,7 +450,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
 const getOrdersByPhotographer = asyncHandler(async (req, res) => {
   const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({
+  const orders = await ArtworkOrder.find({
     "orderItems.imageInfo.photographer": photographer,
     orderStatus: "completed",
   })
@@ -488,7 +488,7 @@ const getOrdersByPhotographer = asyncHandler(async (req, res) => {
     throw new Error("No Orders Found");
   }
 
-  const totalDocuments = await Order.countDocuments({
+  const totalDocuments = await ArtworkOrder.countDocuments({
     "orderItems.imageInfo.photographer": photographer,
   });
   const pageCount = Math.ceil(totalDocuments / pageSize);
@@ -501,10 +501,10 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
   if (!orderStatus || !orderId) {
     res.status(400);
-    throw new Error("Order Status and Order Id is required to update");
+    throw new Error("ArtworkOrder Status and ArtworkOrder Id is required to update");
   }
 
-  const order = await Order.findById(orderId);
+  const order = await ArtworkOrder.findById(orderId);
   const validStatusTypes = new Set(["pending", "completed", "cancelled"]);
   if (!validStatusTypes.has(orderStatus)) {
     res.status(400);
@@ -522,28 +522,31 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   await sendNotificationToUser({
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
-    title: `Order Status Updated`,
-    body: `Your order is now: ${orderStatus?.slice(0, 1).toUpperCase() + orderStatus?.slice(1)
-      }`,
+    title: `ArtworkOrder Status Updated`,
+    body: `Your order is now: ${
+      orderStatus?.slice(0, 1).toUpperCase() + orderStatus?.slice(1)
+    }`,
     type: "order",
     data: {
-      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-        }://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id
-        }`,
+      url: `${
+        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+      }://${order.printStatus === "no-print" ? "digitalorder" : "printorder"}/${
+        order._id
+      }`,
     },
   });
 
   await order.save();
-  res.status(200).send({ message: "Order status updated" });
+  res.status(200).send({ message: "ArtworkOrder status updated" });
 });
 
 const getOrderById = asyncHandler(async (req, res) => {
   const { orderId } = req.query;
 
   if (!orderId)
-    return res.status(400).send({ message: "Order Id is required" });
+    return res.status(400).send({ message: "ArtworkOrder Id is required" });
 
-  const order = await Order.findById(orderId)
+  const order = await ArtworkOrder.findById(orderId)
     .populate({
       path: "orderItems",
       populate: [
@@ -583,7 +586,7 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
     return res.status(400).json({ status: false, message: "Invalid Action" });
   }
 
-  const orders = await Order.find({ orderStatus: status })
+  const orders = await ArtworkOrder.find({ orderStatus: status })
     .populate({
       path: "orderItems",
       populate: [
@@ -614,10 +617,10 @@ const getOrderByStatus = asyncHandler(async (req, res) => {
 
   if (!orders || orders.length === 0) {
     res.status(404);
-    throw new Error("Order not found");
+    throw new Error("ArtworkOrder not found");
   }
 
-  const totalDocuments = await Order.countDocuments({ orderStatus: status });
+  const totalDocuments = await ArtworkOrder.countDocuments({ orderStatus: status });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ orders, pageCount });
@@ -691,14 +694,9 @@ const calculateCartItemsPrice = async (
       const area = (width || 0) * (height || 0);
 
       if (!paperId && imageId && !isCustom) {
-        const image = await ImageVault.findById(imageId);
+        const image = await Artwork.findById(imageId);
 
-        const imagePrice =
-          resolution === "small"
-            ? image.price.small
-            : resolution === "medium"
-              ? image.price.medium
-              : image.price.original;
+                const imagePrice = image.price || 0;
 
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
@@ -903,7 +901,7 @@ const paymentHandler = asyncHandler(async (req, res) => {
 const getPendingOrders = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const orders = await Order.find({ orderStatus: "pending" })
+  const orders = await ArtworkOrder.find({ orderStatus: "pending" })
     .populate({
       path: "orderItems",
       populate: [
@@ -933,9 +931,9 @@ const getPendingOrders = asyncHandler(async (req, res) => {
     .limit(pageSize);
 
   if (!orders || orders.length === 0)
-    return res.status(400).send({ message: "Order not found" });
+    return res.status(400).send({ message: "ArtworkOrder not found" });
 
-  const totalDocuments = await Order.countDocuments({ orderStatus: "pending" });
+  const totalDocuments = await ArtworkOrder.countDocuments({ orderStatus: "pending" });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   res.status(200).send({ orders, pageCount });
@@ -973,7 +971,7 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //     for (let item of items) {
 //       const { imageId, paperId, frameId, width, height, resolution } = item;
 
-//       const image = await ImageVault.findById(imageId);
+//       const image = await Artwork.findById(imageId);
 //       if (!image && !isCustom) continue;
 
 //       const ownImage =
@@ -1095,7 +1093,7 @@ const getPendingOrders = asyncHandler(async (req, res) => {
 //     for (let item of items) {
 //       const { imageId, paperId, frameId, width, height, resolution } = item;
 
-//       const image = await ImageVault.findById(imageId);
+//       const image = await Artwork.findById(imageId);
 //       if (!image && !isCustom) continue;
 
 //       // const ownImage =
@@ -1285,14 +1283,9 @@ const calculateCartPrice = async (req, res) => {
       const area = (width || 0) * (height || 0);
 
       if (!paperId && imageId && !isCustom) {
-        const image = await ImageVault.findById(imageId);
+        const image = await Artwork.findById(imageId);
 
-        const imagePrice =
-          resolution === "small"
-            ? image.price.small
-            : resolution === "medium"
-              ? image.price.medium
-              : image.price.original;
+                const imagePrice = image.price || 0;
 
         subtotal += imagePrice;
         totalFinalPrice += imagePrice;
@@ -1449,7 +1442,7 @@ const calculateCartPrice = async (req, res) => {
 const updatePrintStatus = asyncHandler(async (req, res) => {
   const { orderId, printStatus } = req.body;
 
-  const order = await Order.findOne({ _id: orderId });
+  const order = await ArtworkOrder.findOne({ _id: orderId });
 
   order.printStatus = printStatus;
 
@@ -1459,13 +1452,16 @@ const updatePrintStatus = asyncHandler(async (req, res) => {
     userId: order.userInfo.user,
     userType: order.userInfo.userType,
     title: "Print Status Updated",
-    body: `Your order is now: ${printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
-      }`,
+    body: `Your order is now: ${
+      printStatus?.slice(0, 1).toUpperCase() + printStatus?.slice(1)
+    }`,
     type: "order",
     data: {
-      url: `${order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
-        }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${order._id
-        }`,
+      url: `${
+        order.userInfo.userType === "User" ? "clickedart" : "clickedartartist"
+      }://${printStatus === "no-print" ? "digitalorder" : "printorder"}/${
+        order._id
+      }`,
     },
   });
 
@@ -1476,14 +1472,14 @@ const updateReadyToShipStatus = asyncHandler(async (req, res) => {
   const { orderId, status = false } = req.body;
 
   if (!orderId) {
-    return res.status(400).send({ message: "Order Id not found" });
+    return res.status(400).send({ message: "ArtworkOrder Id not found" });
   }
   let readyToShipTimeStamp;
   if (status === true) {
     readyToShipTimeStamp = new Date();
   }
 
-  await Order.findOneAndUpdate(
+  await ArtworkOrder.findOneAndUpdate(
     { _id: orderId },
     { readyToShip: status, readyToShipTimeStamp }
   );

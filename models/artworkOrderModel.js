@@ -19,12 +19,7 @@ const orderSchema = new mongoose.Schema(
         imageInfo: {
           image: {
             type: mongoose.Schema.Types.ObjectId,
-            refPath: "orderItems.imageInfo.imageModel",
-          },
-          imageModel: {
-            type: String,
-            enum: ["ImageVault", "Artwork"],
-            default: "ImageVault"
+            ref: "Artwork",
           },
           photographer: {
             type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +27,7 @@ const orderSchema = new mongoose.Schema(
           },
           resolution: {
             type: String,
-            enum: ["original", "medium", "small"],
+            enum: ["original", "thumbnail"],
           },
           price: {
             type: Number,
@@ -211,6 +206,6 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Order", orderSchema);
+module.exports = mongoose.model("ArtworkOrder", orderSchema);
 
 // gstPriceForThatItem = sgst + cgst

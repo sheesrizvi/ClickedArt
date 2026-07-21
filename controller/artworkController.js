@@ -1,17 +1,17 @@
 const mongoose = require("mongoose");
 const asyncHandler = require("express-async-handler");
-const ImageVault = require("../../models/imagebase/imageVaultModel.js");
-const Category = require("../../models/categoryModel.js");
-const ImageAnalytics = require("../../models/imagebase/imageAnalyticsModel.js");
-const Like = require("../../models/socials/likeModel.js");
-const Comment = require("../../models/socials/commentModel.js");
-const Follow = require("../../models/socials/followModel.js");
+const Artwork = require("../models/artworkModel.js");
+const Category = require("../models/artworkCategoryModel.js");
+const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
+const Like = require("../models/socials/likeModel.js");
+const Comment = require("../models/socials/commentModel.js");
+const Follow = require("../models/socials/followModel.js");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
-const Photographer = require("../../models/photographerModel.js");
-const RoyaltySettings = require("../../models/imagebase/royaltyModel.js");
-const Order = require("../../models/orderModel.js");
-const { generateSlug } = require("../../middleware/slugMiddleware.js");
+const Photographer = require("../models/photographerModel.js");
+const RoyaltySettings = require("../models/imagebase/royaltyModel.js");
+const Order = require("../models/orderModel.js");
+const { generateSlug } = require("../middleware/slugMiddleware.js");
 const {
   sendApprovedImageMail,
   sendUnapprovedImageMail,
@@ -20,12 +20,12 @@ const {
   sendUnapprovedImageMailOfMonetizedProfile,
   sendEventSubmissionConfirmation,
   sendUnapprovedImageMailOfNonMonetizedProfile,
-} = require("../../middleware/handleEmail.js");
+} = require("../middleware/handleEmail.js");
 const {
   sendNotificationToUser,
-} = require("../../middleware/notificationUtils.js");
+} = require("../middleware/notificationUtils.js");
 
-const Subscription = require("../../models/subscriptionModel.js");
+const Subscription = require("../models/subscriptionModel.js");
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -91,7 +91,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
     imageLimit = 10;
   }
 
-  const uploadedImagesCount = await ImageVault.countDocuments({ photographer });
+  const uploadedImagesCount = await Artwork.countDocuments({ photographer });
 
   let planName = "Basic";
   if (subscription && subscription.planId && subscription.planId.name) {
@@ -122,7 +122,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
   const slug = generateSlug(title);
 
-  const newImage = await ImageVault.create({
+  const newImage = await Artwork.create({
     category,
     photographer,
     imageLinks,
@@ -144,6 +144,7 @@ const addImageInVault = asyncHandler(async (req, res) => {
 
   await ImageAnalytics.create({
     image: newImage._id,
+    imageModel: "Artwork"
   });
 
   await Photographer.findOneAndUpdate(
@@ -191,7 +192,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Price cannot be more than 25000" });
   }
 
-  const photo = await ImageVault.findOne({ _id: id, photographer });
+  const photo = await Artwork.findOne({ _id: id, photographer });
   if (!photo) return res.status(400).send({ message: "Photo not found" });
 
   if (photo.title !== title || !photo.slug) {
@@ -266,7 +267,7 @@ const updateImageInVault = asyncHandler(async (req, res) => {
 const getImageFromVault = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
-  let image = await ImageVault.findOne({ _id: id }).populate(
+  let image = await Artwork.findOne({ _id: id }).populate(
     "photographer category license"
   );
 
@@ -290,10 +291,10 @@ const getImageFromVault = asyncHandler(async (req, res) => {
 const getAllImagesFromVault = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const totalDocuments = await ImageVault.countDocuments({ isActive: true });
+  const totalDocuments = await Artwork.countDocuments({ isActive: true });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  const images = await ImageVault.find({ isActive: true })
+  const images = await Artwork.find({ isActive: true })
     .populate("category photographer license")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
@@ -324,7 +325,7 @@ const getAllImagesFromVault = asyncHandler(async (req, res) => {
 const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
   const { photographer, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const photos = await ImageVault.find({ photographer, isActive: true })
+  const photos = await Artwork.find({ photographer, isActive: true })
     .populate("category photographer license")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
@@ -333,7 +334,7 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
   if (!photos || photos.length === 0)
     return res.status(400).send({ message: "Photos not found" });
 
-  const totalDocuments = await ImageVault.countDocuments({
+  const totalDocuments = await Artwork.countDocuments({
     photographer,
     isActive: true,
   });
@@ -366,7 +367,7 @@ const getAllImagesByPhotographer = asyncHandler(async (req, res) => {
 const getImagesByCategory = asyncHandler(async (req, res) => {
   const { category, pageNumber = 1, pageSize = 20 } = req.query;
 
-  const photos = await ImageVault.find({ category, isActive: true })
+  const photos = await Artwork.find({ category, isActive: true })
     .populate("category photographer license")
     .sort({ createdAt: -1 })
     .skip((pageNumber - 1) * pageSize)
@@ -375,7 +376,7 @@ const getImagesByCategory = asyncHandler(async (req, res) => {
   if (!photos || photos.length === 0)
     return res.status(400).send({ message: "Photos not found" });
 
-  const totalDocuments = await ImageVault.countDocuments({
+  const totalDocuments = await Artwork.countDocuments({
     category,
     isActive: true,
   });
@@ -413,7 +414,7 @@ const getImagesByCategoryType = asyncHandler(async (req, res) => {
     return res
       .status(400)
       .send({ message: "Category not found with this title" });
-  const photos = await ImageVault.find({
+  const photos = await Artwork.find({
     category: category._id,
     isActive: true,
   })
@@ -424,7 +425,7 @@ const getImagesByCategoryType = asyncHandler(async (req, res) => {
   if (!photos || photos.length === 0)
     return res.status(400).send({ message: "Photos not found" });
 
-  const totalDocuments = await ImageVault.countDocuments({
+  const totalDocuments = await Artwork.countDocuments({
     category: category._id,
     isActive: true,
   });
@@ -477,14 +478,14 @@ const deleteAllResolutions = asyncHandler(async (images) => {
 const deleteImagesFromVault = asyncHandler(async (req, res) => {
   const { id } = req.query;
 
-  const photo = await ImageVault.findOne({ _id: id });
+  const photo = await Artwork.findOne({ _id: id });
 
   if (!photo) return res.status(400).send({ message: "Photo not found" });
 
   if (photo.imageLinks) {
     deleteAllResolutions(photo.imageLinks);
   }
-  await ImageVault.findOneAndUpdate({ _id: id }, { $set: { isActive: false } });
+  await Artwork.findOneAndUpdate({ _id: id }, { $set: { isActive: false } });
   // await Photographer.findOneAndUpdate({_id: photo.photographer}, { $inc: { photosCount: -1 } })
   // await ImageAnalytics.findOneAndDelete({ image: photo._id })
 
@@ -501,7 +502,7 @@ const approveImage = asyncHandler(async (req, res) => {
     });
   }
 
-  const image = await ImageVault.findById(imageId).populate("photographer");
+  const image = await Artwork.findById(imageId).populate("photographer");
   if (!image || !image.photographer) {
     return res.status(404).json({ message: "Image not found." });
   }
@@ -600,13 +601,13 @@ const approveImage = asyncHandler(async (req, res) => {
 const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const totalDocuments = await ImageVault.countDocuments({
+  const totalDocuments = await Artwork.countDocuments({
     exclusiveLicenseStatus: { $in: ["pending", "review"] },
     isActive: false,
   });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  const images = await ImageVault.find({
+  const images = await Artwork.find({
     exclusiveLicenseStatus: { $in: ["pending", "review"] },
     isActive: false,
   })
@@ -635,7 +636,7 @@ const getAllPendingImagesForAdmin = asyncHandler(async (req, res) => {
 const toggleFeaturedArtwork = asyncHandler(async (req, res) => {
   const { imageId } = req.body;
 
-  const image = await ImageVault.findOne({ _id: imageId });
+  const image = await Artwork.findOne({ _id: imageId });
 
   if (!image) {
     throw new Error("Image not found");
@@ -652,12 +653,12 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
   const [featuredArtwork, totalDocuments] = await Promise.all([
-    ImageVault.find({ featuredArtwork: true, isActive: true })
+    Artwork.find({ featuredArtwork: true, isActive: true })
       .populate("category photographer license")
       .sort({ createdAt: -1 })
       .skip((pageNumber - 1) * pageSize)
       .limit(pageSize),
-    ImageVault.countDocuments({ featuredArtwork: true, isActive: true }),
+    Artwork.countDocuments({ featuredArtwork: true, isActive: true }),
   ]);
 
   if (!featuredArtwork || featuredArtwork.length === 0) {
@@ -812,15 +813,15 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 //     { $count: "total" }
 //   ];
 
-//   let results = await ImageVault.aggregate(pipeline);
-//   const totalDocuments = await ImageVault.aggregate(totalPipeline);
+//   let results = await Artwork.aggregate(pipeline);
+//   const totalDocuments = await Artwork.aggregate(totalPipeline);
 
 //   let count = totalDocuments.length > 0 && totalDocuments[0]?.total > 0 ? totalDocuments[0]?.total : 0;
 //   // const pageCount = Math.ceil(count / pageSize);
 
 //   const imageIds = results.map((result) => result._id)
 
-//   results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license')
+//   results = await Artwork.find({ _id: { $in: imageIds } }).populate('category photographer license')
 
 //   const categories = await Category.find({ $or: [
 //     { name: { $regex: Query, $options: 'i' } },
@@ -829,12 +830,12 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 
 //   const categoriesIds = categories.map((category) => category._id)
 
-//   const categoryImageResults = await ImageVault.find({
+//   const categoryImageResults = await Artwork.find({
 //       category: { $in: categoriesIds },
 //       isActive: true
 //    }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize)
 
-//    const totalCategoryDocuments = await ImageVault.countDocuments({
+//    const totalCategoryDocuments = await Artwork.countDocuments({
 //       category: { $in: categoriesIds },
 //       isActive: true
 //    })
@@ -889,12 +890,12 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 //     { $count: 'total' }
 //   ];
 
-//   let results = await ImageVault.aggregate(searchPipeline);
-//   const totalDocs = await ImageVault.aggregate(countPipeline);
+//   let results = await Artwork.aggregate(searchPipeline);
+//   const totalDocs = await Artwork.aggregate(countPipeline);
 //   let count = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
 //   const imageIds = results.map((result) => result._id);
-//   results = await ImageVault.find({ _id: { $in: imageIds } }).populate('category photographer license');
+//   results = await Artwork.find({ _id: { $in: imageIds } }).populate('category photographer license');
 
 //   const categories = await Category.find({
 //     $or: [
@@ -903,7 +904,7 @@ const getFeaturedArtwork = asyncHandler(async (req, res) => {
 //     ]
 //   });
 
-//   const categoryImageResults = await ImageVault.find({
+//   const categoryImageResults = await Artwork.find({
 //     category: { $in: categories.map((c) => c._id) },
 //     isActive: true
 //   }).populate('category photographer license').skip((pageNumber - 1) * pageSize).limit(pageSize);
@@ -928,7 +929,8 @@ const searchImages = asyncHandler(async (req, res) => {
 
   pageNumber = Number(pageNumber);
   pageSize = Number(pageSize);
-  const searchQuery = Query;
+
+  const searchQuery = Query.trim();
   const sortOrder = order === "asc" ? 1 : -1;
 
   let sortCriteria = searchQuery ? {
@@ -942,20 +944,33 @@ const searchImages = asyncHandler(async (req, res) => {
     "imageAnalytics.downloads": -1,
   };
 
-  if (sortType === "date") {
-    sortCriteria = { createdAt: sortOrder };
-  } else if (sortType === "price") {
-    sortCriteria = { "price.original": sortOrder };
-  } else if (sortType === "views") {
-    sortCriteria = { "imageAnalytics.views": sortOrder };
-  } else if (sortType === "likes") {
-    sortCriteria = { "imageAnalytics.likes": sortOrder };
-  } else if (sortType === "downloads") {
-    sortCriteria = { "imageAnalytics.downloads": sortOrder };
+  switch (sortType) {
+    case "date":
+      sortCriteria = { createdAt: sortOrder };
+      break;
+
+    case "price":
+      sortCriteria = { "price.original": sortOrder };
+      break;
+
+    case "views":
+      sortCriteria = { "imageAnalytics.views": sortOrder };
+      break;
+
+    case "likes":
+      sortCriteria = { "imageAnalytics.likes": sortOrder };
+      break;
+
+    case "downloads":
+      sortCriteria = { "imageAnalytics.downloads": sortOrder };
+      break;
   }
 
-  const pipeline = [
-    {
+  const pipeline = [];
+
+  // Atlas Search only when query exists
+  if (searchQuery) {
+    pipeline.push({
       $search: {
         index: "imagesearchindex",
         compound: {
@@ -964,69 +979,125 @@ const searchImages = asyncHandler(async (req, res) => {
               text: {
                 query: searchQuery,
                 path: field,
-                fuzzy: { maxEdits: 2, prefixLength: 2 },
+                fuzzy: {
+                  maxEdits: 2,
+                  prefixLength: 2,
+                },
               },
             })
           ),
         },
       },
-    },
-    { $match: { isActive: true } },
-    { $addFields: { relevanceScore: { $meta: "searchScore" } } },
+    });
 
-    {
-      $facet: {
-        meta: [{ $count: "totalDocuments" }],
-        data: [
-          { $sort: { relevanceScore: -1 } },
-          { $skip: (pageNumber - 1) * pageSize },
-          { $limit: pageSize },
-
-          {
-            $lookup: {
-              from: "imageanalytics",
-              localField: "_id",
-              foreignField: "image",
-              as: "imageAnalytics",
-            },
-          },
-          {
-            $unwind: {
-              path: "$imageAnalytics",
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $lookup: {
-              from: "photographers",
-              localField: "photographer",
-              foreignField: "_id",
-              as: "photographer",
-            },
-          },
-          {
-            $unwind: {
-              path: "$photographer",
-              preserveNullAndEmptyArrays: true,
-            },
-          },
-          {
-            $lookup: {
-              from: "categories",
-              localField: "category",
-              foreignField: "_id",
-              as: "category",
-            },
-          },
-          { $sort: sortCriteria },
-        ],
+    pipeline.push({
+      $addFields: {
+        relevanceScore: {
+          $meta: "searchScore",
+        },
       },
-    },
-  ];
+    });
+  }
 
-  const [{ data = [], meta = [] } = {}] = await ImageVault.aggregate(pipeline);
+  pipeline.push({
+    $match: {
+      isActive: true,
+    },
+  });
+
+  pipeline.push({
+    $facet: {
+      meta: [
+        {
+          $count: "totalDocuments",
+        },
+      ],
+
+      data: [
+        ...(searchQuery ? [{ $sort: { relevanceScore: -1 } }] : []),
+
+        {
+          $skip: (pageNumber - 1) * pageSize,
+        },
+
+        {
+          $limit: pageSize,
+        },
+
+        // Artwork Analytics
+        {
+          $lookup: {
+            from: "imageanalytics",
+            let: {
+              artworkId: "$_id",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      {
+                        $eq: ["$image", "$$artworkId"],
+                      },
+                      {
+                        $eq: ["$imageModel", "Artwork"],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            as: "imageAnalytics",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$imageAnalytics",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Photographer
+        {
+          $lookup: {
+            from: "photographers",
+            localField: "photographer",
+            foreignField: "_id",
+            as: "photographer",
+          },
+        },
+
+        {
+          $unwind: {
+            path: "$photographer",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+
+        // Artwork Categories
+        {
+          $lookup: {
+            from: "artworkcategories",
+            localField: "category",
+            foreignField: "_id",
+            as: "category",
+          },
+        },
+
+        {
+          $sort: sortCriteria,
+        },
+      ],
+    },
+  });
+
+  const [{ data = [], meta = [] } = {}] = await Artwork.aggregate(
+    pipeline
+  );
 
   const totalDocuments = meta[0]?.totalDocuments || 0;
+
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   const photos = data.map((image) => ({
@@ -1036,11 +1107,14 @@ const searchImages = asyncHandler(async (req, res) => {
     },
   }));
 
-  res.status(200).send({
+  res.status(200).json({
     photos,
     pageCount,
+    totalDocuments,
+    currentPage: pageNumber,
   });
 });
+
 
 const updateImageViewCount = asyncHandler(async (req, res) => {
   const { imageId } = req.body;
@@ -1220,13 +1294,13 @@ const bestSellerPhotos = asyncHandler(async (req, res) => {
 const getRejectedImages = asyncHandler(async (req, res) => {
   const { pageNumber = 1, pageSize = 20 } = req.query;
 
-  const totalDocuments = await ImageVault.countDocuments({
+  const totalDocuments = await Artwork.countDocuments({
     exclusiveLicenseStatus: { $in: ["rejected"] },
     isActive: false,
   });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
-  const images = await ImageVault.find({
+  const images = await Artwork.find({
     exclusiveLicenseStatus: { $in: ["rejected"] },
     isActive: false,
   })
@@ -1263,7 +1337,7 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
   pageNumber = parseInt(pageNumber);
   pageSize = parseInt(pageSize);
 
-  const totalDocuments = await ImageVault.countDocuments({ isActive: true });
+  const totalDocuments = await Artwork.countDocuments({ isActive: true });
   const pageCount = Math.ceil(totalDocuments / pageSize);
 
   let sortCriteria = {
@@ -1291,7 +1365,7 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
     matchStage.notForSale = { $ne: true };
   }
 
-  let images = await ImageVault.aggregate([
+  let images = await Artwork.aggregate([
     { $match: matchStage },
     {
       $lookup: {
@@ -1368,7 +1442,7 @@ const getAllImagesFromVaultBySorting = asyncHandler(async (req, res) => {
 const updateNotForSaleStatus = asyncHandler(async (req, res) => {
   const { imageId, status = false } = req.body;
 
-  await ImageVault.findOneAndUpdate({ _id: imageId }, { notForSale: status });
+  await Artwork.findOneAndUpdate({ _id: imageId }, { notForSale: status });
 
   res
     .status(200)
@@ -1382,7 +1456,7 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     return res.status(400).send({ message: "Slug is required" });
   }
 
-  let image = await ImageVault.findOne({
+  let image = await Artwork.findOne({
     slug: { $regex: new RegExp(`^${slug}$`, "i") },
   })
     .populate("category license")
@@ -1392,7 +1466,7 @@ const getImageBySlug = asyncHandler(async (req, res) => {
     });
 
   if (!image) {
-    const Artwork = require("../../models/artworkModel.js");
+    const Artwork = require("../models/artworkModel.js");
     let artwork = await Artwork.findOne({
       slug: { $regex: new RegExp(`^${slug}$`, "i") },
     })
@@ -1435,7 +1509,7 @@ const getImageBySlug = asyncHandler(async (req, res) => {
 const getImageForDownload = asyncHandler(async (req, res) => {
   let { id, resolution } = req.query;
 
-  let image = await ImageVault.findOne({ _id: id })
+  let image = await Artwork.findOne({ _id: id })
     .select(
       "imageLinks photographer resolutions title description story keywords category photographer license price location cameraDetails slug"
     )
@@ -1456,7 +1530,7 @@ const getImageForDownload = asyncHandler(async (req, res) => {
 const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
   const { photographerId, eventName } = req.query;
 
-  const images = await ImageVault.find({
+  const images = await Artwork.find({
     photographer: photographerId,
     eventName: eventName.toLowerCase(),
   });
@@ -1471,7 +1545,7 @@ const getImagesOfEventsByPhotographer = asyncHandler(async (req, res) => {
 const getImagesByEvents = asyncHandler(async (req, res) => {
   const { eventName } = req.query;
 
-  const images = await ImageVault.find({
+  const images = await Artwork.find({
     eventName: eventName.toLowerCase(),
     isActive: true,
   }).populate("category photographer");
@@ -1489,11 +1563,11 @@ const getPhotographerByEvents = asyncHandler(async (req, res) => {
   const lowerCaseEvent = eventName.toLowerCase();
   const skip = (parseInt(pageNumber) - 1) * parseInt(limit);
 
-  const totalImages = await ImageVault.countDocuments({
+  const totalImages = await Artwork.countDocuments({
     eventName: lowerCaseEvent,
   });
 
-  const images = await ImageVault.find({ eventName: lowerCaseEvent })
+  const images = await Artwork.find({ eventName: lowerCaseEvent })
     .populate("photographer")
     .skip(skip)
     .limit(parseInt(limit));
@@ -1523,7 +1597,7 @@ const addEventToImage = asyncHandler(async (req, res) => {
       .status(400)
       .send({ message: "Image ID and Event Name are required" });
   }
-  const image = await ImageVault.findById(imageId);
+  const image = await Artwork.findById(imageId);
   if (!image) {
     return res.status(404).send({ message: "Image not found" });
   }
@@ -1538,7 +1612,7 @@ const removeEventFromImage = asyncHandler(async (req, res) => {
   if (!imageId) {
     return res.status(400).send({ message: "Image ID is required" });
   }
-  const image = await ImageVault.findById(imageId);
+  const image = await Artwork.findById(imageId);
   if (!image) {
     return res.status(404).send({ message: "Image not found" });
   }
@@ -1553,7 +1627,7 @@ const selectImageForEvent = asyncHandler(async (req, res) => {
   if (!imageId) {
     return res.status(400).send({ message: "Image ID is required" });
   }
-  const image = await ImageVault.findById(imageId);
+  const image = await Artwork.findById(imageId);
   if (!image) {
     return res.status(404).send({ message: "Image not found" });
   }
@@ -1566,16 +1640,15 @@ const selectImageForEvent = asyncHandler(async (req, res) => {
   }
   await image.save();
   res.status(200).send({
-    message: `Image ${
-      isSelected ? "deselected" : "selected"
-    } for event successfully`,
+    message: `Image ${isSelected ? "deselected" : "selected"
+      } for event successfully`,
   });
 });
 
 const getSelectImagesForEvent = asyncHandler(async (req, res) => {
   const { eventName } = req.query;
 
-  const images = await ImageVault.find({
+  const images = await Artwork.find({
     eventName: eventName.toLowerCase(),
     selectedForEvent: true,
   }).populate("category photographer");
@@ -1610,7 +1683,7 @@ const getYearRewindOfPhotographer = asyncHandler(async (req, res) => {
   const startDate = new Date(`${year}-01-01T00:00:00Z`);
   const endDate = new Date(`${year}-12-31T23:59:59Z`);
 
-  const result = await ImageVault.aggregate([
+  const result = await Artwork.aggregate([
     {
       $match: {
         photographer: photographerId,
@@ -1708,10 +1781,10 @@ const getYearRewindOfPhotographer = asyncHandler(async (req, res) => {
 
   const mostUsedTheme = mostUsedThemeName
     ? {
-        name: mostUsedThemeName,
-        coverImage: coverMap[mostUsedThemeName],
-        count: themeMap[mostUsedThemeName],
-      }
+      name: mostUsedThemeName,
+      coverImage: coverMap[mostUsedThemeName],
+      count: themeMap[mostUsedThemeName],
+    }
     : null;
 
   let formattedTopPhoto = null;
