@@ -932,7 +932,8 @@ const searchImages = asyncHandler(async (req, res) => {
   const sortOrder = order === "asc" ? 1 : -1;
 
   let sortCriteria = searchQuery ? {
-    relevanceScore: -1,
+    relevanceScore: -1, // testing
+
     createdAt: -1,
     "imageAnalytics.views": -1,
     "imageAnalytics.downloads": -1,
@@ -1566,9 +1567,8 @@ const selectImageForEvent = asyncHandler(async (req, res) => {
   }
   await image.save();
   res.status(200).send({
-    message: `Image ${
-      isSelected ? "deselected" : "selected"
-    } for event successfully`,
+    message: `Image ${isSelected ? "deselected" : "selected"
+      } for event successfully`,
   });
 });
 
@@ -1708,10 +1708,10 @@ const getYearRewindOfPhotographer = asyncHandler(async (req, res) => {
 
   const mostUsedTheme = mostUsedThemeName
     ? {
-        name: mostUsedThemeName,
-        coverImage: coverMap[mostUsedThemeName],
-        count: themeMap[mostUsedThemeName],
-      }
+      name: mostUsedThemeName,
+      coverImage: coverMap[mostUsedThemeName],
+      count: themeMap[mostUsedThemeName],
+    }
     : null;
 
   let formattedTopPhoto = null;
