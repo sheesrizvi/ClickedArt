@@ -66,7 +66,7 @@ const {
 } = require("./controller/deliveryController.js");
 const { cleanupExpiredImages } = require("./controller/imagebase/imageVaultController.js");
 const { cleanupExpiredArtworks } = require("./controller/artworkController.js");
-console.log("imageVaultRoutes =", imageVaultRoutes);
+
 const app = express();
 
 app.use(
