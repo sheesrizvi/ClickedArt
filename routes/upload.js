@@ -15,6 +15,12 @@ const RoyaltySettings = require("../models/imagebase/royaltyModel.js");
 const CustomWatermark = require("../models/imagebase/customWatermarkModel.js");
 const { S3 } = require("@aws-sdk/client-s3");
 const sizeOf = require("image-size");
+const Artwork = require("../models/artworkModel.js");
+const ImageAnalytics = require("../models/imagebase/imageAnalyticsModel.js");
+const Photographer = require("../models/photographerModel.js");
+const { generateSlug } = require("../middleware/slugMiddleware.js");
+const { isAdmin } = require("../middleware/authMiddleware.js");
+
 
 const config = {
   region: process.env.AWS_BUCKET_REGION,
@@ -1095,6 +1101,214 @@ const createTextImageBuffer = async (text, width, height) => {
 const removeBackgroundWithSharp = async (buffer) => {
   return buffer;
 };
+
+
+router.post(
+  "/admin-bulk-upload-artwork",
+  isAdmin,
+  upload1.single("image"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).send({ message: "No file uploaded." });
+      }
+
+      const { title, description, keywords, photographer, category, status } =
+        req.body;
+
+      if (!photographer || !category) {
+        return res
+          .status(400)
+          .send({ message: "Photographer and category are required." });
+      }
+
+      // Parse categories
+      let categoryArray;
+      try {
+        categoryArray =
+          typeof category === "string" && category.startsWith("[")
+            ? JSON.parse(category)
+            : Array.isArray(category)
+            ? category
+            : [category];
+      } catch {
+        categoryArray = Array.isArray(category) ? category : [category];
+      }
+
+      // Parse keywords
+      let keywordsArray = [];
+      if (keywords) {
+        try {
+          keywordsArray =
+            typeof keywords === "string" && keywords.startsWith("[")
+              ? JSON.parse(keywords)
+              : typeof keywords === "string"
+              ? keywords.split(",").map((k) => k.trim()).filter(Boolean)
+              : Array.isArray(keywords)
+              ? keywords
+              : [];
+        } catch {
+          keywordsArray = [];
+        }
+      }
+
+      // ── Step 1: rotate & get real dimensions ──────────────────────────────
+      let correctedBuffer;
+      let width, height;
+      try {
+        correctedBuffer = await sharp(req.file.buffer).rotate().toBuffer();
+        ({ width, height } = await sharp(correctedBuffer).metadata());
+      } catch (err) {
+        console.error("[bulk-upload] Step1 (rotate/metadata) failed:", err);
+        return res.status(500).send({ message: "Failed to read image.", error: err.message });
+      }
+
+      // ── Step 2: build thumbnail with watermark ──────────────────────────
+      let thumbnailBuffer;
+      let thumbWidth, thumbHeight;
+      try {
+        let watermarkBuffer;
+        try {
+          const royaltySettings = await RoyaltySettings.findOne();
+          if (royaltySettings && royaltySettings.watermarkImage) {
+            const wmResponse = await axios.get(royaltySettings.watermarkImage, {
+              responseType: "arraybuffer",
+            });
+            const watermarkScaleFactor = 0.3;
+            const watermarkWidth = width * watermarkScaleFactor;
+            const watermarkHeight = height * watermarkScaleFactor;
+
+            const royaltyBuffer = Buffer.from(wmResponse.data);
+            watermarkBuffer = await sharp(royaltyBuffer)
+              .resize({
+                width: Math.round(watermarkWidth),
+                height: Math.round(watermarkHeight),
+                fit: sharp.fit.inside,
+                withoutEnlargement: true,
+              })
+              .ensureAlpha()
+              .modulate({
+                brightness: 1,
+                opacity: 0.05,
+              })
+              .png()
+              .toBuffer();
+          }
+        } catch (wmErr) {
+          console.warn("[bulk-upload] Could not load RoyaltySettings watermark, falling back to text:", wmErr.message);
+        }
+
+        if (!watermarkBuffer) {
+          watermarkBuffer = await createTextImageBuffer("ClickedArt", width, height);
+        }
+
+        let watermarkedBuffer;
+        if (watermarkBuffer) {
+          watermarkedBuffer = await sharp(correctedBuffer)
+            .composite([
+              {
+                input: watermarkBuffer,
+                gravity: "center",
+                blend: "over",
+              },
+            ])
+            .toBuffer();
+        } else {
+          watermarkedBuffer = correctedBuffer;
+        }
+
+        thumbnailBuffer = await sharp(watermarkedBuffer)
+          .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 70 })
+          .toBuffer();
+
+        const thumbMeta = await sharp(thumbnailBuffer).metadata();
+        thumbWidth = thumbMeta.width;
+        thumbHeight = thumbMeta.height;
+      } catch (err) {
+        console.error("[bulk-upload] Step2 (thumbnail creation) failed:", err);
+        return res.status(500).send({ message: "Failed to create thumbnail.", error: err.message });
+      }
+
+      if (thumbnailBuffer.length > 500 * 1024) {
+        try {
+          thumbnailBuffer = await compressToExactSize(thumbnailBuffer);
+          const thumbMeta = await sharp(thumbnailBuffer).metadata();
+          thumbWidth = thumbMeta.width;
+          thumbHeight = thumbMeta.height;
+        } catch { /* ignore */ }
+      }
+
+      // ── Step 3: upload thumbnail to S3 ────────────────────────────────────
+      let thumbnailUrl;
+      try {
+        const thumbKey = `images/${Date.now()}_${Math.round(Math.random() * 1e9)}_thumbnail.webp`;
+        await new Upload({
+          client: s3,
+          params: { Bucket: process.env.AWS_BUCKET, Key: thumbKey, Body: thumbnailBuffer, ContentType: "image/webp" },
+        }).done();
+        thumbnailUrl = `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${thumbKey}`;
+      } catch (err) {
+        console.error("[bulk-upload] Step3 (S3 thumbnail upload) failed:", err);
+        return res.status(500).send({ message: "Failed to upload thumbnail to S3.", error: err.message });
+      }
+
+      // ── Step 4: upload original to S3 ─────────────────────────────────────
+      let originalUrl;
+      try {
+        const ext = (req.file.originalname.split(".").pop() || "jpg").toLowerCase();
+        const origKey = `images/${Date.now()}_${Math.round(Math.random() * 1e9)}_original.${ext}`;
+        await new Upload({
+          client: s3,
+          params: { Bucket: process.env.AWS_BUCKET, Key: origKey, Body: correctedBuffer, ContentType: req.file.mimetype },
+        }).done();
+        originalUrl = `https://${process.env.AWS_BUCKET}.s3.${config.region}.amazonaws.com/${origKey}`;
+      } catch (err) {
+        console.error("[bulk-upload] Step4 (S3 original upload) failed:", err);
+        return res.status(500).send({ message: "Failed to upload original to S3.", error: err.message });
+      }
+
+      // ── Step 5: create DB record ───────────────────────────────────────────
+      let newImage;
+      try {
+        const artworkTitle = title?.trim() || req.file.originalname.replace(/\.[^/.]+$/, "");
+        const slug = generateSlug(artworkTitle);
+        const exclusiveLicenseStatus = status === "approved" ? "approved" : "pending";
+        const isActive = status === "approved";
+
+        newImage = await Artwork.create({
+          category: categoryArray,
+          photographer,
+          imageLinks: { thumbnail: thumbnailUrl, original: originalUrl },
+          resolutions: {
+            thumbnail: { width: thumbWidth, height: thumbHeight },
+            original: { width, height },
+          },
+          title: artworkTitle,
+          description: description || "",
+          keywords: keywordsArray,
+          price: { original: 0 },
+          notForSale: false,
+          exclusiveLicenseStatus,
+          isActive,
+          slug,
+        });
+
+        await ImageAnalytics.create({ image: newImage._id, imageModel: "Artwork" });
+        await Photographer.findByIdAndUpdate(photographer, { $inc: { photosCount: 1 } });
+      } catch (err) {
+        console.error("[bulk-upload] Step5 (DB create) failed:", err);
+        return res.status(500).send({ message: "Failed to save artwork record.", error: err.message });
+      }
+
+      res.status(201).send({ photo: newImage });
+    } catch (error) {
+      console.error("[bulk-upload] Unexpected error:", error);
+      res.status(500).send({ message: "Upload failed.", error: error.message });
+    }
+  }
+);
+
 
 router.post("/upload-watermark-image", async (req, res) => {
   const { imageUrl } = req.body;
