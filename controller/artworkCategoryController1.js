@@ -1,4 +1,4 @@
-const ArtworkCategory = require("../models/artworkCategoryModel");
+const ArtworkCategory = require("../models/artworkCategoryModel.js");
 const asyncHandler = require("express-async-handler");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 const { S3Client } = require("@aws-sdk/client-s3");
