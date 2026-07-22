@@ -76,6 +76,7 @@ app.use(
 );
 
 app.use(express.json());
+const router = express.Router()
 router.get("/ping-test", (req, res) => {
   return res.json({
     ok: true,
