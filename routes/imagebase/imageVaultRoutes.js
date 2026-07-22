@@ -37,7 +37,12 @@ const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middlewar
 
 const router = express.Router()
 
-
+router.get("/ping-test", (req, res) => {
+  res.json({
+    ok: true,
+    file: __filename,
+  });
+});
 router.post('/add-image-in-vault', IsAdminOrPhotographer,  addImageInVault)
 router.post('/update-image-in-vault',  updateImageInVault)
 router.get('/get-image-by-id', getImageFromVault)

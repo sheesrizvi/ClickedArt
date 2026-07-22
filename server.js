@@ -76,13 +76,6 @@ app.use(
 );
 
 app.use(express.json());
-const router = express.Router()
-router.get("/ping-test", (req, res) => {
-  return res.json({
-    ok: true,
-    file: __filename,
-  });
-});
 app.use("/api/upload", upload);
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
