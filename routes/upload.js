@@ -242,6 +242,7 @@ router.post(
         processedBuffer = await sharp(buffer)
           .resize(targetResolution.width, targetResolution.height)
           .toBuffer();
+        //test
 
         if (format === "jpeg" || format === "jpg") {
           let quality = 90;
@@ -284,8 +285,8 @@ router.post(
         fileSizeInMB > 10
           ? ["small", "medium"]
           : fileSizeInMB > 4
-          ? ["small"]
-          : [];
+            ? ["small"]
+            : [];
 
       const uploadPromises = ["original", ...conversionTargets].map(
         async (key) => {
@@ -546,8 +547,8 @@ router.post(
         fileSizeInMB > 10
           ? ["small", "medium"]
           : fileSizeInMB > 4
-          ? ["small"]
-          : [];
+            ? ["small"]
+            : [];
 
       const uploadPromises = ["original", ...conversionTargets].map(
         async (key) => {
@@ -952,16 +953,14 @@ router.post(
       };
 
       console.log(
-        `Small Resolution: ${resolutions.small.width}x${
-          resolutions.small.height
+        `Small Resolution: ${resolutions.small.width}x${resolutions.small.height
         } (${(
           (resolutions.small.width * resolutions.small.height) /
           1_000_000
         ).toFixed(2)} MP)`
       );
       console.log(
-        `Medium Resolution: ${resolutions.medium.width}x${
-          resolutions.medium.height
+        `Medium Resolution: ${resolutions.medium.width}x${resolutions.medium.height
         } (${(
           (resolutions.medium.width * resolutions.medium.height) /
           1_000_000
@@ -972,8 +971,8 @@ router.post(
         imageSizeInMP > 12
           ? ["small", "medium"]
           : imageSizeInMP > 4
-          ? ["small"]
-          : [];
+            ? ["small"]
+            : [];
 
       const uploadPromises = [
         "thumbnail",
@@ -1008,7 +1007,7 @@ router.post(
               width: 1600,
               height: 1600,
               fit: "inside",
-              withoutEnlargement: true, 
+              withoutEnlargement: true,
             })
             .webp({ quality: 70 })
             .toBuffer();
@@ -1091,8 +1090,8 @@ const createTextImageBuffer = async (text, width, height) => {
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <text x="50%" y="50%" fill="rgba(255, 255, 255, 0.3)" font-family="'Brush Script MT', cursive" font-size="${Math.round(
-        height * 0.07
-      )}" text-anchor="middle" dominant-baseline="middle">${text}</text>
+    height * 0.07
+  )}" text-anchor="middle" dominant-baseline="middle">${text}</text>
     </svg>
   `;
   return Buffer.from(svg);
@@ -1129,8 +1128,8 @@ router.post(
           typeof category === "string" && category.startsWith("[")
             ? JSON.parse(category)
             : Array.isArray(category)
-            ? category
-            : [category];
+              ? category
+              : [category];
       } catch {
         categoryArray = Array.isArray(category) ? category : [category];
       }
@@ -1143,10 +1142,10 @@ router.post(
             typeof keywords === "string" && keywords.startsWith("[")
               ? JSON.parse(keywords)
               : typeof keywords === "string"
-              ? keywords.split(",").map((k) => k.trim()).filter(Boolean)
-              : Array.isArray(keywords)
-              ? keywords
-              : [];
+                ? keywords.split(",").map((k) => k.trim()).filter(Boolean)
+                : Array.isArray(keywords)
+                  ? keywords
+                  : [];
         } catch {
           keywordsArray = [];
         }
