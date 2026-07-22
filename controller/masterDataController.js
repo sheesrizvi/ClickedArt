@@ -9,6 +9,7 @@ const Monetization = require("../models/monetizationModel.js");
 const User = require("../models/userModel.js");
 const ImageVault = require("../models/imagebase/imageVaultModel.js");
 const Category = require("../models/categoryModel.js");
+const Artwork = require("../models/artworkModel.js");
 const ArtworkCategory = require("../models/artworkCategoryModel.js");
 const Blog = require("../models/socials/blogModel.js");
 const Frame = require("../models/imagebase/frameModel.js");
@@ -155,10 +156,12 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     const [
       totalUsers,
       totalPhotos,
+      totalArtworks,
       totalPhotographers,
       inactivePhotographers,
       activePhotographers,
       pendingPhotos,
+      pendingArtworks,
       totalCategories,
       totalArtworkCategories,
       pendingPhotographers,
@@ -178,6 +181,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     ] = await Promise.all([
       safeCount(User.countDocuments({ isActive: true })),
       safeCount(ImageVault.countDocuments({ isActive: true })),
+      safeCount(Artwork.countDocuments({ isActive: true })),
       safeCount(Photographer.countDocuments({ active: true })),
       safeCount(
         Photographer.countDocuments({
@@ -193,6 +197,12 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       ),
       safeCount(
         ImageVault.countDocuments({
+          exclusiveLicenseStatus: "pending",
+          isActive: false,
+        })
+      ),
+      safeCount(
+        Artwork.countDocuments({
           exclusiveLicenseStatus: "pending",
           isActive: false,
         })
@@ -244,10 +254,12 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
     return res.status(200).json({
       totalUsers,
       totalPhotos,
+      totalArtworks,
       totalPhotographers,
       inactivePhotographers,
       activePhotographers,
       pendingPhotos,
+      pendingArtworks,
       totalCategories,
       totalArtworkCategories,
       pendingPhotographers,
