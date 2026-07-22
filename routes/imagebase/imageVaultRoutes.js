@@ -29,6 +29,9 @@ const {
         selectImageForEvent,
         getSelectImagesForEvent,
         getYearRewindOfPhotographer,
+        getDeletedImages,
+        restoreImage,
+        permanentDeleteImage,
      } = require('../../controller/imagebase/imageVaultController')
 const { IsAdminOrPhotographer, isAdmin, verifyToken } = require('../../middleware/authMiddleware')
 
@@ -40,6 +43,10 @@ router.post('/update-image-in-vault',  updateImageInVault)
 router.get('/get-image-by-id', getImageFromVault)
 router.get('/get-all-images', getAllImagesFromVault)
 router.delete('/delete-image', IsAdminOrPhotographer, deleteImagesFromVault)
+router.get('/get-deleted-images', isAdmin, getDeletedImages)
+router.post('/restore-image', isAdmin, restoreImage)
+router.put('/restore-image', isAdmin, restoreImage)
+router.delete('/permanent-delete-image', isAdmin, permanentDeleteImage)
 router.get('/get-images-by-photographer', getAllImagesByPhotographer)
 router.get('/get-image-by-category-id', getImagesByCategory)
 router.get('/get-image-by-category-type', getImagesByCategoryType)

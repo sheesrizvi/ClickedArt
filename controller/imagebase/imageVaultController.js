@@ -481,15 +481,99 @@ const deleteImagesFromVault = asyncHandler(async (req, res) => {
 
   if (!photo) return res.status(400).send({ message: "Photo not found" });
 
-  if (photo.imageLinks) {
-    deleteAllResolutions(photo.imageLinks);
-  }
-  await ImageVault.findOneAndUpdate({ _id: id }, { $set: { isActive: false } });
-  // await Photographer.findOneAndUpdate({_id: photo.photographer}, { $inc: { photosCount: -1 } })
-  // await ImageAnalytics.findOneAndDelete({ image: photo._id })
+  await ImageVault.findOneAndUpdate({ _id: id }, { $set: { isActive: false, deletedAt: new Date() } });
 
-  res.status(200).send({ message: "Image deleted" });
+  res.status(200).send({ message: "Image moved to deleted photos" });
 });
+
+const getDeletedImages = asyncHandler(async (req, res) => {
+  const { pageNumber = 1, pageSize = 20 } = req.query;
+
+  const query = {
+    isActive: false,
+    exclusiveLicenseStatus: { $ne: "rejected" },
+  };
+
+  const totalDocuments = await ImageVault.countDocuments(query);
+  const pageCount = Math.ceil(totalDocuments / pageSize);
+
+  const images = await ImageVault.find(query)
+    .populate("category photographer license")
+    .sort({ deletedAt: -1, updatedAt: -1 })
+    .skip((pageNumber - 1) * pageSize)
+    .limit(pageSize);
+
+  const newImages = await Promise.all(
+    images.map(async (image) => {
+      const imageAnalytics = await ImageAnalytics.findOne({ image: image._id });
+      return {
+        ...image.toObject(),
+        imageAnalytics,
+      };
+    })
+  );
+
+  res.status(200).send({ photos: newImages, pageCount });
+});
+
+const restoreImage = asyncHandler(async (req, res) => {
+  const { id } = req.query;
+
+  const photo = await ImageVault.findById(id);
+  if (!photo) return res.status(404).json({ message: "Photo not found" });
+
+  photo.isActive = true;
+  photo.deletedAt = null;
+  if (photo.exclusiveLicenseStatus === "rejected") {
+    photo.exclusiveLicenseStatus = "approved";
+  }
+  await photo.save();
+
+  res.status(200).json({ message: "Image restored successfully", photo });
+});
+
+const permanentDeleteImage = asyncHandler(async (req, res) => {
+  const { id } = req.query;
+
+  const photo = await ImageVault.findById(id);
+  if (!photo) return res.status(404).json({ message: "Photo not found" });
+
+  if (photo.imageLinks) {
+    await deleteAllResolutions(photo.imageLinks);
+  }
+
+  await ImageAnalytics.findOneAndDelete({ image: photo._id });
+  await ImageVault.findByIdAndDelete(id);
+
+  res.status(200).json({ message: "Image permanently deleted" });
+});
+
+const cleanupExpiredImages = async () => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const expiredImages = await ImageVault.find({
+      $or: [
+        { isActive: false, deletedAt: { $lt: sevenDaysAgo } },
+        { isActive: false, deletedAt: { $exists: false }, updatedAt: { $lt: sevenDaysAgo } },
+        { exclusiveLicenseStatus: "rejected", updatedAt: { $lt: sevenDaysAgo } },
+      ],
+    });
+
+    for (const photo of expiredImages) {
+      if (photo.imageLinks) {
+        await deleteAllResolutions(photo.imageLinks);
+      }
+      await ImageAnalytics.findOneAndDelete({ image: photo._id });
+      await ImageVault.findByIdAndDelete(photo._id);
+    }
+    if (expiredImages.length > 0) {
+      console.log(`Cleaned up ${expiredImages.length} expired photos.`);
+    }
+  } catch (error) {
+    console.error("Error cleaning up expired photos:", error);
+  }
+};
+
 
 const approveImage = asyncHandler(async (req, res) => {
   const { status, rejectionReason, imageId } = req.body;
@@ -1768,4 +1852,8 @@ module.exports = {
   selectImageForEvent,
   getSelectImagesForEvent,
   getYearRewindOfPhotographer,
+  getDeletedImages,
+  restoreImage,
+  permanentDeleteImage,
+  cleanupExpiredImages,
 };

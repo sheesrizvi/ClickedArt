@@ -64,6 +64,8 @@ const {
   raisePickupRequestScheduler,
   raisePickupRequestSchedulerCustom,
 } = require("./controller/deliveryController.js");
+const { cleanupExpiredImages } = require("./controller/imagebase/imageVaultController.js");
+const { cleanupExpiredArtworks } = require("./controller/artworkController.js");
 
 const app = express();
 
@@ -162,6 +164,12 @@ cron.schedule("0 9 * * 0", () => {
 cron.schedule("55 23 * * *", () => {
   console.log("Running the raise pickup request scheduler check");
   raisePickupRequestScheduler();
+});
+
+cron.schedule("0 4 * * *", () => {
+  console.log("Running 7-day cleanup for expired deleted and rejected photos/artworks");
+  cleanupExpiredImages();
+  cleanupExpiredArtworks();
 });
 
 
