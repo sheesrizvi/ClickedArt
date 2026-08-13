@@ -12,8 +12,9 @@ const Category = require("../models/categoryModel.js");
 const Artwork = require("../models/artworkModel.js");
 const ArtworkCategory = require("../models/artworkCategoryModel.js");
 const Blog = require("../models/socials/blogModel.js");
-const Frame = require("../models/imagebase/frameModel.js");
 const Paper = require("../models/imagebase/paperModel.js");
+const Frame = require("../models/imagebase/frameModel.js");
+const Mount = require("../models/imagebase/mountModel.js");
 const Story = require("../models/storyModel.js");
 const Plan = require("../models/planModel.js");
 const { sub } = require("date-fns");
@@ -169,6 +170,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       pendingBlogs,
       totalStories,
       totalFrames,
+      totalMounts,
       totalPapers,
       totalOrders,
       totalDigitalOrders,
@@ -219,6 +221,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       safeCount(Blog.countDocuments({ isActive: false })),
       safeCount(Story.countDocuments()),
       safeCount(Frame.countDocuments()),
+      safeCount(Mount.countDocuments()),
       safeCount(Paper.countDocuments()),
       safeCount(Order.countDocuments()),
       safeCount(Order.countDocuments({ printStatus: "no-print" })),
@@ -267,6 +270,7 @@ const documentCountsForAdmin = asyncHandler(async (req, res) => {
       pendingBlogs,
       totalStories,
       totalFrames,
+      totalMounts,
       totalPapers,
       totalOrders,
       totalDigitalOrders,
