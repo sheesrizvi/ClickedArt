@@ -11,7 +11,7 @@ const axios = require('axios')
 //       if (!token) {
 //         return res.status(500).send({ error: 'Authorization token is missing' });
 //       }
-  
+
 //       const result = await axios.get('https://track.delhivery.com/c/api/pin-codes/json/', {
 //         params: {
 //           filter_codes: pincode
@@ -21,7 +21,7 @@ const axios = require('axios')
 //           'Authorization': `Token ${token}`
 //         }
 //       });
-  
+
 //       res.status(200).send({ result: result.data });
 //     } catch (error) {
 //       const status = error.response ? error.response.status : 500;
@@ -59,8 +59,8 @@ const checkPincodeAvailablity = asyncHandler(async (req, res) => {
 
     if (
       deliveryData &&
-      deliveryData.is_oda === "N" &&  
-      deliveryData.center?.length > 0 
+      deliveryData.is_oda === "N" &&
+      deliveryData.center?.length > 0
     ) {
       return res.status(200).send({ available: true, deliveryData });
     } else {
@@ -113,7 +113,7 @@ const createShipment = async (req, res) => {
       waybill: '',
       shipment_width: '20',
       shipment_height: '10',
-      weight: '',  
+      weight: '',
       seller_gst_tin: '',
       shipping_mode: 'Surface',
       address_type: ''
@@ -149,8 +149,8 @@ const createShipment = async (req, res) => {
       }
     );
 
-    console.log(response.data);  
-    
+    console.log(response.data);
+
     res.status(200).send({ result: response.data })
   } catch (error) {
     console.error('Error while creating shipment:', error.response ? error.response.data : error.message);
@@ -207,8 +207,8 @@ const createShipment = async (req, res) => {
 //       phone: '7054001058'
 //     }
 //   }));
-  
-  
+
+
 //   const config = {
 //     method: 'post',
 //     url: 'https://staging-express.delhivery.com/api/cmu/create.json', 
@@ -218,7 +218,7 @@ const createShipment = async (req, res) => {
 //     },
 //     data: data,
 //   };
-  
+
 //   axios(config).then((response) => {
 //     console.log('Response:', response.data);
 //     return res.status(200).send({ result: response.data })
@@ -234,7 +234,7 @@ const registerDelivery = asyncHandler(async (req, res) => {
   const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
   const formData = new URLSearchParams();
-  formData.append('format', 'json'); 
+  formData.append('format', 'json');
   formData.append(
     'data',
     JSON.stringify({
@@ -307,12 +307,12 @@ const registerDelivery = asyncHandler(async (req, res) => {
         },
       ],
       pickup_location: {
-        name: 'FORTENETSKILLS SURFACE',
-        add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+        name: 'ClickedArt Spaces',
+        add: '1st Floor, SAAJ Showroom, ClickedArt Spaces, 56, Faizabad - Lucknow Hwy, Ashok Vihar, Mangal Puri, Ismailganj, Indira Nagar',
         city: 'Lucknow',
-        pin_code: 226010,
+        pin_code: 226028,
         country: 'India',
-        phone: '7054001058',
+        phone: '7054001056',
       },
     })
   );
@@ -321,7 +321,7 @@ const registerDelivery = asyncHandler(async (req, res) => {
     method: 'post',
     url: 'https://staging-express.delhivery.com/api/cmu/create.json',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded', 
+      'Content-Type': 'application/x-www-form-urlencoded',
       Authorization: `Token ${token}`,
     },
     data: formData,
@@ -341,9 +341,9 @@ const registerDelivery = asyncHandler(async (req, res) => {
 
 const registerDeliveryFromOrder = asyncHandler(async (order) => {
   const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
- 
+
   const formData = new URLSearchParams();
-  formData.append('format', 'json'); 
+  formData.append('format', 'json');
   formData.append(
     'data',
     JSON.stringify({
@@ -390,7 +390,7 @@ const registerDeliveryFromOrder = asyncHandler(async (order) => {
       //   country: 'India',
       //   phone: '7054001058',
       // },
-       pickup_location: {
+      pickup_location: {
         name: 'ClickedArt',
         add: 'First Floor, Hope Villa, 624/new-1, near Wave Mall, Vibhuti Khand, Gomti Nagar',
         city: 'Lucknow',
@@ -403,7 +403,7 @@ const registerDeliveryFromOrder = asyncHandler(async (order) => {
 
   const config = {
     method: 'post',
-  //  url: 'https://staging-express.delhivery.com/api/cmu/create.json',
+    //  url: 'https://staging-express.delhivery.com/api/cmu/create.json',
     url: 'https://track.delhivery.com/api/cmu/create.json',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -432,7 +432,7 @@ const registerCustomDeliveryFromOrder = asyncHandler(async (order) => {
   const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
   const formData = new URLSearchParams();
-  formData.append('format', 'json'); 
+  formData.append('format', 'json');
   formData.append(
     'data',
     JSON.stringify({
@@ -479,7 +479,7 @@ const registerCustomDeliveryFromOrder = asyncHandler(async (order) => {
       //   country: 'India',
       //   phone: '7054001058',
       // },
-       pickup_location: {
+      pickup_location: {
         name: 'ClickedArt',
         add: 'First Floor, Hope Villa, 624/new-1, near Wave Mall, Vibhuti Khand, Gomti Nagar',
         city: 'Lucknow',
@@ -520,15 +520,15 @@ const registerCustomDeliveryFromOrder = asyncHandler(async (order) => {
 
 const getPackageDetails = asyncHandler(async (req, res) => {
   try {
-   
+
     const waybill = req.query.waybill || ""
     const refIds = req.query.orderId || ""
-   
-    const token = process.env.DEHLIVERYONE_LIVE_TOKEN; 
+
+    const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
     // const url = `https://staging-express.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
 
-     const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
+    const url = `https://track.delhivery.com/api/v1/packages/json/?waybill=${waybill}&ref_ids=${refIds}`;
 
     const config = {
       method: 'get',
@@ -551,24 +551,24 @@ const getPackageDetails = asyncHandler(async (req, res) => {
 
 const registerDeliveryManually = asyncHandler(async (req, res) => {
   const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
-  
+
   const { orderId } = req.body
   const order = await Order.findOne({ _id: orderId }).populate('userInfo.user')
-  if(!order) {
+  if (!order) {
     return res.status(400).send({ message: 'Order not found' })
   }
 
-  if(order.printStatus === 'no-print') {
-    return rs.status(400).send({  message: 'This is a digital Order. No Need to generate waybill' })
+  if (order.printStatus === 'no-print') {
+    return rs.status(400).send({ message: 'This is a digital Order. No Need to generate waybill' })
   }
 
-  if(order.waybill) {
+  if (order.waybill) {
     return res.status(400).send({ message: 'Waybill already exist. Please use this to track your current order' })
   }
 
- 
+
   const formData = new URLSearchParams();
-  formData.append('format', 'json'); 
+  formData.append('format', 'json');
   formData.append(
     'data',
     JSON.stringify({
@@ -608,12 +608,12 @@ const registerDeliveryManually = asyncHandler(async (req, res) => {
         },
       ],
       pickup_location: {
-        name: 'FORTENETSKILLS SURFACE',
-        add: 'COLONY NO-3,SECTOR NO-D ARAJI NO -178 PLOT NO-35 PLOT NO-35 KANPUR NAGAR MIRZAPUR KALYANPUR',
+        name: 'ClickedArt Spaces',
+        add: '1st Floor, SAAJ Showroom, ClickedArt Spaces, 56, Faizabad - Lucknow Hwy, Ashok Vihar, Mangal Puri, Ismailganj, Indira Nagar',
         city: 'Lucknow',
-        pin_code: 226010,
+        pin_code: 226028,
         country: 'India',
-        phone: '7054001058',
+        phone: '7054001056',
       },
     })
   );
@@ -644,7 +644,7 @@ const registerDeliveryManually = asyncHandler(async (req, res) => {
 
 const raisePickupRequest = async (req, res) => {
   try {
-    const { pickup_location = 'FORTENETSKILLS SURFACE', expected_package_count, pickup_date, pickup_time } = req.body;
+    const { pickup_location = 'ClickedArt Spaces', expected_package_count, pickup_date, pickup_time } = req.body;
 
     // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
     const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
@@ -720,18 +720,18 @@ const raisePickupRequestScheduler = async () => {
   try {
 
     const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0); 
-    
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999); 
+    startOfToday.setHours(0, 0, 0, 0);
 
-    let orders = await Order.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday }   })
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    let orders = await Order.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday } })
 
     let orderIds = orders.map((order) => order._id)
-   
+
     let expected_package_count = orders.length
-  
-    if(expected_package_count < 1) {
+
+    if (expected_package_count < 1) {
       return
     }
 
@@ -739,10 +739,10 @@ const raisePickupRequestScheduler = async () => {
     currentDate.setDate(currentDate.getDate() + 1);
     const pickup_date = currentDate.toISOString().split('T')[0];
     const pickup_time = "11:00:00";
-   // const pickup_location = 'FORTENETSKILLS SURFACE'
+    // const pickup_location = 'FORTENETSKILLS SURFACE'
     const pickup_location = 'ClickedArt'
     console.log('pickup_date', pickup_date)
-    
+
     // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
     const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
@@ -764,13 +764,13 @@ const raisePickupRequestScheduler = async () => {
 
     console.log('Pickup request created successfully')
     console.log("Response Data", response.data)
-    if(response && response.data && response.data.success) {
+    if (response && response.data && response.data.success) {
 
       await Order.updateMany(
         { _id: { $in: orderIds } },
         { $set: { pickupId: response.data.pickup_id } }
-    );
-    
+      );
+
     }
     return
   } catch (error) {
@@ -787,18 +787,18 @@ const raisePickupRequestSchedulerCustom = async () => {
   try {
 
     const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0); 
-    
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999); 
+    startOfToday.setHours(0, 0, 0, 0);
 
-    let orders = await CustomImageOrder.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday }   })
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    let orders = await CustomImageOrder.find({ waybill: { $exists: true }, readyToShip: true, readyToShipTimeStamp: { $gte: startOfToday, $lte: endOfToday } })
 
     let orderIds = orders.map((order) => order._id)
-   
+
     let expected_package_count = orders.length
-  
-    if(expected_package_count < 1) {
+
+    if (expected_package_count < 1) {
       return
     }
 
@@ -806,9 +806,9 @@ const raisePickupRequestSchedulerCustom = async () => {
     currentDate.setDate(currentDate.getDate() + 1);
     const pickup_date = currentDate.toISOString().split('T')[0];
     const pickup_time = "11:00:00";
-   // const pickup_location = 'FORTENETSKILLS SURFACE'
+    // const pickup_location = 'FORTENETSKILLS SURFACE'
     const pickup_location = 'ClickedArt'
-   // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
+    // const DELHIVERY_API_URL = "https://staging-express.delhivery.com/fm/request/new/";
     const DELHIVERY_API_URL = "https://track.delhivery.com/fm/request/new/";
     const token = process.env.DEHLIVERYONE_LIVE_TOKEN;
 
@@ -818,7 +818,7 @@ const raisePickupRequestSchedulerCustom = async () => {
       pickup_date,
       pickup_time,
     };
-   
+
     const response = await axios.post(DELHIVERY_API_URL, payload, {
       headers: {
         "Content-Type": "application/json",
@@ -829,13 +829,13 @@ const raisePickupRequestSchedulerCustom = async () => {
 
     console.log('Pickup request created successfully')
     console.log("Response Data", response.data)
-    if(response && response.data && response.data.success) {
+    if (response && response.data && response.data.success) {
 
       await CustomImageOrder.updateMany(
         { _id: { $in: orderIds } },
         { $set: { pickupId: response.data.pickup_id } }
-    );
-    
+      );
+
     }
     return
   } catch (error) {
@@ -850,29 +850,29 @@ const raisePickupRequestSchedulerCustom = async () => {
 const cancelOrderThroughWaybill = asyncHandler(async (req, res) => {
   const { waybill } = req.query
   const options = {
-  method: 'POST',
- // url: 'https://staging-express.delhivery.com/api/p/edit',
-  url: 'https://track.delhivery.com/api/p/edit',
-  headers: {
-    Authorization: `Token ${process.env.DEHLIVERYONE_LIVE_TOKEN}`,
-    Accept: 'application/json',
-    'Content-Type': 'application/json'
-  },
-  data: {waybill , cancellation: 'true'}
-};
+    method: 'POST',
+    // url: 'https://staging-express.delhivery.com/api/p/edit',
+    url: 'https://track.delhivery.com/api/p/edit',
+    headers: {
+      Authorization: `Token ${process.env.DEHLIVERYONE_LIVE_TOKEN}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    },
+    data: { waybill, cancellation: 'true' }
+  };
 
-axios
-	.request(options)
-	.then((result) => {
-    return res.status(200).send({
-      data: result.data,
-      message: "Cancellation Success"
+  axios
+    .request(options)
+    .then((result) => {
+      return res.status(200).send({
+        data: result.data,
+        message: "Cancellation Success"
+      })
     })
-  })
-	.catch((err) => {
-    console.log('err', err)
-    return res.status(400).send({ message: "Cancellation Request failed" })
-  })
+    .catch((err) => {
+      console.log('err', err)
+      return res.status(400).send({ message: "Cancellation Request failed" })
+    })
 })
 
 module.exports = {
