@@ -66,6 +66,7 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
   const layoutContent = await LayoutContent.findOne({});
   const deliveryCharge = layoutContent?.charges?.delivery || false;
   const platformFees = layoutContent?.charges?.platform || false;
+  const isGstActive = layoutContent?.charges?.gst || false;
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -96,8 +97,8 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
     discount +=
       (item.frameInfo?.discount || 0) + (item.paperInfo?.discount || 0);
 
-    const sgst = finalPrice * 0.09;
-    const cgst = finalPrice * 0.09;
+    const sgst = isGstActive ? finalPrice * 0.09 : 0;
+    const cgst = isGstActive ? finalPrice * 0.09 : 0;
     const totalGST = sgst + cgst;
 
     const nextCounter = await getCounter(financialYear);
@@ -144,8 +145,12 @@ const createCustomUploadOrder = asyncHandler(async (req, res) => {
       totalAmount: finalPrice,
       finalAmount,
       discount,
-      deliveryCharge,
-      platformFees,
+      deliveryCharge: deliveryCharge,
+      platformFees: platformFees,
+      gstCharge: isGstActive,
+      gstChargeAmount: isGstActive ? Number(totalGST.toFixed(2)) : 0,
+      sgstAmount: isGstActive ? Number(sgst.toFixed(2)) : 0,
+      cgstAmount: isGstActive ? Number(cgst.toFixed(2)) : 0,
       deliveryChargeAmount: deliveryCharge ? deliveryChargeAmount : 0,
       platformFeesAmount: platformFees ? platformFeesAmount : 0,
     });

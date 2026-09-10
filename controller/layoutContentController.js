@@ -17,9 +17,18 @@ const addLayoutContent = asyncHandler(async (req, res) => {
 const updateLayoutContent = asyncHandler(async (req, res) => {
     const { logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges } = req.body;
 
+    const updateData = {};
+    if (logo !== undefined) updateData.logo = logo;
+    if (heroSectionPhotos !== undefined) updateData.heroSectionPhotos = heroSectionPhotos;
+    if (footerDetails !== undefined) updateData.footerDetails = footerDetails;
+    if (testimonials !== undefined) updateData.testimonials = testimonials;
+    if (support !== undefined) updateData.support = support;
+    if (banners !== undefined) updateData.banners = banners;
+    if (charges !== undefined) updateData.charges = charges;
+
     const content = await LayoutContent.findOneAndUpdate(
         {},
-        { logo, heroSectionPhotos, footerDetails, testimonials, support, banners, charges },
+        { $set: updateData },
         { new: true, upsert: true }
     );
     res.status(200).send({ message: 'Content updated successfully', content });

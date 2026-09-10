@@ -185,6 +185,18 @@ const customImageOrderSchema = new mongoose.Schema(
     platformFeesAmount: {
       type: Number,
     },
+    gstCharge: {
+      type: Boolean,
+    },
+    gstChargeAmount: {
+      type: Number,
+    },
+    sgstAmount: {
+      type: Number,
+    },
+    cgstAmount: {
+      type: Number,
+    },
   },
   {
     timestamps: true,

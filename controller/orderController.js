@@ -85,6 +85,7 @@ const createOrder = asyncHandler(async (req, res) => {
   const layoutContent = await LayoutContent.findOne({});
   const deliveryCharge = layoutContent?.charges?.delivery || false;
   const platformFees = layoutContent?.charges?.platform || false;
+  const isGstActive = layoutContent?.charges?.gst || false;
 
   const today = new Date();
   const currentYear = today.getFullYear();
@@ -143,8 +144,8 @@ const createOrder = asyncHandler(async (req, res) => {
       //   }
       // }
 
-      const sgst = finalPrice * 0.09;
-      const cgst = finalPrice * 0.09;
+      const sgst = isGstActive ? finalPrice * 0.09 : 0;
+      const cgst = isGstActive ? finalPrice * 0.09 : 0;
       const totalGST = sgst + cgst || 0;
 
       if (!item.paperInfo || !item.paperInfo.size) {
@@ -189,6 +190,10 @@ const createOrder = asyncHandler(async (req, res) => {
       (item) => item.paperInfo && item.paperInfo.paper
     );
 
+    const totalSgst = updatedItems.reduce((sum, item) => sum + (item.sgst || 0), 0);
+    const totalCgst = updatedItems.reduce((sum, item) => sum + (item.cgst || 0), 0);
+    const totalGSTAmount = totalSgst + totalCgst;
+
     const order = new Order({
       userInfo: {
         user: userId,
@@ -206,7 +211,10 @@ const createOrder = asyncHandler(async (req, res) => {
       gst,
       printStatus: hasPaper ? "processing" : "no-print",
       invoiceNumber,
-      invoiceNumber,
+      gstCharge: isGstActive,
+      gstChargeAmount: Number(totalGSTAmount.toFixed(2)),
+      sgstAmount: Number(totalSgst.toFixed(2)),
+      cgstAmount: Number(totalCgst.toFixed(2)),
       deliveryCharge: updatedItems.every((item) => item.subTotal > 0)
         ? deliveryCharge
         : false,
@@ -216,7 +224,7 @@ const createOrder = asyncHandler(async (req, res) => {
           (
             (totalAmount +
               (deliveryCharge ? totalDeliveryCharge : 0) +
-              (totalAmount + (totalDeliveryCharge || 0)) * 0.18) *
+              (isGstActive ? (totalAmount + (totalDeliveryCharge || 0)) * 0.18 : 0)) *
             0.02
           ).toFixed(2)
         )
@@ -829,7 +837,8 @@ const calculateCartItemsPrice = async (
 
     totalFinalPrice += totalDeliveryCharge;
 
-    const gstCharge = totalFinalPrice * 0.18;
+    const isGstActive = layoutContent?.charges?.gst || false;
+    const gstCharge = isGstActive ? totalFinalPrice * 0.18 : 0;
     totalFinalPrice += gstCharge;
 
     if (layoutContent?.charges?.platform) {
@@ -1420,7 +1429,8 @@ const calculateCartPrice = async (req, res) => {
 
     totalFinalPrice += totalDeliveryCharge;
 
-    const gstCharge = totalFinalPrice * 0.18;
+    const isGstActive = layoutContent?.charges?.gst || false;
+    const gstCharge = isGstActive ? totalFinalPrice * 0.18 : 0;
     totalFinalPrice += gstCharge;
 
     if (layoutContent?.charges?.platform) {

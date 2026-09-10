@@ -55,6 +55,10 @@ const layoutContentSchema = new mongoose.Schema({
       type: Boolean,
       required: true,
     },
+    gst: {
+      type: Boolean,
+      default: false,
+    },
   },
   minimumVersion: {
     android: { type: String, default: "1" },
